@@ -1,0 +1,21 @@
+{
+  "_comment": "Pfade duerfen Windows-Umgebungsvariablen wie %ProgramData% enthalten. Aenderungen koennen auch mit Set-AVConfig vorgenommen werden.",
+  "ClamAVPath": "ClamAV",
+  "DatabasePath": "ClamAV\\database",
+  "QuarantinePath": "%ProgramData%\\REMNEXA\\Quarantine",
+  "LogPath": "%LocalAppData%\\REMNEXA\\Logs",
+  "DownloadUri": "https://github.com/Cisco-Talos/clamav/releases/latest",
+  "AutoUpdateSignatures": true,
+  "ScanBeforeRemoval": false,
+  "ScanAfterRemoval": true,
+  "IncludePUA": false,
+  "MaxFileSize": "100M",
+  "SignatureMaxAgeDays": 7,
+  "DefaultTimeoutSeconds": 3600,
+  "ExcludedPaths": [
+    "%ProgramData%\\REMNEXA\\Quarantine",
+    "%LocalAppData%\\REMNEXA\\Logs",
+    "%ProgramData%\\ProgramCleaner\\Quarantine",
+    "%LocalAppData%\\ProgramCleaner\\Logs"
+  ]
+}
