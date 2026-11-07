@@ -1,0 +1,5 @@
+/runtime/
+/ClamAV/
+/Backup-*/
+*.log
+*.jsonl
