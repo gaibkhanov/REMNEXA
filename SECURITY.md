@@ -1,15 +1,30 @@
+[English](SECURITY.md) | [Deutsch](SECURITY.de.md)
+
 # Security policy
 
-REMNEXA is a Windows maintenance utility that can remove applications, files, registry entries, services or scheduled tasks after user selection. Review every preview and keep backups of important data. A restore point cannot reverse every external uninstaller or residual cleanup operation.
+REMNEXA can invoke uninstallers and modify files, Registry data and supported system settings. Treat it as a maintenance tool with sensitive operations, not as a security boundary or antivirus replacement.
 
 ## Reporting a vulnerability
 
-Please do not publish sensitive exploit details in a public issue. If GitHub private vulnerability reporting is enabled, use the repository's **Security → Report a vulnerability** form. Otherwise, contact the repository maintainer through a private GitHub channel and share only the minimum details needed to reproduce the issue.
+Use GitHub's private vulnerability reporting **if enabled** under the repository's Security tab. If it is unavailable, open a minimal issue requesting a private reporting channel; do not include exploit details, credentials, personal logs or private paths publicly. No private contact address or guaranteed response time is designated here.
 
-Include the affected REMNEXA version, Windows version, PowerShell version, impact and safe reproduction steps. Do not attach personal logs or secrets.
+Include the affected version/commit, sanitized reproduction steps, impact and a proposed mitigation if available. Use synthetic data. Do not test exploitation on systems without authorization.
 
-## Supported versions
+## Support status
 
-The current documented baseline is REMNEXA 2.1.3 on Windows 10/11 with PowerShell 7.5 or newer. The 3.0 roadmap is in progress and has no released version yet.
+The current 2.2.0 branch is a development build. There is no formal long-term support or security response SLA. Report issues against current development and identify older affected releases where known. An existing release is not automatically a security-certified build.
 
-For current controls and known audit gaps, see [the security model](docs/SECURITY_MODEL.md). ClamAV is an optional on-demand scanner and is not a replacement for Microsoft Defender or real-time endpoint protection.
+## Boundaries and known limits
+
+- Cleanup previews and confirmations reduce accidental changes but do not prove that every match belongs to an application.
+- Reparse-point checks narrow, but do not eliminate, filesystem time-of-check/time-of-use races.
+- Restore points and supported configuration backups do not guarantee complete recovery.
+- ClamAV is optional on-demand scanning, not continuous protection.
+- AI contracts exist; no inference runtime/model is shipped. Future model output must remain untrusted advice.
+- Review any registered uninstaller command before trusting its origin.
+
+See the [security model](docs/SECURITY_MODEL.md) and [development report](docs/VERSION_2.2.0.md) for implemented controls and open validation work.
+
+## Sharing diagnostics
+
+Redact user names, account identifiers, absolute personal paths, tokens, file content and sensitive program/command details. Do not upload malware or quarantine samples in public issues. Keep upstream third-party security updates separate from REMNEXA's application version.

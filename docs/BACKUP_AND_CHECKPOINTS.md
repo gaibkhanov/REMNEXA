@@ -1,26 +1,36 @@
-# Backups ohne Git
+[English](BACKUP_AND_CHECKPOINTS.md) | [Deutsch](BACKUP_AND_CHECKPOINTS.de.md)
 
-Der Maintainer entwickelt REMNEXA ohne Git-Versionierung. Vor größeren Änderungen wird deshalb ein unveränderlicher Ordner `Backup-<Version>` erstellt. Das Werkzeug überschreibt vorhandene Backups nie, überspringt vorhandene Backup-Ordner und Reparse Points und erstellt ein SHA-256-Manifest.
+# Backups and checkpoints
 
-## Ein Backup erstellen
+Git records source changes. A local source checkpoint provides an additional copy; neither replaces backups of personal data or a tested system restore.
 
-Aus dem Projektordner:
+## Create a checkpoint
+
+Close REMNEXA and stop editing the source during copying. From the project root:
 
 ```powershell
-pwsh -NoProfile -File .\tools\New-RemnexaBackup.ps1 -Version 2.1.3
+pwsh -NoProfile -File .\tools\New-RemnexaBackup.ps1 -Version 2.2.0-checkpoint
 ```
 
-Der Standard-Quellordner ist der Projektordner, in dem das Werkzeug liegt. Für einen anderen Quellordner kann `-SourcePath` angegeben werden. Bei einem Fehler bleibt der Zwischenstand zur Prüfung erhalten; ein vorhandener Backup-Ordner wird nicht verändert.
+Choose a unique version suffix for each checkpoint. Specify `-Version` explicitly: the tool's legacy default is not the current development version. `-SourcePath` can select a different source root.
 
-Die Quelle wird während des Kopierens nicht gesperrt. Vor einer Sicherung sollte REMNEXA daher geschlossen sein und es sollten keine Dateien im Quellordner geändert werden.
+The tool checks space, stages the copy, verifies copied files with SHA-256, checks its manifest and only then names the directory `Backup-<Version>`. An existing destination is never overwritten. Failed staging is retained for inspection rather than presented as a completed backup.
 
-Jeder erfolgreiche Sicherungsordner enthält:
+## Coverage and exclusions
 
-- `BACKUP-INFO.txt` mit Versionsnummer, Zeitpunkt und Umfang.
-- `BACKUP-MANIFEST.csv` mit relativem Pfad, Dateigröße und SHA-256 für jede gesicherte Quelldatei.
+Existing top-level `Backup-*` directories and reparse points are skipped. Linked or placeholder content may therefore be absent; inspect the manifest rather than assuming a full disk image. The source is not locked, so concurrent changes can make a snapshot inconsistent.
 
-## Checkpoints
+A successful checkpoint contains:
 
-Nach jeder abgeschlossenen Entwicklungsstufe wird der Arbeitsstand mit einer neuen Versions- oder Entwicklungsnummer gesichert. Änderungen werden über `BACKUP-MANIFEST.csv` mit der letzten Sicherung verglichen. Release-Dateien werden weiterhin separat getestet; ein Backup ersetzt keine Regressionstests oder einen Wiederherstellungstest.
+- `BACKUP-MANIFEST.csv`: relative path, size and SHA-256 for each copied source file.
+- `BACKUP-INFO.txt`: version, timestamp, source location and totals.
 
-Die erste Sicherung des unveränderten REMNEXA-2.1.3-Stands wurde mit denselben Regeln erstellt. Sie enthält 898 Dateien und 1,309,979,961 Nutzdatenbytes; alle 898 Dateien wurden beim Kopieren per SHA-256 verifiziert.
+**Keep these files private:** local metadata can contain absolute personal paths and sensitive filenames. Backups are excluded from version control and must not be included in release artifacts.
+
+## Verify and recover
+
+Before relying on a backup, verify expected files and hashes against the manifest and test a copy in an isolated directory. Preserve the current working tree before replacing anything. Restore only reviewed files; do not copy an old runtime or vendor component blindly over newer security updates.
+
+The backup tool creates checkpoints; it is not a general restore manager. Application removal, live system settings and personal data require separate recovery plans. Do not claim complete rollback of a third-party uninstallation.
+
+See [development workflow](DEVELOPMENT_WORKFLOW.md) for Git checkpoints and [security model](SECURITY_MODEL.md) for operation-level recovery limits.

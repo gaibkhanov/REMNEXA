@@ -1,136 +1,85 @@
-# Optionale ClamAV-Integration
+[English](README.md) | [Deutsch](README.de.md)
 
-Dieses Submodul erweitert REMNEXA um lokale On-Demand-Scans. Es
-implementiert keinen Echtzeitschutz, keinen Hintergrunddienst und keine eigene
-Signaturdatenbank. Funde werden nie automatisch geloescht. Eine Datei wird nur
-mit dem ausdruecklichen Parameter `-Quarantine` verschoben.
+# Optional ClamAV integration
 
-## Voraussetzungen
+REMNEXA integrates ClamAV for local, on-demand scanning. It is not a resident protection service or a replacement for Microsoft Defender or another antivirus. Review the [user guide](../docs/USER_GUIDE.md) and [security model](../docs/SECURITY_MODEL.md).
 
-- Windows 10 oder 11 und PowerShell ab Version 7.5.
-- Internetzugang fuer Installation und Signaturaktualisierung.
-- Administratorrechte fuer Windows-, Program-Files- und ProgramData-Pfade.
-- Die offizielle portable ClamAV-Windows-Version. `Initialize-ClamAV` kann das
-  aktuelle Paket aus den offiziellen Cisco-Talos-Releases beziehen. Standardziel
-  ist der portable Unterordner `ClamAV` direkt im Anwendungsverzeichnis.
+## Components and requirements
 
-Offizielle Dokumentation:
+The source contains the PowerShell integration, not ClamAV executables or signature databases. Setup needs a supported Windows ClamAV package, internet access and suitable permissions. The application explains elevation before opening its Antivirus workspace. API users must provide elevation where required for system scan targets or installation paths.
 
-- https://docs.clamav.net/manual/Installing.html
-- https://docs.clamav.net/manual/Usage/SignatureManagement.html
-- https://docs.clamav.net/manual/Usage/Scanning.html
-
-## Schnellstart
+Load the module from the repository root:
 
 ```powershell
-Import-Module .\Antivirus\Antivirus.psd1 -Force
-Initialize-ClamAV
-Update-ClamAVEngine
-Update-ClamAVSignature
-Invoke-ClamAVScan -ScanType Quick
+Import-Module .\Antivirus\Antivirus.psd1
+Get-ClamAVStatus
+Get-AVConfig
 ```
 
-Eine vollstaendige, interaktive Abfolge steht in
-`Examples/Invoke-AntivirusWorkflow.ps1`.
+## Installation and updates
 
-## Konfiguration
-
-Die Datei `config/antivirus.json` enthaelt alle Pfade und Standards. Die Datei
-bleibt bewusst gueltiges JSON; Erlaeuterungen stehen deshalb in `_comment` statt
-in JavaScript-artigen Kommentarzeilen.
+Use the setup action in the application, or explicitly request installation:
 
 ```powershell
-Get-AVConfig
+Initialize-ClamAV -Install
+Update-ClamAVSignature
+```
+
+Downloads require HTTPS and a valid, matching SHA-256 digest. Automatic setup depends on usable upstream release metadata; missing or malformed digests abort installation. Direct archive installation requires `-DownloadUri` and `-ExpectedSha256` from a trusted source. Never invent a digest or bypass verification to make installation succeed.
+
+Installation stages the engine beside its target, preserves existing signatures and retains the replaced engine. Configuration-commit failures trigger rollback to the prior engine. A subsequent signature-update failure is outside that transaction; it does not automatically restore every earlier state. Retained engine backups have no in-application restore interface.
+
+`Update-ClamAVEngine` handles engine updates; `Update-ClamAVSignature` invokes freshclam for signature updates. They are separate operations. Signature age warnings default to seven days; consult the actual configuration.
+
+## Scans
+
+Examples after engine/signature setup:
+
+```powershell
+Invoke-ClamAVScan -ScanType Quick
+Invoke-ClamAVScan -ScanType Full
+Invoke-ClamAVScan -ScanType Custom -Path '.\scan-fixture' -Timeout 1800
+```
+
+The custom example requires an existing directory. Choose targets deliberately.
+
+| Type | Scope |
+| --- | --- |
+| Quick | Configured common infection locations, including temporary and startup locations. |
+| Full | Defined Windows, program and user roots; not a guarantee of every mounted disk/file. |
+| Custom | Explicit existing targets; at least one is required. |
+
+`-IncludePUA` enables potentially unwanted application detection, which can raise false positives. `-MaxFileSize` and configured exclusions/limits affect coverage. Locked files, permissions, archive limits and timeouts can prevent complete inspection.
+
+ClamAV exit code 0 means no detections, 1 means detections and 2 means a scan error. A detection is not automatically a confirmed infection; no detections are not proof of safety. Progress indicates workflow stages, not an exact count of every file.
+
+Scanning uses local engine/signatures and can run offline. The scan function itself does not fetch fresh signatures. Setup, explicit updates and other configured workflow update actions can require network access; prepare and verify the offline configuration beforehand. Old signatures reduce usefulness.
+
+## Quarantine and restore
+
+Ordinary scans report findings. `-Quarantine` explicitly opts into moving detected files into managed quarantine with a SHA-256-backed JSON manifest. The generic default location is `%ProgramData%\REMNEXA\Quarantine`; configuration can change it.
+
+`Get-ClamAVQuarantine` lists entries. Select and review the detection, original path and intended restore target before using the application's restore action or `Restore-ClamAVQuarantine -Identifier`. Restoring can reintroduce a threat. The module verifies the stored hash and refuses an existing destination.
+
+Do not use `-Force` as a workaround: it skips the module's confirmation, not its integrity/no-overwrite checks. The UI supplies its own explicit warning before invoking restore. Never publish quarantined files or private manifests.
+
+## Configuration
+
+Use `config/antivirus.json`, `Get-AVConfig` and `Set-AVConfig`; prefer supported validated writes:
+
+```powershell
 Set-AVConfig -Values @{
     ScanBeforeRemoval = $false
-    ScanAfterRemoval  = $true
-    IncludePUA        = $false
-    MaxFileSize       = '100M'
+    ScanAfterRemoval = $true
+    IncludePUA = $false
+    MaxFileSize = '100M'
 }
 ```
 
-Umgebungsvariablen wie `%ProgramData%` und `%LocalAppData%` duerfen in den
-Pfaden verwendet werden. Der Quarantaene- und der Logordner werden automatisch
-vom Scan ausgeschlossen.
+These settings change future behavior; they do not run a scan immediately. Check configured paths, exclusions, signature policy and timeout before broad scans. Logs and quarantine are excluded from scanning as configured. See [the workflow example](../Examples/Invoke-AntivirusWorkflow.ps1) for the module API.
 
-## Funktionen
+## Troubleshooting and licensing
 
-- `Initialize-ClamAV`: erkennt eine Installation oder richtet das portable
-  offizielle Windows-Paket gefuehrt ein.
-- `Update-ClamAVEngine`: aktualisiert die portable Scan-Engine getrennt von den
-  Signaturen und stellt bei einem fehlgeschlagenen Austausch die alte Version
-  automatisch wieder her.
-- `Update-ClamAVSignature`: aktualisiert die Datenbank mit `freshclam.exe` und
-  warnt nach dem konfigurierten Hoechstalter, standardmaessig sieben Tage.
-- `Get-ClamAVStatus`: liefert Version, Signaturstand, Pfade und Bereitschaft.
-- `Invoke-ClamAVScan`: Quick-, Full- oder Custom-Scan.
-- `Invoke-ClamAVTargetedScan`: scannt konkrete Reste aus der Deinstallation.
-- `Get-ClamAVScanResult`: parst ClamAV-Ausgabe in flache Ergebnisobjekte.
-- `Get-ClamAVQuarantine`: listet aktive Quarantaene-Manifeste.
-- `Restore-FromClamAVQuarantine`: stellt nach Warnung und Bestaetigung wieder her.
-- `Get-AVConfig` und `Set-AVConfig`: lesen und aendern die JSON-Konfiguration.
+Check engine/signature readiness, exact errors, permissions and configured paths before retrying. An expired signature warning is different from an engine startup failure. Do not disable installed security software to force REMNEXA to run.
 
-Der ClamAV-Engine-Download akzeptiert nur absolute HTTPS-Adressen und benoetigt
-einen gueltigen SHA-256-Pruefwert. Beim offiziellen GitHub-Release wird dessen
-Digest verwendet. Fuer eine direkte ZIP-Adresse muessen URL und erwarteter Hash
-explizit angegeben werden:
-
-```powershell
-$downloadUri = '<HTTPS-Adresse der ZIP-Datei>'
-$sha256 = '<64-stellige SHA-256-Pruefsumme>'
-Initialize-ClamAV -Install -DownloadUri $downloadUri -ExpectedSha256 $sha256
-Update-ClamAVEngine -DownloadUri $downloadUri -ExpectedSha256 $sha256
-```
-
-Ohne Digest oder bei einer Abweichung wird vor dem Entpacken abgebrochen.
-Die Installation wird neben dem Zielordner vorbereitet. Bei einem Fehler waehrend
-des Austauschs wird der vorherige Ordner wiederhergestellt; ein erfolgreich
-ersetzter Ordner bleibt als Sicherung neben dem Installationsziel erhalten.
-
-Alle oeffentlichen Funktionen besitzen Comment-Based Help, zum Beispiel:
-
-```powershell
-Get-Help Invoke-ClamAVScan -Full
-```
-
-## Scanarten und Sicherheit
-
-`Quick` prueft Temp, AppData, LocalAppData, Downloads, beide Startup-Ordner und
-typische ausfuehrbare Dateien unter ProgramData. `Full` prueft die definierten
-Windows-, Programm- und Benutzerpfade. `Custom` verlangt mindestens einen
-existierenden Pfad.
-
-ClamAV-Exit-Codes werden wie vorgesehen behandelt: 0 ist sauber, 1 bedeutet
-mindestens einen Fund, 2 ist ein Scanfehler. Ein Fund ist daher kein technischer
-Fehler. Das Zeitlimit beendet einen haengenden Prozess.
-
-`-IncludePUA` kann mehr Fehlalarme verursachen. Eine PUA-Meldung bedeutet nicht
-automatisch Schadsoftware. Vor einer Wiederherstellung prueft das Modul den im
-Manifest gespeicherten SHA-256-Hash. Ein bereits vorhandener Originalpfad wird
-nie ueberschrieben.
-
-## Integration in REMNEXA
-
-Das Hauptprogramm importiert das Modul beim Start. Unter `[9] Erweiterte
-Windows-Werkzeuge` steht `[6] ClamAV-Malware-Pruefung` bereit. Dort sind die
-Engine-Aktualisierung und die Signaturaktualisierung getrennte Optionen. Die Optionen
-`ScanBeforeRemoval` und `ScanAfterRemoval` steuern die automatische, rein
-meldende Pruefung der gefundenen Datei- und Ordnerreste. Diese Integration
-verwendet bewusst nicht `-Quarantine`: Verschieben bleibt eine ausdrueckliche
-Nutzerentscheidung.
-
-## Bekannte Einschraenkungen
-
-- ClamAV ist eine zusaetzliche Zweitmeinung und ersetzt unter Windows keinen
-  aktuellen residenten Schutz wie Microsoft Defender.
-- Verschluesselte oder kennwortgeschuetzte Archive koennen nicht vollstaendig
-  geprueft werden.
-- Zugriffsrechte, Dateisperren und ClamAV-Groessenlimits koennen Dateien
-  ueberspringen.
-- Bei `--infected` meldet ClamAV nur Funde. `Write-Progress` zeigt deshalb die
-  Vorbereitungs-, Scan- und Auswertungsphasen sowie die Zahl der Scan-Ziele,
-  nicht eine erfundene exakte Dateiprozentzahl.
-- Die portable Installation verwendet keinen ClamAV-Dienst und keinen
-  Echtzeitschutz.
-- Der komplette Anwendungsordner kann kopiert werden; `ClamAVPath` und
-  `DatabasePath` sind standardmaessig relativ und bleiben dadurch portabel.
+ClamAV has its own license and third-party notices, independent of REMNEXA's MIT license. Preserve upstream notices when distributing it. See [third-party notices](../docs/THIRD_PARTY_NOTICES.md) and [official ClamAV documentation](https://docs.clamav.net/).

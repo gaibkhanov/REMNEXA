@@ -1,86 +1,48 @@
+[English](README.md) | [Deutsch](README.de.md)
+
 # REMNEXA
 
 **More control over your Windows PC.**
 
-REMNEXA is an open-source Windows maintenance utility with a multilingual terminal interface. Uninstall supported applications, review leftover traces, manage startup entries, inspect your system and optionally run local ClamAV scans.
+A free, open-source Windows utility for application removal, startup management, system maintenance and optional local malware scanning. Review detected items and choose which supported changes to make.
 
-Review what REMNEXA finds and choose which supported changes to make. Cleanup previews, confirmations and structured logs help you understand each operation.
+**Windows 10 / 11 · PowerShell 7.5+ · MIT License · Six interface languages**
 
-**Windows 10 / 11 · PowerShell 7.5+ · MIT License · Six languages**
+> **2.2.0 is a development build**, available on the [development branch](https://github.com/gaibkhanov/REMNEXA/tree/feature/2.2.0-development). It is not a published stable release. The default branch may contain an earlier version.
 
-> **Development build: 2.2.0.** Available on [`feature/2.2.0-development`](https://github.com/gaibkhanov/REMNEXA/tree/feature/2.2.0-development). This is not a published stable release. The default `main` branch may contain an earlier version.
+## Features
 
----
+### Application removal
 
-## ✨ Features
-
-### 🗑️ Application Uninstaller
-
-Remove supported desktop and Microsoft Store applications, then review the traces they may leave behind.
-
-- Scan for potentially related files, folders and Registry entries.
-- Identify potentially related services and scheduled tasks.
-- Preview detected leftovers before choosing cleanup.
-- Review removed items, failures, intentionally retained items and remaining traces.
+- Uninstall supported desktop, MSI and Microsoft Store applications.
+- Find potentially related files, directories, Registry entries, services and scheduled tasks.
+- Preview leftovers and confirm cleanup separately from the official uninstaller.
+- Review removed, failed, intentionally retained and remaining items.
 - Keep Windows-managed package files protected from generic manual deletion.
 
-Detected traces are cleanup candidates, not proof that every item is safe to delete. Review the preview before continuing.
+A match is a cleanup candidate, not proof of ownership. Review every proposed removal. Store package removal has user and provisioning scope limits; see the [user guide](docs/USER_GUIDE.md).
 
-### 🚀 Startup Manager
+### Startup and system maintenance
 
-Review supported entries configured to launch with Windows.
+Inspect and manage supported startup entries, with backups for supported changes. View Windows version, CPU load, memory, fixed-drive space and running services. Access selected Windows repair, optional-feature and privacy tools.
 
-- Inspect entry names, commands, locations and scope.
-- Disable and restore supported startup entries.
-- Preserve backups and history for supported startup changes.
+The system overview is read-only. The current interface is a terminal application; a graphical dashboard is planned.
 
-### 🖥️ System Overview & Maintenance
+### Optional ClamAV scanning
 
-Inspect useful Windows information and access selected maintenance tools.
+Run local on-demand scans, update signatures and review detections. Supported quarantine and restore operations require deliberate selection. Initial setup and signature updates need internet access; the scanner can use an installed engine and signatures offline.
 
-- Windows version, build and architecture.
-- CPU load and memory usage.
-- Fixed-drive storage information.
-- Running Windows services and startup entries.
-- Optional service and antivirus-status checks.
-- Selected Windows repair and maintenance tools.
+REMNEXA is not a real-time antivirus and does not replace Microsoft Defender or your installed security software. A detection can be a false positive; no detections do not guarantee safety. See the [ClamAV guide](Antivirus/README.md).
 
-The system overview is **read-only**. Opening it does not automatically optimize or change Windows settings. The current interface is terminal-based; a graphical dashboard is planned.
+### Six interface languages
 
-### 🛡️ Optional Antivirus Scanning
+German, English, Spanish, French, Russian and Turkish. Translation resources are separate from application logic, with German fallback. Project documentation is available in English and German.
 
-Integrate ClamAV for local, on-demand malware scanning.
+## Installation
 
-- Set up supported ClamAV components using validated downloads.
-- Update signature databases when an internet connection is available.
-- Run manual scans and review detection results.
-- Use supported quarantine and restore operations with explicit warnings.
+Requirements: Windows 10 or 11, PowerShell **7.5 or newer**, and administrator approval for operations requiring elevated access. Windows PowerShell 5.1 cannot run the application. Consult the [compatibility matrix](docs/COMPATIBILITY_MATRIX.md) for tested limits.
 
-Local scanning does not require a cloud API key. Initial setup and signature updates require internet access; scans can run offline once the engine and signatures are available.
-
-**REMNEXA is not a real-time antivirus and does not replace Microsoft Defender or your installed security software.** Detections can be false positives; review findings before taking action.
-
-### 🌍 Multilingual Interface
-
-Six interface languages are available:
-
-🇩🇪 German · 🇬🇧 English · 🇪🇸 Spanish · 🇫🇷 French · 🇷🇺 Russian · 🇹🇷 Turkish
-
-Language resources are stored separately from application logic, with a German fallback.
-
----
-
-## 📥 Installation
-
-### Requirements
-
-- Windows 10 or Windows 11; see the [compatibility matrix](docs/COMPATIBILITY_MATRIX.md) for verification limits.
-- PowerShell **7.5 or newer**, or a compatible portable runtime supplied with a distribution. Windows PowerShell 5.1 cannot run REMNEXA.
-- Administrator approval for operations requiring elevated access. REMNEXA explains the reason before opening the Windows permission prompt.
-
-### Run the 2.2.0 development version from source
-
-Download the ZIP from the [2.2.0 development branch](https://github.com/gaibkhanov/REMNEXA/tree/feature/2.2.0-development), or clone that branch:
+Download the development branch ZIP or use Git:
 
 ```powershell
 git clone --branch feature/2.2.0-development https://github.com/gaibkhanov/REMNEXA.git
@@ -88,121 +50,63 @@ Set-Location REMNEXA
 .\REMNEXA.cmd
 ```
 
-Alternatively, start the application directly with PowerShell 7.5+:
+Alternatively:
 
 ```powershell
 pwsh -NoProfile -File .\REMNEXA.ps1
 ```
 
-The launcher uses `runtime\pwsh.exe` when it is bundled; otherwise it looks for `pwsh.exe` in your system's `PATH`.
+The launcher prefers a bundled `runtime\pwsh.exe`, otherwise PowerShell on `PATH`. **The source repository excludes the portable runtime, ClamAV binaries and signature databases.** Install PowerShell separately for a source checkout. Keep the source directories together. A new Windows installer is not included.
 
-**The source repository does not include the portable PowerShell runtime, ClamAV binaries or signature databases.** Install PowerShell separately for a source checkout. ClamAV is optional and has its own setup requirements; see the [ClamAV guide](Antivirus/README.md). A new Windows installer is not available in this development build.
+## Safety and control
 
----
+- Review cleanup previews and explicitly confirm interactive destructive actions.
+- Read the action-specific explanation before allowing a Windows administrator prompt.
+- Protected components are blocked by default; WindowsApps folders are excluded from generic deletion.
+- Supported operations attempt to create a new restore point and verify Windows actually created it.
+- Structured logs distinguish skipped paths, failures and final remaining traces.
+- Personal folders are excluded from the default leftover scan; an extended scan requires extra care.
 
-## 🔒 Safety First
+Backups and restore points do not guarantee full recovery. Uninstalling another vendor's application can be irreversible. Keep independent backups of important data.
 
-REMNEXA makes sensitive operations visible and asks before supported interactive changes.
+Service and antivirus checks are snapshots. A stopped demand-start service is not automatically faulty. Another registered antivirus can explain Defender standing down, but registration alone does not prove active protection.
 
-- Preview cleanup candidates before removal.
-- Confirm destructive actions explicitly in the interactive workflow.
-- Block protected Windows components by default.
-- Request elevated access when required, with an explanation beforehand.
-- Attempt to create restore points for supported write operations and verify that Windows created a new point.
-- Keep structured logs for troubleshooting and review.
-- Explain skipped Windows-managed files and access failures without taking ownership or overriding their access permissions.
+## What's new in 2.2.0
 
-**Some changes cannot be fully reversed.** Restore points and supported configuration backups do not guarantee complete recovery, especially after uninstalling third-party software. Review every deletion and keep independent backups of important files. If a new restore point cannot be confirmed, review the warning before choosing whether to continue without it.
-
-Personal folders are excluded from the default leftover scan. The optional extended scan can include personal files and requires particular care.
-
-Service and antivirus checks are snapshots. A stopped demand-start service is not automatically broken. Defender can stand down when another antivirus is registered, but registration alone does not confirm active real-time protection. Status messages do not prove that an uninstall caused a Windows problem.
-
----
-
-## 🆕 What's New in 2.2.0?
-
-Version 2.2.0 builds on the 2.1.3 baseline with maintenance, safety and usability improvements:
-
-- HTTPS and SHA-256 validation for supported ClamAV downloads.
-- Staged ClamAV installation and configuration-recovery handling.
-- Additional cleanup-path validation, including linked-path checks and protection for Windows-managed package files.
-- Clearer results for skipped, failed and remaining traces, including Registry deletion failures.
+- HTTPS and SHA-256 checks for supported ClamAV downloads; staged installation and configuration recovery.
+- Additional linked-path checks and validation of supported privacy backups.
+- Clearer cleanup accounting, access errors and Windows-managed retained items.
 - Completion at 100% before the optional system-status check.
-- Context-aware service and antivirus messages, without duplicate Defender warnings.
-- Action-specific administrator explanations.
-- Next/previous page options shown only when those pages exist.
-- One visible exit choice per prompt: 0 where it already exits, otherwise X for direct exit.
-- Modular core components, six external language resources and a read-only system overview.
-- Expanded automated regression coverage.
+- Contextual service/antivirus messages and action-specific administrator explanations.
+- Page navigation only when another page exists; one visible exit option per prompt.
+- Modular core components, external translations and a read-only system overview.
 
-**Verification:** the application baseline passed **79 local Pester tests** and **12 self-test checks**. These are local results, not a claim of a complete Windows compatibility matrix or a verified GitHub Actions run. Known limitations, analyzer warnings and untested scenarios are recorded in the [2.2.0 development report](docs/VERSION_2.2.0.md) and [development workflow](docs/DEVELOPMENT_WORKFLOW.md).
+The recorded application baseline passed **79 local Pester tests and 12 self-test checks**. This is not a complete compatibility, security or CI certification. See the [development report](docs/VERSION_2.2.0.md).
 
-**Release status:** development build, not a published stable release.
+## Documentation
 
----
+- [Documentation index](docs/README.md) · [User guide](docs/USER_GUIDE.md)
+- [ClamAV guide](Antivirus/README.md) · [Changelog](CHANGELOG.md)
+- [Architecture audit](docs/ARCHITECTURE_AUDIT.md) · [Roadmap](docs/DEVELOPMENT_ROADMAP.md)
+- [Security model](docs/SECURITY_MODEL.md) · [Compatibility](docs/COMPATIBILITY_MATRIX.md)
+- [Development workflow](docs/DEVELOPMENT_WORKFLOW.md) · [Backup guide](docs/BACKUP_AND_CHECKPOINTS.md)
 
-## 🗺️ Roadmap
+## Roadmap
 
-REMNEXA is being developed incrementally toward a broader Windows maintenance platform.
+A graphical dashboard, broader storage analysis, stronger removal attribution, a central restore interface, an embedded offline AI assistant and improved packaging remain planned. **No AI model or inference runtime is included.** See the roadmap for implementation and verification status.
 
-Planned work includes:
+## Contributing and security
 
-- A graphical system dashboard.
-- More advanced disk and storage analysis.
-- Enhanced application-removal workflows.
-- Improved backup and recovery tools.
-- A locally integrated, offline AI assistant.
-- A simplified Windows installer.
+Read [CONTRIBUTING.md](CONTRIBUTING.md) before submitting changes. For bugs, [open an issue](https://github.com/gaibkhanov/REMNEXA/issues) with versions, reproduction steps and expected/actual results. Remove private paths, credentials and sensitive log content before posting. Report vulnerabilities through [SECURITY.md](SECURITY.md).
 
-These are future capabilities, not completed features of this development build. No local AI model or inference runtime is included.
+## Support the project
 
----
-
-## 📖 Documentation
-
-- [Detailed German user guide](README-Programm-Entferner.txt)
-- [ClamAV integration](Antivirus/README.md)
-- [2.2.0 development report](docs/VERSION_2.2.0.md)
-- [Changelog](CHANGELOG.md)
-- [Development roadmap](docs/DEVELOPMENT_ROADMAP.md)
-- [Security model](docs/SECURITY_MODEL.md)
-- [Compatibility information](docs/COMPATIBILITY_MATRIX.md)
-- [Architecture audit](docs/ARCHITECTURE_AUDIT.md)
-- [Development workflow](docs/DEVELOPMENT_WORKFLOW.md)
-
-Official references: [Microsoft PowerShell](https://learn.microsoft.com/powershell/) and [ClamAV](https://docs.clamav.net/).
-
----
-
-## 🤝 Contributing
-
-Contributions, bug reports and suggestions are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) before submitting a change.
-
-For a bug report, [open a GitHub issue](https://github.com/gaibkhanov/REMNEXA/issues) with the REMNEXA version, Windows and PowerShell versions, steps to reproduce, and expected versus actual behavior.
-
-Remove private system information, personal file paths, credentials and sensitive log data before posting a public report. For security vulnerabilities, follow [SECURITY.md](SECURITY.md).
-
----
-
-## ❤️ Support the Project
-
-REMNEXA is an open-source project developed to help Windows users maintain and manage their computers.
-
-If you find it useful, you can support continued development through the [PayPal donation page](https://www.paypal.com/pool/9uaOjAIYHS?sr=wccr).
+Donations are optional. You can support development through the [PayPal donation page](https://www.paypal.com/pool/9uaOjAIYHS?sr=wccr).
 
 [![Donate with PayPal](https://img.shields.io/badge/Donate-PayPal-0070BA?logo=paypal&logoColor=white)](https://www.paypal.com/pool/9uaOjAIYHS?sr=wccr)
 
-Donations are optional. Reporting bugs, improving translations and contributing code also help.
+Bug reports, translations and code contributions also help.
 
----
+## License
 
-## 📜 License
-
-REMNEXA is licensed under the [MIT License](LICENSE).
-
-Optional third-party components, including ClamAV and PowerShell, retain their own licenses and redistribution requirements. Their licensing terms are independent of REMNEXA's MIT License.
-
----
-
-**REMNEXA — More control over your Windows PC.**
+REMNEXA uses the [MIT License](LICENSE). Optional third-party components retain their own terms; see [third-party notices](docs/THIRD_PARTY_NOTICES.md). REMNEXA's license does not replace those obligations.

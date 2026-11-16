@@ -1,30 +1,40 @@
+[English](STATIC_ANALYSIS_BASELINE.md) | [Deutsch](STATIC_ANALYSIS_BASELINE.de.md)
+
 # Static analysis baseline
 
-**Date:** 2026-11-16\
-**Analyzer:** PSScriptAnalyzer 1.24.0 on PowerShell 7.6.9\
-**Scope:** 58 first-party PowerShell source, module, manifest, test and developer-tool files. Historical backups, runtime payloads, ClamAV vendor files and the bundled analyzer module were excluded.
+**Tool:** PSScriptAnalyzer 1.24.0 on PowerShell 7.6.9. This is a recorded application-code baseline, not a new scan of the documentation revision.
 
-## Result
+## Scope and results
 
-- Errors: **0**
-- Warnings: **230**
-- Informational findings: **44**
-- Total findings: **274**
+Scope is 64 first-party PowerShell source, module, manifest, test and developer-tool files. Historical backups, vendor runtime/ClamAV content and analyzer dependencies are excluded.
 
-The CI workflow and local runner gate on analyzer errors, so the local error gate passes. The warning set is a baseline, not a claim that every warning is harmless or resolved. The rule-by-rule notes below were written during the earlier 50-file scan; the expanded scope includes first-party tools and still needs a fresh rule-level review.
+| Run | Errors | Warnings | Information | Interpretation |
+| --- | --- | --- | --- | --- |
+| Earlier sequential full analysis of the same application code | 0 | 322 | 49 | Recorded warning baseline, not warning-free certification. |
+| Error-only gate in the Git checkout | 0 | Not requested | Not requested | Completed error gate across 64 files. |
+| Full warning-level run in the Git checkout | Incomplete | Incomplete | Incomplete | Intermittent null-reference failure on `tests/Navigation.Tests.ps1`. |
 
-## Warning triage
+Do not combine a successful error-only gate with an incomplete full run and describe it as a complete new analysis. Older smaller-scope counts are superseded by this scope and should not be compared as though the file set were identical.
 
-- **157 `PSAvoidUsingWriteHost`:** REMNEXA is a console interface and deliberately uses colored host output for menus, progress and results. Replacing these calls wholesale would change the interface and output behavior; revisit them as part of the UI boundary work in Phase C/F.
-- **13 `PSAvoidUsingEmptyCatchBlock`:** several catches are best-effort console, host-title or optional-system probes. Review each with its surrounding operation before changing error behavior; do not add noisy errors to expected fallback paths.
-- **9 `PSUseShouldProcessForStateChangingFunctions`:** the flagged functions are `New-FreshClamConfiguration`, `Update-ClamAVSignature`, `New-RemnexaAiRequest`, `New-RemnexaOperationResult`, `Set-OperationProgress`, `New-RestorePointIfPossible`, `Remove-RegistryTrace`, `Remove-Traces` and `Set-PrivacyProfile`. The two request/result constructors only build in-memory data; these are false positives from the verb-based rule. Other functions still need a focused `-WhatIf`/`ShouldProcess` design review before the warning is suppressed or fixed.
-- **19 `PSReviewUnusedParameter`:** includes the script's legacy command-line parameters, which are consumed by its dispatcher and compatibility paths. Preserve the public command-line interface while checking these during modularization.
-- **22 `PSUseSingularNouns`:** existing function names are used by current modules and call sites. Renaming them needs compatibility wrappers and regression coverage.
-- **4 `PSUseBOMForUnicodeEncodedFile`:** the files are UTF-8 without BOM and run on the declared PowerShell 7.5+ baseline. Do not rewrite encodings until the packaging/compatibility policy is set.
-- **1 `PSAvoidAssignmentToAutomaticVariable`:** review the flagged assignment before changing it; preserve the legacy call surface.
-- Remaining warnings concern global compatibility variables and a legacy helper verb; review those with the API and logging changes.
-- The 41 informational findings are split between 16 `PSProvideCommentHelp` and 25 `PSUseOutputTypeCorrectly` findings.
+## Triage priorities
 
-## Verification limits
+- Review empty catch blocks and state-changing functions without consistent `ShouldProcess` semantics.
+- Inspect automatic-variable assignments, unused parameters and global compatibility state before refactoring.
+- Console `Write-Host` calls are often intentional UI output, but each warning still needs contextual review.
+- Preserve callable interfaces when addressing plural nouns or legacy verbs.
+- In-memory request/result constructors do not mutate the system merely because their names start with New; assess such findings individually.
+- Evaluate encoding, comment-help and output-type findings against the declared PowerShell 7.5+ runtime.
 
-PSScriptAnalyzer was obtained from the PowerShell Gallery over HTTPS. Its SHA-512 package hash matched the Gallery's version metadata. The package was extracted only to the isolated workspace for analysis and is not an application dependency. GitHub Actions has not run because version control is intentionally not used in this workflow.
+Do not suppress categories wholesale or claim every warning harmless. Detailed per-rule counts from smaller historical runs are not a current full triage.
+
+## Reproduce
+
+Install PSScriptAnalyzer 1.24.0, then run from the project root:
+
+```powershell
+pwsh -NoProfile -File .\tools\RunPSScriptAnalyzer.ps1 -ProjectRoot (Get-Location).Path
+```
+
+The runner prints findings and fails on analyzer errors. The complete run may reproduce the documented tool failure. Capture sanitized failure details and isolate a minimal reproduction; do not alter tests simply to conceal it.
+
+The [CI workflow](../.github/workflows/quality.yml) uses an error-only gate. Its definition is not evidence of a passed remote run. See [workflow](DEVELOPMENT_WORKFLOW.md) and [verification report](VERSION_2.2.0.md).

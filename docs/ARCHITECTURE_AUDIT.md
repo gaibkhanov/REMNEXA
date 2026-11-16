@@ -1,65 +1,59 @@
-# REMNEXA architecture audit
+[English](ARCHITECTURE_AUDIT.md) | [Deutsch](ARCHITECTURE_AUDIT.de.md)
 
-**Audit date:** 2026-11-16\
-**Baseline:** REMNEXA 2.1.3\
-**Scope:** the active application source, PowerShell module, launchers, configuration, documentation and local test/build metadata. Historical `Backup-*` trees and ignored runtime payloads are recorded separately from the active source.
+# Architecture audit
 
-## Baseline and evidence
+**Scope:** first-party source for the 2.2.0 development build, derived from the 2.1.3 baseline. This is a source review with targeted tests, not a complete independent security audit.
 
-The local project at `C:\Users\gaibk\OneDrive\Software\REMNEXA` has no `.git` directory. A read-only comparison recorded earlier in this session found the main script byte-identical to GitHub `main` at commit `652360ebd8751be5f66b579e9e7d18854d8bb4de`; the public version was 2.1.3. The local folder therefore does not provide a verifiable local branch name, commit, or dirty-state report. Development remains in a separate source snapshot. The active OneDrive application files remain unchanged; an explicitly requested `Backup-2.1.3` directory was added beside them.
+## Current structure
 
-The active source contains a 3,615-line `REMNEXA.ps1`, a separate `Antivirus` PowerShell module, JSON configuration, five REMNEXA `.cmd` launchers, compatibility launchers, German user documentation, and a root README/license. The tree also contains versioned historical backups. The `.gitignore` excludes `runtime/`, `ClamAV/`, `Backup-*/`, logs, and JSONL files. The source inventory has no `tests/`, `.github/workflows/`, or existing `docs/` directory.
+| Area | Responsibility |
+| --- | --- |
+| `REMNEXA.cmd`, compatibility launchers | Select a suitable PowerShell runtime and launch the application. |
+| `REMNEXA.ps1` | Console navigation, program inventory, uninstall/cleanup orchestration and Windows tools. |
+| `Core/` | Localization, settings, logging, processes, permissions, results, system snapshots, path safety, menu and security assessment. |
+| `locales/` | Six JSON language resources; 282 keys per language at the recorded baseline. |
+| `Antivirus/` | Optional ClamAV setup, scanning, signatures and quarantine. |
+| `config/`, `assets/`, `Examples/` | Default configuration, visual assets and usage examples. |
+| `tests/`, `tools/`, `.github/workflows/` | Regression tests, local checks, backup tooling and CI configuration. |
 
-## Existing structure and behavior
+The console dispatcher remains substantial. Compatibility wrappers preserve existing calls while selected responsibilities move into modules. There is no full graphical application or universal task scheduler.
 
-| Area | Current implementation | Evidence |
-|---|---|---|
-| Entry point and UI | Interactive terminal UI in one large script; roughly 240 `Write-Host` calls. No WPF, WinForms, or other GUI framework references were found. | `REMNEXA.ps1`, function inventory and static search |
-| Program removal | Registry uninstall entries and Appx packages are listed; user selection, protected-component checks, dry-run support, restore-point attempt, confirmation, uninstall invocation, residual search and run logs are handled in the main script. | `Get-InstalledPrograms`, `Find-AllTraces`, `Invoke-RemovalOperation`, `Remove-Traces` |
-| Other system functions | Startup management with JSON backups/history, selected privacy registry changes with a backup, service listing, Windows maintenance tools, integrity checks and log cleanup. | `REMNEXA.ps1` functions around lines 1802–3020 |
-| Antivirus | Optional ClamAV PowerShell module with setup, updates, scans, results, quarantine and restore. It is an on-demand second opinion, not real-time protection. | `Antivirus/Antivirus.psd1`, module files and `Antivirus/README.md` |
-| Localization | Six languages are stored as translation arrays inside the main script: German, English, Spanish, French, Russian and Turkish. | `$script:LanguageCodes`, `$script:Texts` |
-| Logging | JSON run/tool logs and JSONL history are stored under `%LOCALAPPDATA%\REMNEXA`. | `Save-RunLog`, `Save-ToolLog`, history functions |
-| Startup and packaging | `.cmd` launchers select a portable `runtime\pwsh.exe` when present, else `pwsh.exe` on `PATH`. No installer or build pipeline is present in the source inventory. | `REMNEXA.cmd`, `.gitignore`, inventory |
-| Tests and CI | No test suite, workflow, benchmark, or analyzer configuration exists. The machine has Pester 3.4.0; PSScriptAnalyzer was not found. | Local tool discovery and file inventory |
+## Operation boundaries
 
-## Confirmed defects and risks
+Application inventory includes registered desktop uninstallers and supported Appx packages. The pipeline previews candidates, obtains required approvals, attempts a verified restore point, invokes the registered uninstaller, rescans, offers separate leftover cleanup, verifies remaining traces and writes logs/history. Optional status assessment follows the completed removal.
 
-These are code-level findings. They have not been represented as a successful exploit or as a complete security review.
+Registry, filesystem, registered commands, services, scheduled tasks and vendor package tools are sensitive boundaries. Some matching is still name-based. No universal publisher/product/shared-dependency attribution has been validated.
 
-| Priority | Finding | Evidence and impact |
-|---|---|---|
-| High | Recursive cleanup does not validate every ancestor for a junction/symlink immediately before deletion. | `Add-FileTraceIfSafe` rejects a reparse point on the selected leaf (around line 1260), but `Remove-Traces` recursively removes a directory (around line 1709) after only `Test-ProtectedFilePath`; ancestor components are not rechecked. A linked parent could redirect a candidate outside its expected tree. This conflicts with the requested junction-attack protection and needs an isolated regression test before release. |
-| High | Baseline ClamAV installation and engine-update paths could proceed without a valid digest; engine updates also accepted configured non-HTTPS ZIP URLs. | `Initialize-ClamAV` and `Update-ClamAVEngine` only checked a digest when metadata happened to match `sha256:<64 hex>`, and the update path did not enforce HTTPS. The isolated snapshot now requires HTTPS and a matching SHA-256 for both paths, accepts `-ExpectedSha256` for direct ZIP URLs, and stages initial installation with rollback. Synthetic regression tests pass; no vendor package was downloaded or executed. |
-| High | Privacy restore trusted registry paths, names, types and values loaded from a mutable JSON backup. | `Restore-PrivacyProfile` previously applied each JSON snapshot directly. The privacy tool can request elevation, so a tampered backup could redirect writes outside the intended privacy settings. The isolated snapshot now validates the complete backup against the fixed path/name allowlist and accepted value types before performing any write. Tests cover a valid fixture and path, completeness and type tampering; no live registry was changed. |
-| Medium | The self-test treats optional distribution components as mandatory. | `Invoke-RemnexaSelfTest` requires `runtime\pwsh.exe` and marks ClamAV failed whenever its engine is not installed (around lines 3297–3340), although `README.md` says the source distribution excludes the portable runtime and ClamAV engine. The first Phase B fix in this audit snapshot corrects this and adds a regression test. |
-| Medium | A restore point is not a rollback for every operation. | Startup and privacy changes have app-managed restore data, while app uninstall and residual deletion cannot be reliably reversed. The UI must continue to describe these as distinct recovery levels. |
-| Medium | The local source checkout cannot establish Git provenance. | There is no `.git` directory and Git was not found in standard install locations. `workspace_git` could not identify this folder as a workspace. No local branch or commit can be safely created or claimed from this machine state. |
+## Confirmed defects addressed in 2.2.0
 
-## Confirmed safeguards
+| Earlier defect | Current control |
+| --- | --- |
+| Optional source-package components failed self-test | Runtime and ClamAV engine absence is handled as optional. |
+| Missing/malformed archive digest could allow installation | HTTPS plus matching SHA-256 required before extraction. |
+| Replacement engine/configuration could leave partial setup | Staged installation, atomic config commit and rollback on commit failure. |
+| Linked-path cleanup risk | Ancestor reparse-point checks at collection and before removal; uninspectable paths rejected. |
+| Privacy restore trusted arbitrary input | Schema and fixed Registry allowlist validated before writes. |
+| WindowsApps deletion produced avoidable access failures | Windows-managed package directories intentionally retained. |
+| Registry exit code 1 counted as success | Failure accounting and successful-parent coverage separated. |
+| Progress waited at 92% for optional status check | Save removal result and reach 100% before optional assessment. |
+| Misleading service/duplicate Defender warnings | Contextual service and combined antivirus assessment. |
+| Invalid paging and duplicate exit choices | Bounds checked; one advertised exit per prompt. |
 
-- PowerShell 7.5 or newer is required by the script and module manifests.
-- Administrator elevation is deferred until an operation requires it; the removal path can use the current session without elevation where supported.
-- Protected services/components and risky trace classes have explicit checks; removal previews and confirmations exist, and a dry-run option is exposed.
-- Restore-point failure blocks a noninteractive uninstall and requires an explicit choice in interactive mode.
-- ClamAV detections are not automatically deleted. Quarantine and restore are separate actions.
-- The README states that REMNEXA is not a replacement for Microsoft Defender and documents the risk of optional personal-file cleanup.
+These controls have targeted regression coverage; they do not prove every removal/recovery scenario.
 
-## Dependency and license inventory
+## Remaining risks and improvement proposals
 
-- Application runtime: PowerShell 7.5+ on Windows 10/11, as stated in the README and `#requires` directives.
-- Optional scanner: official ClamAV Windows release fetched from Cisco Talos/GitHub when requested. The active source has a module; the Git-ignored local folder also contains scanner binaries and upstream license files, which are not part of the source snapshot.
-- Application license: MIT. The ClamAV project and bundled third-party libraries retain separate license terms. A release that redistributes binaries or model weights needs a fresh component-by-component license review.
-- No Python, Node.js, Docker, Ollama, cloud API or model dependency exists in the active source. No local AI runtime or model is implemented.
+1. **High priority:** stronger ownership attribution and shared-resource handling before expanding cleanup.
+2. **High priority:** comprehensive restore verification, non-success paths and isolated Windows integration coverage.
+3. **High priority:** filesystem race remains between validation and use; path checks are not handle-based isolation.
+4. **Medium priority:** large dispatcher, legacy wrappers and analyzer warning debt require gradual refactoring.
+5. **Medium priority:** signature-update failure after engine installation is outside the installation transaction.
+6. **Unimplemented:** full rollback center, GUI, packaged offline AI, complete installer and release validation.
 
-## Architecture decision
+## UI and dependency decision
 
-Keep PowerShell as the implementation baseline for Phase B. The existing console workflows and Windows integrations do not yet provide evidence that a full UI technology replacement would improve this application. First add safety tests and explicit module boundaries around the current code; evaluate a GUI migration only after startup, responsiveness, packaging, accessibility and maintenance costs can be measured against the console baseline.
+Retain the PowerShell console during stabilization. Compare a Windows-native graphical option against startup time, memory, accessibility, packaging and migration effort before adopting it. No measured benefit currently justifies replacing the whole stack.
 
-## Implementation progress in the isolated snapshot
+PowerShell and optional ClamAV remain separate dependencies. Development uses Pester and PSScriptAnalyzer. No AI runtime/model has been integrated or licensed for distribution. See [third-party notices](THIRD_PARTY_NOTICES.md).
 
-The working snapshot corrects the optional-component self-test, requires an absolute HTTPS URL and SHA-256 match for ClamAV installation and engine-update archives, stages initial installation with rollback, writes Antivirus configuration atomically, validates privacy restore backups against a fixed allowlist, and rejects linked or uninspectable path components. Phase C has extracted localization, settings, logging, native process execution, administrator checks and versioned operation results into focused Core modules while retaining compatibility wrappers. A bounded, advisory-only AI data contract remains disconnected from any model. The read-only system snapshot is now shown from home-menu option 9; synthetic tests and a live Windows CIM query passed, and an isolated mock-host run navigated through the menu entry and back. The quarantine restore prompt handles return and invalid entries in all supported languages. The local Pester suite passes **34 tests** under PowerShell 7.6.9; Windows PowerShell 5.1 parsed **58 active PowerShell files** without syntax errors; PSScriptAnalyzer 1.24.0 reported **0 errors, 230 warnings and 44 informational findings**. The test runner now returns a nonzero exit status for failed tests. The untouched OneDrive source and verified `Backup-2.1.3` remain unchanged. Visual behavior in a normal interactive Windows Terminal remains unverified. GitHub Actions has not run and nothing has been published.
-
-## Audit limits
-
-This was a static source review plus parser checks under Windows PowerShell 5.1 and targeted runtime tests under PowerShell 7.6.9. Static parsing succeeded for every active `.ps1`, `.psm1` and `.psd1` file, but that is not full application validation: the application requires PowerShell 7.5+. Live vendor-download verification, elevated privacy-restore integration tests, destructive-operation tests, installer tests, Windows-version matrix tests and a complete third-party license audit remain outstanding. Pester 5.7.1 and GitHub Actions have not run locally or remotely.
+See [roadmap](DEVELOPMENT_ROADMAP.md), [security model](SECURITY_MODEL.md), [compatibility](COMPATIBILITY_MATRIX.md) and [verification report](VERSION_2.2.0.md).
