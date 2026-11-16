@@ -70,6 +70,23 @@ vom Scan ausgeschlossen.
 - `Restore-FromClamAVQuarantine`: stellt nach Warnung und Bestaetigung wieder her.
 - `Get-AVConfig` und `Set-AVConfig`: lesen und aendern die JSON-Konfiguration.
 
+Der ClamAV-Engine-Download akzeptiert nur absolute HTTPS-Adressen und benoetigt
+einen gueltigen SHA-256-Pruefwert. Beim offiziellen GitHub-Release wird dessen
+Digest verwendet. Fuer eine direkte ZIP-Adresse muessen URL und erwarteter Hash
+explizit angegeben werden:
+
+```powershell
+$downloadUri = '<HTTPS-Adresse der ZIP-Datei>'
+$sha256 = '<64-stellige SHA-256-Pruefsumme>'
+Initialize-ClamAV -Install -DownloadUri $downloadUri -ExpectedSha256 $sha256
+Update-ClamAVEngine -DownloadUri $downloadUri -ExpectedSha256 $sha256
+```
+
+Ohne Digest oder bei einer Abweichung wird vor dem Entpacken abgebrochen.
+Die Installation wird neben dem Zielordner vorbereitet. Bei einem Fehler waehrend
+des Austauschs wird der vorherige Ordner wiederhergestellt; ein erfolgreich
+ersetzter Ordner bleibt als Sicherung neben dem Installationsziel erhalten.
+
 Alle oeffentlichen Funktionen besitzen Comment-Based Help, zum Beispiel:
 
 ```powershell

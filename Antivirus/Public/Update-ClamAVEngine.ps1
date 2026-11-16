@@ -16,6 +16,10 @@ function Update-ClamAVEngine {
     Optionale direkte offizielle ZIP-Adresse. Ohne Angabe wird das neueste
     offizielle Cisco-Talos-Release automatisch ermittelt.
 
+    .PARAMETER ExpectedSha256
+    Erwarteter SHA-256-Pruefwert fuer eine direkte ZIP-Adresse, bei der keine
+    Release-Metadaten mit Digest vorliegen.
+
     .PARAMETER Force
     Installiert das aktuelle Paket erneut, auch wenn die Versionsnummer bereits
     mit dem neuesten Release uebereinstimmt.
@@ -33,6 +37,7 @@ function Update-ClamAVEngine {
     param(
         [string]$ConfigPath = $script:AVConfigPath,
         [string]$DownloadUri,
+        [string]$ExpectedSha256,
         [switch]$Force,
         [switch]$UpdateSignatures
     )
@@ -44,6 +49,7 @@ function Update-ClamAVEngine {
     }
 
     $asset = Resolve-ClamAVReleaseAsset -DownloadUri $(if ($DownloadUri) { $DownloadUri } else { [string]$config.DownloadUri })
+    $asset = Assert-ClamAVReleaseAsset -Asset $asset -ExpectedSha256 $ExpectedSha256
     if (-not $Force -and $asset.Version -and $statusBefore.Version -eq $asset.Version) {
         Write-AVLog -Message "ClamAV-Engine ist bereits aktuell: $($statusBefore.Version)." -Level 'Success' -Event 'EngineUpdate'
         return [PSCustomObject]@{
@@ -80,12 +86,7 @@ function Update-ClamAVEngine {
         Write-AVLog -Message "ClamAV-Engine-Update gestartet: $($statusBefore.Version) -> $($asset.Version)." -Event 'EngineUpdate'
         Write-Progress -Activity 'ClamAV-Engine-Update' -Status 'Offizielles Paket wird heruntergeladen' -PercentComplete 10
         Invoke-WebRequest -Uri $asset.Uri -OutFile $archivePath -UseBasicParsing -ErrorAction Stop
-        if ($asset.Digest -match '^sha256:([a-fA-F0-9]{64})$') {
-            $actualHash = (Get-FileHash -LiteralPath $archivePath -Algorithm SHA256 -ErrorAction Stop).Hash
-            if ($actualHash -ne $Matches[1]) {
-                throw 'Die SHA-256-Pruefung des ClamAV-Updates ist fehlgeschlagen. Die vorhandene Installation bleibt unveraendert.'
-            }
-        }
+        [void](Assert-ClamAVArchiveDigest -Digest ([string]$asset.Digest) -ArchivePath $archivePath)
 
         Write-Progress -Activity 'ClamAV-Engine-Update' -Status 'Paket wird vorbereitet' -PercentComplete 35
         Expand-Archive -LiteralPath $archivePath -DestinationPath $extractPath -Force -ErrorAction Stop

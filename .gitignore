@@ -1,5 +1,10 @@
 /runtime/
 /ClamAV/
 /Backup-*/
+/tools/Modules/
+/tools/*.nupkg
+/FILES-SHA256.csv
+/COPY-PROVENANCE.csv
+/TestResults.xml
 *.log
 *.jsonl

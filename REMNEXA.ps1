@@ -1,4 +1,4 @@
-﻿#requires -Version 7.5
+#requires -Version 7.5
 
 [CmdletBinding()]
 param(
@@ -27,13 +27,24 @@ param(
 
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = 'Stop'
+Import-Module -Name (Join-Path $PSScriptRoot 'Core\PathSafety.psd1') -Force -ErrorAction Stop
+Import-Module -Name (Join-Path $PSScriptRoot 'Core\PrivacyBackupValidation.psd1') -Force -ErrorAction Stop
+Import-Module -Name (Join-Path $PSScriptRoot 'Core\MenuChoices.psd1') -Force -ErrorAction Stop
+Import-Module -Name (Join-Path $PSScriptRoot 'Core\Localization.psd1') -Force -ErrorAction Stop
+Import-Module -Name (Join-Path $PSScriptRoot 'Core\AppSettings.psd1') -Force -ErrorAction Stop
+Import-Module -Name (Join-Path $PSScriptRoot 'Core\Logging.psd1') -Force -ErrorAction Stop
+Import-Module -Name (Join-Path $PSScriptRoot 'Core\Permissions.psd1') -Force -ErrorAction Stop
+Import-Module -Name (Join-Path $PSScriptRoot 'Core\OperationResults.psd1') -Force -ErrorAction Stop
+Import-Module -Name (Join-Path $PSScriptRoot 'Core\SystemSnapshot.psd1') -Force -ErrorAction Stop
+Import-Module -Name (Join-Path $PSScriptRoot 'Core\SecurityAssessment.psd1') -Force -ErrorAction Stop
 
 $script:BrandName = 'REMNEXA'
-$script:CleanerVersion = '2.1.3'
+$script:CleanerVersion = '2.2.0'
 $script:RestartRequired = $false
 $script:ExitRequested = $false
 $script:LastRunLogPath = ''
 $script:LastRunSummary = $null
+$script:LastOperationResult = $null
 $script:ReturnToProgramList = $false
 $script:LogLines = New-Object System.Collections.Generic.List[string]
 $global:ProgramCleanerLogLines = $script:LogLines
@@ -67,245 +78,8 @@ $script:ProtectedComponents = @(
     [PSCustomObject]@{ Category = 'Microsoft Visual C++ Redistributable'; Pattern = '(?i)Microsoft\s*Visual\s*C\+\+.*(Redistributable|Runtime)|VC\+\+.*Runtime' }
 )
 
-# Reihenfolge aller Übersetzungen: Deutsch, Englisch, Spanisch, Französisch, Russisch, Türkisch.
-$script:Texts = @{
-    AppDescription       = @('Deinstalliert ein ausgewähltes Windows-Programm und sucht danach nach Resten.', 'Uninstalls a selected Windows program and then searches for leftovers.', 'Desinstala un programa de Windows y después busca restos.', 'Désinstalle un programme Windows puis recherche les résidus.', 'Удаляет выбранную программу Windows, а затем ищет её остатки.', 'Seçilen Windows programını kaldırır ve ardından kalıntıları arar.')
-    AdminDeferred        = @('Administratorrechte werden erst nach Auswahl [1] angefordert.', 'Administrator rights are requested only after selecting [1].', 'Los derechos de administrador se solicitan solo después de elegir [1].', 'Les droits administrateur ne sont demandés quʼaprès le choix [1].', 'Права администратора запрашиваются только после выбора [1].', 'Yönetici hakları yalnızca [1] seçildikten sonra istenir.')
-    SelectPrompt         = @('Auswahl', 'Selection', 'Selección', 'Sélection', 'Выбор', 'Seçim')
-    SearchPrompt         = @('Suchtext', 'Search text', 'Texto de búsqueda', 'Texte recherché', 'Текст поиска', 'Arama metni')
-    MainQuestion         = @('Was möchtest du tun?', 'What would you like to do?', '¿Qué deseas hacer?', 'Que souhaitez-vous faire ?', 'Что вы хотите сделать?', 'Ne yapmak istiyorsunuz?')
-    Main1                = @('Programm über den Namen suchen', 'Search for a program by name', 'Buscar un programa por nombre', 'Rechercher un programme par nom', 'Найти программу по имени', 'Programı adına göre ara')
-    Main2                = @('Installierte Anwendungen auflisten (empfohlen)', 'List installed applications (recommended)', 'Listar aplicaciones instaladas (recomendado)', 'Lister les applications installées (recommandé)', 'Показать установленные приложения (рекомендуется)', 'Yüklü uygulamaları listele (önerilen)')
-    Main3                = @('Alle Einträge einschließlich Systemkomponenten anzeigen', 'Show all entries including system components', 'Mostrar todas las entradas, incluidos los componentes del sistema', 'Afficher toutes les entrées, y compris les composants système', 'Показать все записи, включая системные компоненты', 'Sistem bileşenleri dahil tüm kayıtları göster')
-    Main4                = @('Nur Reste eines bereits entfernten Programms suchen', 'Search only for leftovers of an already removed program', 'Buscar solo restos de un programa ya eliminado', 'Rechercher uniquement les résidus dʼun programme déjà supprimé', 'Искать только остатки уже удалённой программы', 'Önceden kaldırılmış bir programın yalnızca kalıntılarını ara')
-    Main5                = @('Trockenlauf: prüfen, aber nichts verändern', 'Dry run: check without changing anything', 'Simulación: comprobar sin modificar nada', 'Simulation : vérifier sans rien modifier', 'Пробный запуск: проверить без изменений', 'Deneme çalışması: hiçbir şeyi değiştirmeden kontrol et')
-    Main6                = @('Entfernungshistorie ansehen', 'View removal history', 'Ver historial de eliminaciones', 'Afficher lʼhistorique des suppressions', 'Просмотреть историю удалений', 'Kaldırma geçmişini görüntüle')
-    Main7                = @('Von der Anwendung erstellte Logs löschen', 'Delete logs created by the application', 'Eliminar los registros creados por la aplicación', 'Supprimer les journaux créés par lʼapplication', 'Удалить журналы, созданные приложением', 'Uygulamanın oluşturduğu günlükleri sil')
-    Main8                = @('Sprache ändern', 'Change language', 'Cambiar idioma', 'Changer de langue', 'Изменить язык', 'Dili değiştir')
-    Main9                = @('Erweiterte Windows-Werkzeuge', 'Advanced Windows tools', 'Herramientas avanzadas de Windows', 'Outils Windows avancés', 'Расширенные инструменты Windows', 'Gelişmiş Windows araçları')
-    Main0                = @('Programm beenden', 'Exit application', 'Salir de la aplicación', 'Quitter lʼapplication', 'Выйти из приложения', 'Uygulamadan çık')
-    InvalidMain          = @('Bitte eine Zahl von 0 bis 9 eingeben.', 'Please enter a number from 0 to 9.', 'Introduce un número del 0 al 9.', 'Veuillez saisir un nombre de 0 à 9.', 'Введите число от 0 до 9.', 'Lütfen 0 ile 9 arasında bir sayı girin.')
-    InstalledTitle      = @('Installierte Anwendungen', 'Installed applications', 'Aplicaciones instaladas', 'Applications installées', 'Установленные приложения', 'Yüklü uygulamalar')
-    FoundProgramsTitle   = @('Gefundene Programme', 'Matching programs', 'Programas encontrados', 'Programmes trouvés', 'Найденные программы', 'Bulunan programlar')
-    AllAppsTitle         = @('Alle Anwendungen und Systemkomponenten', 'All applications and system components', 'Todas las aplicaciones y componentes del sistema', 'Toutes les applications et composants système', 'Все приложения и системные компоненты', 'Tüm uygulamalar ve sistem bileşenleri')
-    NoApps               = @('In dieser Ansicht wurden keine passenden Anwendungen gefunden.', 'No matching applications were found in this view.', 'No se encontraron aplicaciones coincidentes en esta vista.', 'Aucune application correspondante nʼa été trouvée dans cette vue.', 'В этом представлении подходящие приложения не найдены.', 'Bu görünümde eşleşen uygulama bulunamadı.')
-    FilterLabel          = @('Filter: {0}', 'Filter: {0}', 'Filtro: {0}', 'Filtre : {0}', 'Фильтр: {0}', 'Filtre: {0}')
-    PageLabel            = @('Seite {0} von {1} | Einträge: {2}', 'Page {0} of {1} | Entries: {2}', 'Página {0} de {1} | Entradas: {2}', 'Page {0} sur {1} | Entrées : {2}', 'Страница {0} из {1} | Записей: {2}', 'Sayfa {0}/{1} | Kayıt: {2}')
-    NoFilterHits         = @('Keine Treffer für diesen Filter.', 'No matches for this filter.', 'No hay resultados para este filtro.', 'Aucun résultat pour ce filtre.', 'Нет результатов для этого фильтра.', 'Bu filtre için sonuç yok.')
-    ProtectedLabel       = @('geschützt', 'protected', 'protegido', 'protégé', 'защищено', 'korumalı')
-    ListCommands         = @('Befehle: positive Nummer = auswählen | 0 beenden | -1 weiter | -2 zurück | -3 suchen | -4 Filter löschen | -5 Hauptmenü', 'Commands: positive number = select | 0 exit | -1 next | -2 previous | -3 search | -4 clear filter | -5 main menu', 'Comandos: número positivo = seleccionar | 0 salir | -1 siguiente | -2 anterior | -3 buscar | -4 borrar filtro | -5 menú principal', 'Commandes : nombre positif = sélectionner | 0 quitter | -1 suivant | -2 précédent | -3 rechercher | -4 effacer le filtre | -5 menu principal', 'Команды: положительный номер = выбрать | 0 выход | -1 далее | -2 назад | -3 поиск | -4 сбросить фильтр | -5 главное меню', 'Komutlar: pozitif sayı = seç | 0 çıkış | -1 ileri | -2 geri | -3 ara | -4 filtreyi temizle | -5 ana menü')
-    InvalidList          = @('Bitte eine angezeigte Nummer oder einen der nummerierten Befehle eingeben.', 'Enter a displayed number or one of the numbered commands.', 'Introduce un número mostrado o uno de los comandos numerados.', 'Saisissez un numéro affiché ou lʼune des commandes numérotées.', 'Введите показанный номер или одну из пронумерованных команд.', 'Gösterilen bir numarayı veya numaralı komutlardan birini girin.')
-    ProtectedItem        = @('Dieser Eintrag ist durch Windows geschützt oder besitzt kein Deinstallationskommando.', 'This entry is protected by Windows or has no uninstall command.', 'Esta entrada está protegida por Windows o no tiene comando de desinstalación.', 'Cette entrée est protégée par Windows ou ne possède aucune commande de désinstallation.', 'Эта запись защищена Windows или не содержит команды удаления.', 'Bu kayıt Windows tarafından korunuyor veya kaldırma komutu yok.')
-    Press1Back           = @('[1] Zurück | [0] Programm beenden', '[1] Back | [0] Exit application', '[1] Volver | [0] Salir', '[1] Retour | [0] Quitter', '[1] Назад | [0] Выйти', '[1] Geri | [0] Çıkış')
-    OperationDone        = @('Vorgang abgeschlossen.', 'Operation completed.', 'Operación completada.', 'Opération terminée.', 'Операция завершена.', 'İşlem tamamlandı.')
-    BackProgramList      = @('Zurück zur Programmliste', 'Return to program list', 'Volver a la lista de programas', 'Retour à la liste des programmes', 'Вернуться к списку программ', 'Program listesine dön')
-    OpenRunLog           = @('Protokoll öffnen', 'Open log', 'Abrir registro', 'Ouvrir le journal', 'Открыть журнал', 'Günlüğü aç')
-    RunDetails           = @('Ergebnis dieses Durchlaufs:', 'Results for this run:', 'Resultados de esta operación:', 'Résultats de cette opération :', 'Результаты этого запуска:', 'Bu çalıştırmanın sonuçları:')
-    BackMain             = @('Zurück zum Hauptmenü', 'Return to main menu', 'Volver al menú principal', 'Retour au menu principal', 'Вернуться в главное меню', 'Ana menüye dön')
-    InvalidPost          = @('Hier sind nur [1] und [0] gültig, wie oben beschriftet. Für eine andere Funktion [1] wählen, zur vorherigen Auswahl zurückkehren und dort die Funktionsnummer eingeben.', 'Only [1] and [0] are valid here, as labelled above. To run another feature, choose [1] to return to the previous menu, then enter its number there.', 'Aquí solo son válidos [1] y [0], tal como se indican arriba. Para usar otra función, elige [1] para volver al menú anterior y luego introduce allí su número.', 'Ici, seuls [1] et [0] sont valides, selon les libellés ci-dessus. Pour utiliser une autre fonction, choisissez [1] pour revenir au menu précédent, puis saisissez son numéro.', 'Здесь доступны только [1] и [0], как указано выше. Чтобы запустить другую функцию, нажмите [1] для возврата в предыдущее меню, затем введите её номер.', 'Burada yukarıda belirtildiği gibi yalnızca [1] ve [0] geçerlidir. Başka bir özellik için [1] ile önceki menüye dönüp numarasını girin.')
-    BackPreviousMenu     = @('Zurück zur vorherigen Auswahl', 'Back to the previous menu', 'Volver al menú anterior', 'Retour au menu précédent', 'Вернуться в предыдущее меню', 'Önceki menüye dön')
-    InvalidAfterOperation = @('Hier sind [1] Hauptmenü, [2] Programmliste, [3] Protokoll öffnen und [0] Beenden gültig.', 'Valid choices are [1] main menu, [2] program list, [3] open log, and [0] exit.', 'Las opciones válidas son [1] menú principal, [2] lista de programas, [3] abrir registro y [0] salir.', 'Les choix valides sont [1] menu principal, [2] liste des programmes, [3] ouvrir le journal et [0] quitter.', 'Допустимые варианты: [1] главное меню, [2] список программ, [3] открыть журнал, [0] выход.', 'Geçerli seçenekler: [1] ana menü, [2] program listesi, [3] günlüğü aç, [0] çıkış.')
-    InvalidAfterOperationNoLog = @('Hier sind [1] Hauptmenü, [2] Programmliste und [0] Beenden gültig.', 'Valid choices are [1] main menu, [2] program list, and [0] exit.', 'Las opciones válidas son [1] menú principal, [2] lista de programas y [0] salir.', 'Les choix valides sont [1] menu principal, [2] liste des programmes et [0] quitter.', 'Допустимые варианты: [1] главное меню, [2] список программ, [0] выход.', 'Geçerli seçenekler: [1] ana menü, [2] program listesi, [0] çıkış.')
-    InvalidAVChoice     = @('Bitte eine Zahl von 0 bis 7 eingeben.', 'Please enter a number from 0 to 7.', 'Introduce un número del 0 al 7.', 'Saisissez un nombre de 0 à 7.', 'Введите число от 0 до 7.', '0 ile 7 arasında bir sayı girin.')
-    InvalidPrivacyChoice = @('Bitte 1, 2, 3 oder 0 eingeben.', 'Enter 1, 2, 3, or 0.', 'Introduce 1, 2, 3 o 0.', 'Saisissez 1, 2, 3 ou 0.', 'Введите 1, 2, 3 или 0.', '1, 2, 3 veya 0 girin.')
-    InvalidStartupMenu  = @('Bitte [1], [2], [3] oder [0] wählen.', 'Choose [1], [2], [3], or [0].', 'Elige [1], [2], [3] o [0].', 'Choisissez [1], [2], [3] ou [0].', 'Выберите [1], [2], [3] или [0].', '[1], [2], [3] veya [0] seçin.')
-    Selected             = @('Ausgewählt: {0}', 'Selected: {0}', 'Seleccionado: {0}', 'Sélectionné : {0}', 'Выбрано: {0}', 'Seçildi: {0}')
-    RemovalWarning       = @('Die reguläre Deinstallation und alle oben aufgeführten Spuren werden entfernt.', 'The regular uninstall and all leftovers listed above will be removed.', 'Se eliminarán la desinstalación normal y todos los restos indicados.', 'La désinstallation normale et tous les résidus listés ci-dessus seront supprimés.', 'Будут выполнены обычное удаление и удаление всех перечисленных остатков.', 'Normal kaldırma ve yukarıda listelenen tüm kalıntılar silinecek.')
-    PersonalWarning      = @('Auch gefundene persönliche Dateien werden endgültig gelöscht und landen nicht im Papierkorb.', 'Any personal files found will also be permanently deleted and will not go to the Recycle Bin.', 'Los archivos personales encontrados también se eliminarán definitivamente sin pasar por la Papelera.', 'Les fichiers personnels trouvés seront également supprimés définitivement sans passer par la Corbeille.', 'Найденные личные файлы также будут удалены без возможности восстановления и не попадут в корзину.', 'Bulunan kişisel dosyalar da kalıcı olarak silinecek ve Geri Dönüşüm Kutusuʼna gitmeyecek.')
-    ConfirmStart         = @('Entfernung starten', 'Start removal', 'Iniciar eliminación', 'Démarrer la suppression', 'Начать удаление', 'Kaldırmayı başlat')
-    ResidualSuffix       = @('{0} (nur Reste)', '{0} (leftovers only)', '{0} (solo restos)', '{0} (résidus uniquement)', '{0} (только остатки)', '{0} (yalnızca kalıntılar)')
-    InvalidConfirm       = @('Bitte 1 zum Starten, 2 für das Hauptmenü oder 0 zum Beenden eingeben.', 'Enter 1 to start, 2 for the main menu, or 0 to exit.', 'Introduce 1 para iniciar, 2 para el menú principal o 0 para salir.', 'Saisissez 1 pour démarrer, 2 pour le menu principal ou 0 pour quitter.', 'Введите 1 для запуска, 2 для главного меню или 0 для выхода.', 'Başlatmak için 1, ana menü için 2 veya çıkmak için 0 girin.')
-    HistoryHeading       = @('Letzte Entfernungen', 'Recent removals', 'Eliminaciones recientes', 'Suppressions récentes', 'Недавние удаления', 'Son kaldırmalar')
-    HistoryTitle         = @('Entfernungshistorie', 'Removal history', 'Historial de eliminaciones', 'Historique des suppressions', 'История удалений', 'Kaldırma geçmişi')
-    HistoryNone          = @('Noch keine Entfernungen gespeichert.', 'No removals have been recorded yet.', 'Aún no se han registrado eliminaciones.', 'Aucune suppression nʼa encore été enregistrée.', 'Удаления пока не записаны.', 'Henüz kaldırma kaydı yok.')
-    HistoryLine          = @('{0} | {1} | entfernt: {2} | Status: {3}', '{0} | {1} | removed: {2} | status: {3}', '{0} | {1} | eliminados: {2} | estado: {3}', '{0} | {1} | supprimés : {2} | état : {3}', '{0} | {1} | удалено: {2} | статус: {3}', '{0} | {1} | kaldırılan: {2} | durum: {3}')
-    HistoryFreed         = @(' | frei: {0}', ' | freed: {0}', ' | liberado: {0}', ' | libéré : {0}', ' | освобождено: {0}', ' | boşaltılan: {0}')
-    StatusComplete       = @('vollständig', 'complete', 'completo', 'terminé', 'завершено', 'tamamlandı')
-    StatusWarnings       = @('mit Hinweisen', 'with warnings', 'con avisos', 'avec avertissements', 'с предупреждениями', 'uyarılarla')
-    LogsTitle            = @('Anwendungs-Logs löschen', 'Delete application logs', 'Eliminar registros de la aplicación', 'Supprimer les journaux de lʼapplication', 'Удалить журналы приложения', 'Uygulama günlüklerini sil')
-    LogsCount            = @('Gefundene Logdateien: {0}', 'Log files found: {0}', 'Archivos de registro encontrados: {0}', 'Fichiers journaux trouvés : {0}', 'Найдено файлов журналов: {0}', 'Bulunan günlük dosyası: {0}')
-    LogsDelete           = @('Alle angezeigten Logs löschen', 'Delete all displayed logs', 'Eliminar todos los registros mostrados', 'Supprimer tous les journaux affichés', 'Удалить все показанные журналы', 'Gösterilen tüm günlükleri sil')
-    LogsDeleted          = @('Logdateien gelöscht: {0}', 'Log files deleted: {0}', 'Archivos de registro eliminados: {0}', 'Fichiers journaux supprimés : {0}', 'Удалено файлов журналов: {0}', 'Silinen günlük dosyası: {0}')
-    LogsFailed           = @('Nicht gelöschte Logdateien: {0}', 'Log files not deleted: {0}', 'Archivos de registro no eliminados: {0}', 'Fichiers journaux non supprimés : {0}', 'Не удалено файлов журналов: {0}', 'Silinemeyen günlük dosyası: {0}')
-    LogsNone             = @('Es sind keine von der Anwendung erstellten Logs vorhanden.', 'There are no logs created by the application.', 'No hay registros creados por la aplicación.', 'Aucun journal créé par lʼapplication nʼest présent.', 'Журналы, созданные приложением, отсутствуют.', 'Uygulamanın oluşturduğu günlük yok.')
-    InvalidLogs          = @('Bitte 1 zum Löschen, 2 für das Hauptmenü oder 0 zum Beenden eingeben.', 'Enter 1 to delete, 2 for the main menu, or 0 to exit.', 'Introduce 1 para eliminar, 2 para el menú principal o 0 para salir.', 'Saisissez 1 pour supprimer, 2 pour le menu principal ou 0 pour quitter.', 'Введите 1 для удаления, 2 для главного меню или 0 для выхода.', 'Silmek için 1, ana menü için 2 veya çıkmak için 0 girin.')
-    LanguageTitle        = @('Sprache ändern', 'Change language', 'Cambiar idioma', 'Changer de langue', 'Изменить язык', 'Dili değiştir')
-    LanguageCurrent      = @('Aktuelle Sprache: {0}', 'Current language: {0}', 'Idioma actual: {0}', 'Langue actuelle : {0}', 'Текущий язык: {0}', 'Geçerli dil: {0}')
-    LanguageSaved        = @('Sprache gespeichert: {0}', 'Language saved: {0}', 'Idioma guardado: {0}', 'Langue enregistrée : {0}', 'Язык сохранён: {0}', 'Dil kaydedildi: {0}')
-    InvalidLanguage      = @('Bitte eine Zahl von 0 bis 6 eingeben.', 'Please enter a number from 0 to 6.', 'Introduce un número del 0 al 6.', 'Veuillez saisir un nombre de 0 à 6.', 'Введите число от 0 до 6.', 'Lütfen 0 ile 6 arasında bir sayı girin.')
-    ProgramNamePrompt    = @('Programmname eingeben', 'Enter program name', 'Introduce el nombre del programa', 'Saisissez le nom du programme', 'Введите имя программы', 'Program adını girin')
-    ResidualNamePrompt   = @('Name des bereits entfernten Programms', 'Name of the already removed program', 'Nombre del programa ya eliminado', 'Nom du programme déjà supprimé', 'Имя уже удалённой программы', 'Önceden kaldırılan programın adı')
-    DryRunNamePrompt     = @('Programmname für den Trockenlauf', 'Program name for the dry run', 'Nombre del programa para la simulación', 'Nom du programme pour la simulation', 'Имя программы для пробного запуска', 'Deneme çalışması için program adı')
-    ProgramEnded         = @('Programm beendet.', 'Application closed.', 'Aplicación cerrada.', 'Application fermée.', 'Приложение закрыто.', 'Uygulama kapatıldı.')
-    NoName               = @('Kein Programmname angegeben. Es wurde nichts verändert.', 'No program name was entered. Nothing was changed.', 'No se indicó ningún programa. No se modificó nada.', 'Aucun nom de programme nʼa été saisi. Rien nʼa été modifié.', 'Имя программы не указано. Изменений нет.', 'Program adı girilmedi. Hiçbir şey değiştirilmedi.')
-    ErrorPrefix          = @('Fehler: {0}', 'Error: {0}', 'Error: {0}', 'Erreur : {0}', 'Ошибка: {0}', 'Hata: {0}')
-    ProgressPrepare      = @('Vorgang wird vorbereitet', 'Preparing operation', 'Preparando la operación', 'Préparation de lʼopération', 'Подготовка операции', 'İşlem hazırlanıyor')
-    ProgressInventory    = @('Installierte Programme werden eingelesen', 'Reading installed programs', 'Leyendo los programas instalados', 'Lecture des programmes installés', 'Чтение установленных программ', 'Yüklü programlar okunuyor')
-    ProgressIdentity     = @('Suchprofil wird erstellt', 'Creating search profile', 'Creando el perfil de búsqueda', 'Création du profil de recherche', 'Создание профиля поиска', 'Arama profili oluşturuluyor')
-    ProgressSearch       = @('Lokale Spuren werden gesucht', 'Searching for local leftovers', 'Buscando restos locales', 'Recherche des résidus locaux', 'Поиск локальных остатков', 'Yerel kalıntılar aranıyor')
-    ProgressPreview      = @('Vorschau ist vollständig', 'Preview is complete', 'Vista previa completada', 'Aperçu terminé', 'Предварительный просмотр готов', 'Önizleme tamamlandı')
-    ProgressDryDone      = @('Trockenlauf abgeschlossen', 'Dry run completed', 'Simulación completada', 'Simulation terminée', 'Пробный запуск завершён', 'Deneme çalışması tamamlandı')
-    ProgressDone         = @('Vorgang abgeschlossen', 'Operation completed', 'Operación completada', 'Opération terminée', 'Операция завершена', 'İşlem tamamlandı')
-    ProgressRecheck      = @('Ausgewählte Anwendung wird erneut geprüft', 'Rechecking selected application', 'Comprobando de nuevo la aplicación seleccionada', 'Nouvelle vérification de lʼapplication sélectionnée', 'Повторная проверка выбранного приложения', 'Seçilen uygulama yeniden denetleniyor')
-    ProgressBackup       = @('Sicherung wird vorbereitet', 'Preparing backup', 'Preparando la copia de seguridad', 'Préparation de la sauvegarde', 'Подготовка резервной копии', 'Yedekleme hazırlanıyor')
-    ProgressUninstall    = @('Offizielle Deinstallation läuft', 'Official uninstall is running', 'La desinstalación oficial está en curso', 'La désinstallation officielle est en cours', 'Выполняется официальное удаление', 'Resmî kaldırma çalışıyor')
-    ProgressUninstallDone= @('Reguläre Deinstallation abgeschlossen', 'Regular uninstall completed', 'Desinstalación normal completada', 'Désinstallation normale terminée', 'Обычное удаление завершено', 'Normal kaldırma tamamlandı')
-    ProgressRescan       = @('Verbliebene Spuren werden gesucht', 'Searching for remaining leftovers', 'Buscando restos restantes', 'Recherche des résidus restants', 'Поиск оставшихся следов', 'Kalan kalıntılar aranıyor')
-    ProgressRescanDone   = @('Nachsuche abgeschlossen', 'Follow-up scan completed', 'Búsqueda posterior completada', 'Analyse complémentaire terminée', 'Повторный поиск завершён', 'Son tarama tamamlandı')
-    ProgressRemove       = @('Gefundene Spuren werden entfernt', 'Removing found leftovers', 'Eliminando los restos encontrados', 'Suppression des résidus trouvés', 'Удаление найденных остатков', 'Bulunan kalıntılar kaldırılıyor')
-    ProgressCleanupDone  = @('Bereinigung abgeschlossen', 'Cleanup completed', 'Limpieza completada', 'Nettoyage terminé', 'Очистка завершена', 'Temizleme tamamlandı')
-    ProgressVerify       = @('Abschlussprüfung läuft', 'Running final verification', 'Ejecutando la comprobación final', 'Vérification finale en cours', 'Выполняется итоговая проверка', 'Son doğrulama çalışıyor')
-    AdminRequired        = @('Für die Entfernung werden Administratorrechte benötigt. Im Testmodus wurde keine UAC-Abfrage geöffnet.', 'Administrator rights are required for removal. No UAC prompt was opened in test mode.', 'Se requieren derechos de administrador. En modo de prueba no se abrió UAC.', 'Des droits administrateur sont requis. Aucune demande UAC nʼa été ouverte en mode test.', 'Для удаления нужны права администратора. В тестовом режиме запрос UAC не открывался.', 'Kaldırma için yönetici hakları gerekir. Test modunda UAC açılmadı.')
-    UacOpening           = @('Jetzt wird die einmalige Windows-Administratorabfrage für die Entfernung geöffnet.', 'The one-time Windows administrator prompt will now open for removal.', 'Ahora se abrirá una única solicitud de administrador de Windows.', 'La demande administrateur Windows unique va maintenant sʼouvrir.', 'Сейчас откроется однократный запрос прав администратора Windows.', 'Kaldırma için tek seferlik Windows yönetici isteği şimdi açılacak.')
-    UacCancelled         = @('Die Administratorabfrage wurde abgebrochen. Es wurde nichts entfernt.', 'The administrator prompt was cancelled. Nothing was removed.', 'Se canceló la solicitud de administrador. No se eliminó nada.', 'La demande administrateur a été annulée. Rien nʼa été supprimé.', 'Запрос прав администратора отменён. Ничего не удалено.', 'Yönetici isteği iptal edildi. Hiçbir şey kaldırılmadı.')
-    InventoryReading     = @('Installierte Anwendungen werden eingelesen.', 'Reading installed applications.', 'Leyendo las aplicaciones instaladas.', 'Lecture des applications installées.', 'Чтение установленных приложений.', 'Yüklü uygulamalar okunuyor.')
-    InventoryAllReading  = @('Alle installierten Einträge werden eingelesen.', 'Reading all installed entries.', 'Leyendo todas las entradas instaladas.', 'Lecture de toutes les entrées installées.', 'Чтение всех установленных записей.', 'Tüm yüklü kayıtlar okunuyor.')
-    SelectionCancelled   = @('Auswahl abgebrochen. Es wurde nichts verändert.', 'Selection cancelled. Nothing was changed.', 'Selección cancelada. No se modificó nada.', 'Sélection annulée. Rien nʼa été modifié.', 'Выбор отменён. Изменений нет.', 'Seçim iptal edildi. Hiçbir şey değiştirilmedi.')
-    NoProgramFound       = @('Kein installiertes Programm passend zu "{0}" gefunden.', 'No installed program matching "{0}" was found.', 'No se encontró ningún programa instalado que coincida con «{0}».', 'Aucun programme installé correspondant à « {0} » nʼa été trouvé.', 'Установленная программа, соответствующая «{0}», не найдена.', '"{0}" ile eşleşen yüklü program bulunamadı.')
-    ResidualQuestion     = @('Nur nach Resten dieses Namens suchen?', 'Search only for leftovers with this name?', '¿Buscar solo restos con este nombre?', 'Rechercher uniquement les résidus portant ce nom ?', 'Искать только остатки с этим именем?', 'Yalnızca bu ada sahip kalıntılar aransın mı?')
-    YesResidual          = @('Ja, Reste suchen', 'Yes, search for leftovers', 'Sí, buscar restos', 'Oui, rechercher les résidus', 'Да, искать остатки', 'Evet, kalıntıları ara')
-    SafeTerms            = @('Sichere Suchbegriffe: {0}', 'Safe search terms: {0}', 'Términos de búsqueda seguros: {0}', 'Termes de recherche sûrs : {0}', 'Безопасные поисковые термины: {0}', 'Güvenli arama terimleri: {0}')
-    DeepSearch           = @('Programmreste werden gesucht. Die tiefe Registry-Suche kann einige Minuten dauern.', 'Searching for program leftovers. The deep registry scan can take several minutes.', 'Buscando restos del programa. El análisis profundo del registro puede tardar varios minutos.', 'Recherche des résidus. Lʼanalyse approfondie du registre peut prendre plusieurs minutes.', 'Идёт поиск остатков программы. Глубокая проверка реестра может занять несколько минут.', 'Program kalıntıları aranıyor. Ayrıntılı kayıt defteri taraması birkaç dakika sürebilir.')
-    DryRunDone           = @('Trockenlauf beendet. Es wurde nichts verändert.', 'Dry run completed. Nothing was changed.', 'Simulación terminada. No se modificó nada.', 'Simulation terminée. Rien nʼa été modifié.', 'Пробный запуск завершён. Изменений нет.', 'Deneme çalışması tamamlandı. Hiçbir şey değiştirilmedi.')
-    LogLabel             = @('Protokoll: {0}', 'Log: {0}', 'Registro: {0}', 'Journal : {0}', 'Журнал: {0}', 'Günlük: {0}')
-    RescanMessage        = @('Verbleibende Spuren werden erneut geprüft.', 'Remaining leftovers are being checked again.', 'Se vuelven a comprobar los restos restantes.', 'Les résidus restants sont vérifiés à nouveau.', 'Оставшиеся следы проверяются повторно.', 'Kalan kalıntılar yeniden denetleniyor.')
-    RemovedCount         = @('Entfernte Spuren: {0}', 'Removed leftovers: {0}', 'Restos eliminados: {0}', 'Résidus supprimés : {0}', 'Удалено следов: {0}', 'Kaldırılan kalıntı: {0}')
-    FailedCount          = @('Nicht entfernte Spuren: {0}', 'Leftovers not removed: {0}', 'Restos no eliminados: {0}', 'Résidus non supprimés : {0}', 'Не удалено следов: {0}', 'Kaldırılamayan kalıntı: {0}')
-    FinalCheck           = @('Abschlussprüfung läuft.', 'Final verification is running.', 'La comprobación final está en curso.', 'La vérification finale est en cours.', 'Выполняется итоговая проверка.', 'Son doğrulama çalışıyor.')
-    FinishedClean        = @('Fertig: Es wurden keine weiteren passenden lokalen Spuren gefunden.', 'Done: No further matching local leftovers were found.', 'Listo: no se encontraron más restos locales coincidentes.', 'Terminé : aucun autre résidu local correspondant nʼa été trouvé.', 'Готово: других подходящих локальных следов не найдено.', 'Bitti: Eşleşen başka yerel kalıntı bulunamadı.')
-    FinishedRemaining    = @('Fertig mit Resthinweis: Die Kontrolle fand noch {0} Treffer.', 'Done with a leftovers notice: Verification found {0} remaining matches.', 'Finalizado con aviso: la comprobación encontró {0} coincidencias restantes.', 'Terminé avec avertissement : la vérification a trouvé {0} correspondances restantes.', 'Завершено с предупреждением: найдено ещё {0} совпадений.', 'Kalıntı uyarısıyla tamamlandı: Doğrulama {0} eşleşme daha buldu.')
-    RestartNotice        = @('Windows verlangt einen Neustart, damit die Entfernung vollständig abgeschlossen wird.', 'Windows requires a restart to complete the removal.', 'Windows requiere un reinicio para completar la eliminación.', 'Windows nécessite un redémarrage pour terminer la suppression.', 'Для завершения удаления Windows требуется перезагрузка.', 'Kaldırmayı tamamlamak için Windows yeniden başlatılmalıdır.')
-    StoreReadError       = @('Microsoft-Store-Apps konnten nicht vollständig gelesen werden: {0}', 'Microsoft Store apps could not be read completely: {0}', 'No se pudieron leer completamente las aplicaciones de Microsoft Store: {0}', 'Les applications Microsoft Store nʼont pas pu être lues entièrement : {0}', 'Не удалось полностью прочитать приложения Microsoft Store: {0}', 'Microsoft Store uygulamaları tam olarak okunamadı: {0}')
-    SafetyParent         = @('Sicherheitsgrenze: Übergeordnetes Verzeichnis wird nicht vorgemerkt: {0}', 'Safety limit: Parent directory will not be queued: {0}', 'Límite de seguridad: no se incluirá el directorio superior: {0}', 'Limite de sécurité : le dossier parent ne sera pas sélectionné : {0}', 'Ограничение безопасности: родительская папка не будет добавлена: {0}', 'Güvenlik sınırı: Üst dizin sıraya alınmayacak: {0}')
-    SafetyLink           = @('Verknüpftes Dateisystemziel wird aus Sicherheitsgründen übersprungen: {0}', 'Linked file-system target is skipped for safety: {0}', 'Se omite por seguridad el destino enlazado: {0}', 'La cible liée est ignorée pour des raisons de sécurité : {0}', 'Связанная цель файловой системы пропущена из соображений безопасности: {0}', 'Bağlı dosya sistemi hedefi güvenlik nedeniyle atlanıyor: {0}')
-    PathCheckError       = @('Pfad konnte nicht geprüft werden: {0}', 'Path could not be checked: {0}', 'No se pudo comprobar la ruta: {0}', 'Le chemin nʼa pas pu être vérifié : {0}', 'Не удалось проверить путь: {0}', 'Yol denetlenemedi: {0}')
-    ServicesReadError    = @('Dienste konnten nicht vollständig geprüft werden: {0}', 'Services could not be checked completely: {0}', 'No se pudieron comprobar completamente los servicios: {0}', 'Les services nʼont pas pu être vérifiés entièrement : {0}', 'Не удалось полностью проверить службы: {0}', 'Hizmetler tam olarak denetlenemedi: {0}')
-    TasksReadError       = @('Geplante Aufgaben konnten nicht vollständig geprüft werden: {0}', 'Scheduled tasks could not be checked completely: {0}', 'No se pudieron comprobar completamente las tareas programadas: {0}', 'Les tâches planifiées nʼont pas pu être vérifiées entièrement : {0}', 'Не удалось полностью проверить запланированные задачи: {0}', 'Zamanlanmış görevler tam olarak denetlenemedi: {0}')
-    NoTraces             = @('Keine zusätzlichen Spuren gefunden.', 'No additional leftovers found.', 'No se encontraron restos adicionales.', 'Aucun résidu supplémentaire trouvé.', 'Дополнительные следы не найдены.', 'Ek kalıntı bulunamadı.')
-    TracesFound          = @('Gefundene Spuren: {0}', 'Leftovers found: {0}', 'Restos encontrados: {0}', 'Résidus trouvés : {0}', 'Найдено следов: {0}', 'Bulunan kalıntı: {0}')
-    MoreItems            = @('... und {0} weitere', '... and {0} more', '... y {0} más', '... et {0} autres', '... и ещё {0}', '... ve {0} tane daha')
-    PersonalFile         = @('persönliche Datei', 'personal file', 'archivo personal', 'fichier personnel', 'личный файл', 'kişisel dosya')
-    RestorePointDone     = @('Windows-Wiederherstellungspunkt wurde erstellt.', 'Windows restore point was created.', 'Se creó un punto de restauración de Windows.', 'Un point de restauration Windows a été créé.', 'Точка восстановления Windows создана.', 'Windows geri yükleme noktası oluşturuldu.')
-    RestorePointFailed   = @('Kein Wiederherstellungspunkt möglich. Die Systemwiederherstellung ist wahrscheinlich deaktiviert; persönliche Dateien wären davon ohnehin nicht umfasst.', 'A restore point could not be created. System Restore is probably disabled; personal files would not be covered anyway.', 'No se pudo crear un punto de restauración. Probablemente Restaurar sistema esté desactivado; los archivos personales no estarían incluidos.', 'Impossible de créer un point de restauration. La restauration du système est probablement désactivée ; les fichiers personnels ne seraient de toute façon pas couverts.', 'Не удалось создать точку восстановления. Вероятно, восстановление системы отключено; личные файлы всё равно не входят в неё.', 'Geri yükleme noktası oluşturulamadı. Sistem Geri Yükleme muhtemelen devre dışı; kişisel dosyalar zaten buna dahil değildir.')
-    StoreRemoving        = @('Microsoft-Store-App wird entfernt: {0}', 'Removing Microsoft Store app: {0}', 'Eliminando la aplicación de Microsoft Store: {0}', 'Suppression de lʼapplication Microsoft Store : {0}', 'Удаление приложения Microsoft Store: {0}', 'Microsoft Store uygulaması kaldırılıyor: {0}')
-    UninstallRunning     = @('Deinstallation läuft: {0}', 'Uninstalling: {0}', 'Desinstalando: {0}', 'Désinstallation en cours : {0}', 'Выполняется удаление: {0}', 'Kaldırılıyor: {0}')
-    UninstallDone        = @('Die reguläre Deinstallation wurde abgeschlossen.', 'The regular uninstall was completed.', 'La desinstalación normal se completó.', 'La désinstallation normale est terminée.', 'Обычное удаление завершено.', 'Normal kaldırma tamamlandı.')
-    LogSaveError         = @('Protokoll konnte nicht gespeichert werden: {0}', 'Log could not be saved: {0}', 'No se pudo guardar el registro: {0}', 'Le journal nʼa pas pu être enregistré : {0}', 'Не удалось сохранить журнал: {0}', 'Günlük kaydedilemedi: {0}')
-    HistorySaveError     = @('Historie konnte nicht gespeichert werden: {0}', 'History could not be saved: {0}', 'No se pudo guardar el historial: {0}', 'Lʼhistorique nʼa pas pu être enregistré : {0}', 'Не удалось сохранить историю: {0}', 'Geçmiş kaydedilemedi: {0}')
-    ToolsTitle           = @('Erweiterte Windows-Werkzeuge', 'Advanced Windows tools', 'Herramientas avanzadas de Windows', 'Outils Windows avancés', 'Расширенные инструменты Windows', 'Gelişmiş Windows araçları')
-    Tools1               = @('Systemintegrität prüfen', 'Check system integrity', 'Comprobar la integridad del sistema', 'Vérifier lʼintégrité du système', 'Проверить целостность системы', 'Sistem bütünlüğünü denetle')
-    Tools2               = @('AppX/UWP-Apps verwalten', 'Manage AppX/UWP apps', 'Administrar aplicaciones AppX/UWP', 'Gérer les applications AppX/UWP', 'Управление приложениями AppX/UWP', 'AppX/UWP uygulamalarını yönet')
-    Tools3               = @('Verwaiste Registry-Einträge suchen', 'Scan for orphaned registry entries', 'Buscar entradas de registro huérfanas', 'Rechercher les entrées de registre orphelines', 'Поиск осиротевших записей реестра', 'Sahipsiz kayıt defteri girdilerini tara')
-    Tools4               = @('Optionale Windows-Features verwalten', 'Manage optional Windows features', 'Administrar características opcionales de Windows', 'Gérer les fonctionnalités Windows facultatives', 'Управление дополнительными компонентами Windows', 'İsteğe bağlı Windows özelliklerini yönet')
-    Tools5               = @('Systemoptimierung und Datenschutz', 'System optimization and privacy', 'Optimización del sistema y privacidad', 'Optimisation du système et confidentialité', 'Оптимизация системы и конфиденциальность', 'Sistem optimizasyonu ve gizlilik')
-    Tools6               = @('ClamAV-Malware-Prüfung', 'ClamAV malware scan', 'Análisis antimalware ClamAV', 'Analyse antimalware ClamAV', 'Проверка на вредоносные программы ClamAV', 'ClamAV kötü amaçlı yazılım taraması')
-    InvalidTools         = @('Bitte eine Zahl von 0 bis 6 eingeben.', 'Please enter a number from 0 to 6.', 'Introduce un número del 0 al 6.', 'Veuillez saisir un nombre de 0 à 6.', 'Введите число от 0 до 6.', 'Lütfen 0 ile 6 arasında bir sayı girin.')
-    AVTitle              = @('ClamAV-Malware-Prüfung', 'ClamAV malware scan', 'Análisis antimalware ClamAV', 'Analyse antimalware ClamAV', 'Проверка ClamAV', 'ClamAV kötü amaçlı yazılım taraması')
-    AVReturnMenu         = @('ClamAV-Menü öffnen (dort [3] = ClamAV-Engine aktualisieren)', 'Return to the ClamAV menu (there, [3] updates the ClamAV engine)', 'Volver al menú de ClamAV (allí, [3] actualiza el motor)', 'Retour au menu ClamAV (où [3] met à jour le moteur)', 'Вернуться в меню ClamAV (там [3] обновляет движок)', 'ClamAV menüsüne dön ([3] motoru günceller)')
-    AV1                  = @('Status anzeigen', 'Show status', 'Mostrar estado', 'Afficher lʼétat', 'Показать состояние', 'Durumu göster')
-    AV2                  = @('Portable ClamAV-Engine einrichten', 'Set up portable ClamAV engine', 'Configurar el motor portátil de ClamAV', 'Configurer le moteur portable ClamAV', 'Настроить портативный движок ClamAV', 'Taşınabilir ClamAV motorunu kur')
-    AV3                  = @('ClamAV-Engine aktualisieren', 'Update ClamAV engine', 'Actualizar el motor de ClamAV', 'Mettre à jour le moteur ClamAV', 'Обновить движок ClamAV', 'ClamAV motorunu güncelle')
-    AV4                  = @('Virensignaturen aktualisieren', 'Update virus signatures', 'Actualizar firmas de virus', 'Mettre à jour les signatures antivirus', 'Обновить вирусные сигнатуры', 'Virüs imzalarını güncelle')
-    AV5                  = @('Schnellprüfung starten', 'Start quick scan', 'Iniciar análisis rápido', 'Lancer lʼanalyse rapide', 'Запустить быструю проверку', 'Hızlı taramayı başlat')
-    AV6                  = @('Eigenen Pfad prüfen', 'Scan a custom path', 'Analizar una ruta', 'Analyser un chemin', 'Проверить выбранный путь', 'Özel bir yolu tara')
-    AV7                  = @('Quarantäne anzeigen oder wiederherstellen', 'View or restore quarantine', 'Ver o restaurar la cuarentena', 'Afficher ou restaurer la quarantaine', 'Просмотр или восстановление карантина', 'Karantinayı görüntüle veya geri yükle')
-    AVPathPrompt         = @('Zu prüfender Pfad', 'Path to scan', 'Ruta que se analizará', 'Chemin à analyser', 'Путь для проверки', 'Taranacak yol')
-    AVNotAvailable      = @('Das Antivirus-Modul fehlt oder konnte nicht geladen werden: {0}', 'The antivirus module is missing or could not be loaded: {0}', 'Falta el módulo antivirus o no pudo cargarse: {0}', 'Le module antivirus est absent ou nʼa pas pu être chargé : {0}', 'Модуль антивируса отсутствует или не загружен: {0}', 'Antivirüs modülü eksik veya yüklenemedi: {0}')
-    AVOptionalFailed     = @('Die optionale ClamAV-Prüfung konnte nicht abgeschlossen werden: {0}', 'The optional ClamAV scan could not be completed: {0}', 'No se pudo completar el análisis opcional de ClamAV: {0}', 'Lʼanalyse ClamAV facultative nʼa pas pu être terminée : {0}', 'Не удалось завершить дополнительную проверку ClamAV: {0}', 'İsteğe bağlı ClamAV taraması tamamlanamadı: {0}')
-    AVFindings           = @('ClamAV-Funde: {0}. Es wurde nichts automatisch gelöscht.', 'ClamAV detections: {0}. Nothing was deleted automatically.', 'Detecciones de ClamAV: {0}. No se eliminó nada automáticamente.', 'Détections ClamAV : {0}. Rien nʼa été supprimé automatiquement.', 'Обнаружено ClamAV: {0}. Ничего не удалено автоматически.', 'ClamAV bulguları: {0}. Hiçbir şey otomatik silinmedi.')
-    AVClean              = @('ClamAV-Prüfung ohne Fund abgeschlossen.', 'ClamAV scan completed without detections.', 'Análisis ClamAV completado sin detecciones.', 'Analyse ClamAV terminée sans détection.', 'Проверка ClamAV завершена без обнаружений.', 'ClamAV taraması bulgu olmadan tamamlandı.')
-    AVNoQuarantine      = @('Keine aktiven Quarantäne-Einträge vorhanden.', 'No active quarantine entries exist.', 'No hay entradas de cuarentena activas.', 'Aucune entrée de quarantaine active.', 'Нет активных записей карантина.', 'Etkin karantina kaydı yok.')
-    AVRestorePrompt      = @('Nummer zum Wiederherstellen oder 0 zum Zurückkehren', 'Number to restore or 0 to return', 'Número para restaurar o 0 para volver', 'Numéro à restaurer ou 0 pour revenir', 'Номер для восстановления или 0 для возврата', 'Geri yüklemek için numara veya dönmek için 0')
-    ProtectedTitle       = @('GESCHÜTZTE WINDOWS-KOMPONENTE', 'PROTECTED WINDOWS COMPONENT', 'COMPONENTE PROTEGIDO DE WINDOWS', 'COMPOSANT WINDOWS PROTÉGÉ', 'ЗАЩИЩЁННЫЙ КОМПОНЕНТ WINDOWS', 'KORUNAN WINDOWS BİLEŞENİ')
-    ProtectedReason      = @('Sperrliste: {0}. Ohne ausdrücklichen Override wird nichts entfernt.', 'Protection list: {0}. Nothing will be removed without an explicit override.', 'Lista de protección: {0}. No se eliminará nada sin una anulación explícita.', 'Liste de protection : {0}. Rien ne sera supprimé sans dérogation explicite.', 'Список защиты: {0}. Без явного переопределения ничего не будет удалено.', 'Koruma listesi: {0}. Açık bir geçersiz kılma olmadan hiçbir şey kaldırılmaz.')
-    ProtectedAbort       = @('Abbrechen (empfohlen)', 'Cancel (recommended)', 'Cancelar (recomendado)', 'Annuler (recommandé)', 'Отмена (рекомендуется)', 'İptal (önerilen)')
-    ProtectedOverride    = @('Override: trotzdem fortfahren', 'Override: continue anyway', 'Anular: continuar de todos modos', 'Dérogation : continuer quand même', 'Переопределить: всё равно продолжить', 'Geçersiz kıl: yine de devam et')
-    InvalidProtected     = @('Bitte 1 zum Abbrechen oder 2 für den ausdrücklichen Override eingeben.', 'Enter 1 to cancel or 2 for the explicit override.', 'Introduce 1 para cancelar o 2 para la anulación explícita.', 'Saisissez 1 pour annuler ou 2 pour la dérogation explicite.', 'Введите 1 для отмены или 2 для явного переопределения.', 'İptal için 1 veya açık geçersiz kılma için 2 girin.')
-    RestoreSkipped       = @('Wiederherstellungspunkt wurde per Override übersprungen.', 'Restore point was skipped by override.', 'El punto de restauración se omitió mediante anulación.', 'Le point de restauration a été ignoré par dérogation.', 'Точка восстановления пропущена переопределением.', 'Geri yükleme noktası geçersiz kılma ile atlandı.')
-    RestoreBlocked       = @('Es konnte kein Wiederherstellungspunkt erstellt werden. Der Vorgang ist aus Sicherheitsgründen angehalten.', 'A restore point could not be created. The operation has been paused for safety.', 'No se pudo crear un punto de restauración. La operación se detuvo por seguridad.', 'Impossible de créer un point de restauration. Lʼopération est suspendue par sécurité.', 'Не удалось создать точку восстановления. Операция остановлена из соображений безопасности.', 'Geri yükleme noktası oluşturulamadı. İşlem güvenlik için durduruldu.')
-    RestoreAbort         = @('Vorgang abbrechen (empfohlen)', 'Cancel operation (recommended)', 'Cancelar la operación (recomendado)', 'Annuler lʼopération (recommandé)', 'Отменить операцию (рекомендуется)', 'İşlemi iptal et (önerilen)')
-    RestoreContinue      = @('Ohne Wiederherstellungspunkt fortfahren', 'Continue without a restore point', 'Continuar sin punto de restauración', 'Continuer sans point de restauration', 'Продолжить без точки восстановления', 'Geri yükleme noktası olmadan devam et')
-    InvalidRestore       = @('Bitte 1 zum Abbrechen oder 2 zum ausdrücklichen Fortfahren eingeben.', 'Enter 1 to cancel or 2 to explicitly continue.', 'Introduce 1 para cancelar o 2 para continuar expresamente.', 'Saisissez 1 pour annuler ou 2 pour continuer explicitement.', 'Введите 1 для отмены или 2 для явного продолжения.', 'İptal için 1 veya açıkça devam etmek için 2 girin.')
-    IntegrityTitle       = @('Systemintegritätsprüfung', 'System integrity check', 'Comprobación de integridad del sistema', 'Vérification de lʼintégrité du système', 'Проверка целостности системы', 'Sistem bütünlüğü denetimi')
-    IntegrityQuestion    = @('Grundlegende Windows-Dienste jetzt prüfen?', 'Check essential Windows services now?', '¿Comprobar ahora los servicios esenciales de Windows?', 'Vérifier maintenant les services Windows essentiels ?', 'Проверить основные службы Windows сейчас?', 'Temel Windows hizmetleri şimdi denetlensin mi?')
-    IntegrityRun         = @('Prüfung ausführen', 'Run check', 'Ejecutar comprobación', 'Exécuter la vérification', 'Запустить проверку', 'Denetimi çalıştır')
-    IntegritySkip        = @('Prüfung überspringen', 'Skip check', 'Omitir comprobación', 'Ignorer la vérification', 'Пропустить проверку', 'Denetimi atla')
-    IntegrityHealthy     = @('Integritätsprüfung ohne kritische Hinweise abgeschlossen.', 'Integrity check completed without critical findings.', 'Comprobación de integridad completada sin hallazgos críticos.', 'Vérification dʼintégrité terminée sans anomalie critique.', 'Проверка целостности завершена без критических замечаний.', 'Bütünlük denetimi kritik bulgu olmadan tamamlandı.')
-    IntegrityWarnings    = @('Integritätsprüfung meldet {0} Hinweis(e). Details stehen im Log.', 'Integrity check reports {0} warning(s). Details are in the log.', 'La comprobación de integridad informa de {0} advertencia(s). Los detalles están en el registro.', 'La vérification dʼintégrité signale {0} avertissement(s). Détails dans le journal.', 'Проверка целостности обнаружила предупреждения: {0}. Подробности в журнале.', 'Bütünlük denetimi {0} uyarı bildirdi. Ayrıntılar günlükte.')
-    IntegrityLine        = @('{0}: {1} | Starttyp: {2}', '{0}: {1} | startup: {2}', '{0}: {1} | inicio: {2}', '{0} : {1} | démarrage : {2}', '{0}: {1} | запуск: {2}', '{0}: {1} | başlangıç: {2}')
-    AppxTitle            = @('AppX/UWP-Apps', 'AppX/UWP apps', 'Aplicaciones AppX/UWP', 'Applications AppX/UWP', 'Приложения AppX/UWP', 'AppX/UWP uygulamaları')
-    AppxCurrentOnly      = @('Nur für den aktuellen Benutzer entfernen', 'Remove for current user only', 'Eliminar solo para el usuario actual', 'Supprimer uniquement pour lʼutilisateur actuel', 'Удалить только для текущего пользователя', 'Yalnızca geçerli kullanıcı için kaldır')
-    AppxProvisioned     = @('Zusätzlich aus dem System-Image für neue Benutzer entfernen', 'Also remove from the system image for new users', 'Eliminar también de la imagen del sistema para nuevos usuarios', 'Supprimer aussi de lʼimage système pour les nouveaux utilisateurs', 'Также удалить из образа системы для новых пользователей', 'Yeni kullanıcılar için sistem imajından da kaldır')
-    AppxProvisionedDone = @('Bereitgestellte AppX-Pakete aus dem System-Image entfernt: {0}', 'Provisioned AppX packages removed from the system image: {0}', 'Paquetes AppX aprovisionados eliminados de la imagen del sistema: {0}', 'Packages AppX provisionnés supprimés de lʼimage système : {0}', 'Подготовленных пакетов AppX удалено из образа системы: {0}', 'Sistem imajından kaldırılan sağlanmış AppX paketi: {0}')
-    AppxScopeQuestion    = @('Geltungsbereich der AppX-Entfernung', 'Scope of AppX removal', 'Alcance de la eliminación AppX', 'Portée de la suppression AppX', 'Область удаления AppX', 'AppX kaldırma kapsamı')
-    InvalidAppxScope     = @('Bitte 1, 2, 3 oder 0 eingeben.', 'Enter 1, 2, 3, or 0.', 'Introduce 1, 2, 3 o 0.', 'Saisissez 1, 2, 3 ou 0.', 'Введите 1, 2, 3 или 0.', '1, 2, 3 veya 0 girin.')
-    OrphanTitle          = @('Verwaiste Deinstallationseinträge', 'Orphaned uninstall entries', 'Entradas de desinstalación huérfanas', 'Entrées de désinstallation orphelines', 'Осиротевшие записи удаления', 'Sahipsiz kaldırma girdileri')
-    OrphanDescription    = @('Es werden nur verdächtige Uninstall-Einträge gezeigt, deren Programmdatei und Installationsordner fehlen.', 'Only suspicious uninstall entries with missing executable and install folder are shown.', 'Solo se muestran entradas sospechosas cuya aplicación y carpeta de instalación faltan.', 'Seules les entrées suspectes dont lʼexécutable et le dossier dʼinstallation manquent sont affichées.', 'Показываются только подозрительные записи без файла программы и папки установки.', 'Yalnızca program dosyası ve kurulum klasörü eksik şüpheli girdiler gösterilir.')
-    OrphanNone           = @('Keine eindeutig verwaisten Einträge gefunden.', 'No clearly orphaned entries were found.', 'No se encontraron entradas claramente huérfanas.', 'Aucune entrée clairement orpheline trouvée.', 'Явно осиротевшие записи не найдены.', 'Açıkça sahipsiz girdi bulunamadı.')
-    OrphanFound          = @('Verdächtige Einträge gefunden: {0}', 'Suspicious entries found: {0}', 'Entradas sospechosas encontradas: {0}', 'Entrées suspectes trouvées : {0}', 'Найдено подозрительных записей: {0}', 'Bulunan şüpheli girdi: {0}')
-    OrphanDelete         = @('Ausgewählten Registry-Eintrag löschen', 'Delete selected registry entry', 'Eliminar la entrada de registro seleccionada', 'Supprimer lʼentrée de registre sélectionnée', 'Удалить выбранную запись реестра', 'Seçilen kayıt defteri girdisini sil')
-    OrphanDeleted        = @('Registry-Eintrag wurde entfernt.', 'Registry entry was removed.', 'La entrada de registro fue eliminada.', 'Lʼentrée de registre a été supprimée.', 'Запись реестра удалена.', 'Kayıt defteri girdisi kaldırıldı.')
-    FeatureTitle         = @('Aktivierte optionale Windows-Features', 'Enabled optional Windows features', 'Características opcionales de Windows activadas', 'Fonctionnalités Windows facultatives activées', 'Включённые дополнительные компоненты Windows', 'Etkin isteğe bağlı Windows özellikleri')
-    FeatureNone          = @('Keine aktivierten optionalen Features gefunden oder DISM ist nicht verfügbar.', 'No enabled optional features were found or DISM is unavailable.', 'No se encontraron características activadas o DISM no está disponible.', 'Aucune fonctionnalité activée trouvée ou DISM indisponible.', 'Включённые компоненты не найдены или DISM недоступен.', 'Etkin özellik bulunamadı veya DISM kullanılamıyor.')
-    FeatureWarning       = @('Das ausgewählte Windows-Feature wird deaktiviert: {0}', 'The selected Windows feature will be disabled: {0}', 'Se desactivará la característica de Windows seleccionada: {0}', 'La fonctionnalité Windows sélectionnée sera désactivée : {0}', 'Выбранный компонент Windows будет отключён: {0}', 'Seçilen Windows özelliği devre dışı bırakılacak: {0}')
-    FeatureDisabled      = @('Windows-Feature deaktiviert: {0}', 'Windows feature disabled: {0}', 'Característica de Windows desactivada: {0}', 'Fonctionnalité Windows désactivée : {0}', 'Компонент Windows отключён: {0}', 'Windows özelliği devre dışı bırakıldı: {0}')
-    PrivacyTitle         = @('Systemoptimierung und Datenschutz', 'System optimization and privacy', 'Optimización del sistema y privacidad', 'Optimisation du système et confidentialité', 'Оптимизация системы и конфиденциальность', 'Sistem optimizasyonu ve gizlilik')
-    PrivacyDescription   = @('Vorschau: DiagTrack, Werbe-ID, Feedback, Cortana/Copilot, Bing-Suche und Consumer Features werden deaktiviert.', 'Preview: DiagTrack, advertising ID, feedback, Cortana/Copilot, Bing search and Consumer Features will be disabled.', 'Vista previa: se desactivarán DiagTrack, ID de publicidad, comentarios, Cortana/Copilot, búsqueda de Bing y Consumer Features.', 'Aperçu : DiagTrack, identifiant publicitaire, commentaires, Cortana/Copilot, recherche Bing et Consumer Features seront désactivés.', 'Предпросмотр: будут отключены DiagTrack, рекламный ID, отзывы, Cortana/Copilot, поиск Bing и Consumer Features.', 'Önizleme: DiagTrack, reklam kimliği, geri bildirim, Cortana/Copilot, Bing araması ve Consumer Features devre dışı bırakılacak.')
-    PrivacyApply         = @('Angezeigte Datenschutz-Einstellungen anwenden', 'Apply the displayed privacy settings', 'Aplicar la configuración de privacidad mostrada', 'Appliquer les paramètres de confidentialité affichés', 'Применить показанные настройки конфиденциальности', 'Gösterilen gizlilik ayarlarını uygula')
-    PrivacyRestore       = @('Von diesem Tool gesetzte Datenschutzwerte zurücksetzen', 'Reset privacy values set by this tool', 'Restablecer los valores de privacidad establecidos por esta herramienta', 'Réinitialiser les valeurs de confidentialité définies par cet outil', 'Сбросить параметры конфиденциальности, заданные этим инструментом', 'Bu araç tarafından ayarlanan gizlilik değerlerini sıfırla')
-    PrivacyDone          = @('Datenschutz-Einstellungen wurden angewendet.', 'Privacy settings were applied.', 'Se aplicó la configuración de privacidad.', 'Les paramètres de confidentialité ont été appliqués.', 'Настройки конфиденциальности применены.', 'Gizlilik ayarları uygulandı.')
-    PrivacyRestored      = @('Vom Tool gesetzte Datenschutzwerte wurden zurückgesetzt.', 'Privacy values set by the tool were reset.', 'Se restablecieron los valores de privacidad establecidos por la herramienta.', 'Les valeurs de confidentialité définies par lʼoutil ont été réinitialisées.', 'Параметры конфиденциальности инструмента сброшены.', 'Araç tarafından ayarlanan gizlilik değerleri sıfırlandı.')
-    PrivacyNoBackup      = @('Es ist keine Datenschutz-Sicherung zum Zurücksetzen vorhanden.', 'No privacy backup is available to restore.', 'No hay una copia de seguridad de privacidad para restaurar.', 'Aucune sauvegarde de confidentialité nʼest disponible.', 'Нет резервной копии параметров конфиденциальности.', 'Geri yüklenecek gizlilik yedeği yok.')
-    RegistryPathLabel    = @('Registry-Pfad: {0}', 'Registry path: {0}', 'Ruta del registro: {0}', 'Chemin du registre : {0}', 'Путь реестра: {0}', 'Kayıt defteri yolu: {0}')
-    StorageFreed         = @('Gemessener freier Speicherplatz durch diesen Lauf: {0}', 'Measured free space gained in this run: {0}', 'Espacio libre medido ganado en esta ejecución: {0}', 'Espace libre mesuré gagné lors de cette exécution : {0}', 'Измеренное освобождённое место за этот запуск: {0}', 'Bu çalışmada ölçülen boş alan kazanımı: {0}')
-    StorageUnclear       = @('Der freie Speicherplatz ist während des Laufs nicht gestiegen; parallele Systemaktivität kann die Messung beeinflussen.', 'Free space did not increase during the run; concurrent system activity can affect the measurement.', 'El espacio libre no aumentó; la actividad simultánea del sistema puede afectar la medición.', 'Lʼespace libre nʼa pas augmenté ; lʼactivité système simultanée peut influencer la mesure.', 'Свободное место не увеличилось; параллельная активность системы может повлиять на измерение.', 'Boş alan artmadı; eşzamanlı sistem etkinliği ölçümü etkileyebilir.')
-    DeleteFoundTraces    = @('Alle oben angezeigten Datei- und Registry-Reste löschen', 'Delete all file and registry leftovers shown above', 'Eliminar todos los restos de archivos y registro mostrados', 'Supprimer tous les résidus de fichiers et de registre affichés', 'Удалить все показанные остатки файлов и реестра', 'Yukarıda gösterilen tüm dosya ve kayıt defteri kalıntılarını sil')
-    KeepFoundTraces      = @('Reste behalten und Vorgang fortsetzen', 'Keep leftovers and continue', 'Conservar los restos y continuar', 'Conserver les résidus et continuer', 'Сохранить остатки и продолжить', 'Kalıntıları koru ve devam et')
-    InvalidTraceDelete   = @('Bitte 1 zum Löschen oder 2 zum Behalten eingeben.', 'Enter 1 to delete or 2 to keep the leftovers.', 'Introduce 1 para eliminar o 2 para conservar los restos.', 'Saisissez 1 pour supprimer ou 2 pour conserver les résidus.', 'Введите 1 для удаления или 2 для сохранения остатков.', 'Silmek için 1 veya kalıntıları korumak için 2 girin.')
-    InvalidOneTwo        = @('Bitte 1 oder 2 eingeben.', 'Enter 1 or 2.', 'Introduce 1 o 2.', 'Saisissez 1 ou 2.', 'Введите 1 или 2.', '1 veya 2 girin.')
-}
-
-# Neue REMNEXA-Arbeitsbereiche. Jede Zeichenfolge folgt der bestehenden
-# Reihenfolge Deutsch, Englisch, Spanisch, Französisch, Russisch, Türkisch.
-$script:Texts.BrandTagline = @('Entfernen. Prüfen. Neu beginnen.', 'Remove. Verify. Begin again.', 'Eliminar. Verificar. Empezar de nuevo.', 'Supprimer. Vérifier. Recommencer.', 'Удалить. Проверить. Начать заново.', 'Kaldır. Doğrula. Yeniden başla.')
-$script:Texts.HomeTitle = @('Arbeitsbereich auswählen', 'Choose a workspace', 'Elegir un área de trabajo', 'Choisir un espace de travail', 'Выберите рабочий раздел', 'Çalışma alanı seçin')
-$script:Texts.HomeDescription = @('Deinstallation, Antivirus, Autostart und Dienste sind voneinander getrennt.', 'Uninstall, antivirus, startup and services are separated.', 'Desinstalación, antivirus, inicio y servicios están separados.', 'Désinstallation, antivirus, démarrage et services sont séparés.', 'Удаление, антивирус, автозагрузка и службы разделены.', 'Kaldırma, antivirüs, başlangıç ve hizmetler birbirinden ayrıdır.')
-$script:Texts.Home1 = @('Programme deinstallieren und Spuren bereinigen', 'Uninstall programs and clean leftovers', 'Desinstalar programas y limpiar restos', 'Désinstaller les programmes et nettoyer les résidus', 'Удалить программы и очистить остатки', 'Programları kaldır ve kalıntıları temizle')
-$script:Texts.Home2 = @('Antivirus- und Malware-Prüfung mit ClamAV', 'Antivirus and malware scan with ClamAV', 'Análisis antivirus y antimalware con ClamAV', 'Analyse antivirus et antimalware avec ClamAV', 'Антивирусная проверка ClamAV', 'ClamAV ile antivirüs ve kötü amaçlı yazılım taraması')
-$script:Texts.Home3 = @('Autostart-Programme verwalten', 'Manage startup programs', 'Administrar programas de inicio', 'Gérer les programmes de démarrage', 'Управление автозагрузкой', 'Başlangıç programlarını yönet')
-$script:Texts.Home4 = @('Aktive Windows-Dienste anzeigen', 'Show active Windows services', 'Mostrar servicios activos de Windows', 'Afficher les services Windows actifs', 'Показать активные службы Windows', 'Etkin Windows hizmetlerini göster')
-$script:Texts.Home5 = @('Entfernungshistorie ansehen', 'View removal history', 'Ver historial de eliminaciones', 'Afficher lʼhistorique des suppressions', 'Просмотреть историю удалений', 'Kaldırma geçmişini görüntüle')
-$script:Texts.Home6 = @('Anwendungs-Logs verwalten', 'Manage application logs', 'Administrar registros de la aplicación', 'Gérer les journaux de lʼapplication', 'Управление журналами приложения', 'Uygulama günlüklerini yönet')
-$script:Texts.Home7 = @('Sprache ändern', 'Change language', 'Cambiar idioma', 'Changer de langue', 'Изменить язык', 'Dili değiştir')
-$script:Texts.Home8 = @('Erweiterte Windows-Werkzeuge', 'Advanced Windows tools', 'Herramientas avanzadas de Windows', 'Outils Windows avancés', 'Расширенные инструменты Windows', 'Gelişmiş Windows araçları')
-$script:Texts.HomeInvalid = @('Bitte eine Zahl von 0 bis 8 eingeben.', 'Enter a number from 0 to 8.', 'Introduce un número del 0 al 8.', 'Saisissez un nombre de 0 à 8.', 'Введите число от 0 до 8.', '0 ile 8 arasında bir sayı girin.')
-$script:Texts.BackHome = @('Zurück zur Startseite', 'Back to home', 'Volver al inicio', 'Retour à lʼaccueil', 'Вернуться на главную', 'Ana sayfaya dön')
-$script:Texts.UninstallTitle = @('Deinstallation und Restebereinigung', 'Uninstall and leftover cleanup', 'Desinstalación y limpieza de restos', 'Désinstallation et nettoyage des résidus', 'Удаление и очистка остатков', 'Kaldırma ve kalıntı temizleme')
-
-$script:Texts.StartupTitle = @('Autostart-Programme', 'Startup programs', 'Programas de inicio', 'Programmes de démarrage', 'Программы автозагрузки', 'Başlangıç programları')
-$script:Texts.StartupDescription = @('Einträge werden nur deaktiviert und gesichert, nicht endgültig gelöscht.', 'Items are disabled and backed up, not permanently deleted.', 'Los elementos se desactivan y guardan, no se eliminan definitivamente.', 'Les éléments sont désactivés et sauvegardés, pas supprimés définitivement.', 'Элементы отключаются и сохраняются, а не удаляются навсегда.', 'Öğeler kalıcı silinmez; devre dışı bırakılır ve yedeklenir.')
-$script:Texts.Startup1 = @('Aktive Autostart-Einträge auflisten und deaktivieren', 'List and disable active startup items', 'Listar y desactivar elementos de inicio activos', 'Lister et désactiver les éléments de démarrage actifs', 'Показать и отключить активные элементы', 'Etkin başlangıç öğelerini listele ve devre dışı bırak')
-$script:Texts.Startup2 = @('Deaktivierten Eintrag wiederherstellen', 'Restore a disabled item', 'Restaurar un elemento desactivado', 'Restaurer un élément désactivé', 'Восстановить отключённый элемент', 'Devre dışı bırakılan öğeyi geri yükle')
-$script:Texts.Startup3 = @('Autostart-Historie anzeigen', 'Show startup history', 'Mostrar historial de inicio', 'Afficher lʼhistorique du démarrage', 'Показать историю автозагрузки', 'Başlangıç geçmişini göster')
-$script:Texts.StartupNone = @('Keine verwaltbaren aktiven Autostart-Einträge gefunden.', 'No manageable active startup items were found.', 'No se encontraron elementos de inicio activos administrables.', 'Aucun élément de démarrage actif gérable trouvé.', 'Управляемые активные элементы не найдены.', 'Yönetilebilir etkin başlangıç öğesi bulunamadı.')
-$script:Texts.StartupBackupsNone = @('Keine deaktivierten Einträge zur Wiederherstellung vorhanden.', 'No disabled items are available to restore.', 'No hay elementos desactivados para restaurar.', 'Aucun élément désactivé à restaurer.', 'Нет отключённых элементов для восстановления.', 'Geri yüklenecek devre dışı öğe yok.')
-$script:Texts.StartupHistoryNone = @('Noch keine Autostart-Änderungen gespeichert.', 'No startup changes have been recorded yet.', 'Aún no se han registrado cambios de inicio.', 'Aucune modification de démarrage enregistrée.', 'Изменения автозагрузки ещё не записаны.', 'Henüz başlangıç değişikliği kaydedilmedi.')
-$script:Texts.StartupReadError = @('Autostart-Einträge konnten nicht vollständig gelesen werden: {0}', 'Startup items could not be read completely: {0}', 'No se pudieron leer completamente los elementos de inicio: {0}', 'Lecture incomplète des éléments de démarrage : {0}', 'Не удалось полностью прочитать автозагрузку: {0}', 'Başlangıç öğeleri tam okunamadı: {0}')
-$script:Texts.StartupProtected = @('Dieser Windows-Systemeintrag wird aus Sicherheitsgründen nur angezeigt.', 'This Windows system item is shown read-only for safety.', 'Este elemento del sistema se muestra solo para lectura por seguridad.', 'Cet élément système est affiché en lecture seule par sécurité.', 'Этот системный элемент показан только для чтения.', 'Bu Windows sistem öğesi güvenlik için salt okunur gösterilir.')
-$script:Texts.StartupConfirm = @('Autostart deaktivieren: {0}', 'Disable startup item: {0}', 'Desactivar elemento de inicio: {0}', 'Désactiver lʼélément de démarrage : {0}', 'Отключить автозагрузку: {0}', 'Başlangıç öğesini devre dışı bırak: {0}')
-$script:Texts.StartupRestoreConfirm = @('Autostart wiederherstellen: {0}', 'Restore startup item: {0}', 'Restaurar elemento de inicio: {0}', 'Restaurer lʼélément de démarrage : {0}', 'Восстановить автозагрузку: {0}', 'Başlangıç öğesini geri yükle: {0}')
-$script:Texts.StartupDisabled = @('Autostart wurde deaktiviert und gesichert: {0}', 'Startup item was disabled and backed up: {0}', 'El elemento de inicio fue desactivado y guardado: {0}', 'Lʼélément de démarrage a été désactivé et sauvegardé : {0}', 'Элемент автозагрузки отключён и сохранён: {0}', 'Başlangıç öğesi devre dışı bırakıldı ve yedeklendi: {0}')
-$script:Texts.StartupRestored = @('Autostart wurde wiederhergestellt: {0}', 'Startup item was restored: {0}', 'El elemento de inicio fue restaurado: {0}', 'Lʼélément de démarrage a été restauré : {0}', 'Элемент автозагрузки восстановлен: {0}', 'Başlangıç öğesi geri yüklendi: {0}')
-$script:Texts.StartupActionFailed = @('Autostart-Änderung fehlgeschlagen: {0}', 'Startup change failed: {0}', 'Error al cambiar el inicio: {0}', 'Échec de la modification du démarrage : {0}', 'Не удалось изменить автозагрузку: {0}', 'Başlangıç değişikliği başarısız: {0}')
-$script:Texts.StartupSelect = @('Nummer des Eintrags auswählen; [0] zurück', 'Select an item number; [0] back', 'Selecciona un número; [0] volver', 'Sélectionnez un numéro ; [0] retour', 'Выберите номер; [0] назад', 'Öğe numarasını seçin; [0] geri')
-$script:Texts.StartupInvalid = @('Bitte eine angezeigte Nummer oder 0 eingeben.', 'Enter a displayed number or 0.', 'Introduce un número mostrado o 0.', 'Saisissez un numéro affiché ou 0.', 'Введите показанный номер или 0.', 'Gösterilen bir numarayı veya 0 girin.')
-
-$script:Texts.ServicesTitle = @('Aktive Windows-Dienste', 'Active Windows services', 'Servicios activos de Windows', 'Services Windows actifs', 'Активные службы Windows', 'Etkin Windows hizmetleri')
-$script:Texts.ServicesDescription = @('Nur Anzeige: In diesem Bereich werden keine Dienste verändert.', 'Read-only: no services are changed in this workspace.', 'Solo lectura: no se modifica ningún servicio.', 'Lecture seule : aucun service nʼest modifié.', 'Только просмотр: службы не изменяются.', 'Salt okunur: bu alanda hizmetler değiştirilmez.')
-$script:Texts.ServicesNone = @('Keine aktiven Dienste gefunden.', 'No active services were found.', 'No se encontraron servicios activos.', 'Aucun service actif trouvé.', 'Активные службы не найдены.', 'Etkin hizmet bulunamadı.')
-$script:Texts.ServicesReadError = @('Dienste konnten nicht gelesen werden: {0}', 'Services could not be read: {0}', 'No se pudieron leer los servicios: {0}', 'Impossible de lire les services : {0}', 'Не удалось прочитать службы: {0}', 'Hizmetler okunamadı: {0}')
-$script:Texts.ServicesCommands = @('[1] nächste Seite | [2] vorherige Seite | [3] suchen | [4] Filter löschen | [0] zurück', '[1] next page | [2] previous page | [3] search | [4] clear filter | [0] back', '[1] siguiente | [2] anterior | [3] buscar | [4] borrar filtro | [0] volver', '[1] suivant | [2] précédent | [3] rechercher | [4] effacer le filtre | [0] retour', '[1] далее | [2] назад | [3] поиск | [4] сбросить фильтр | [0] назад', '[1] ileri | [2] geri | [3] ara | [4] filtreyi temizle | [0] geri')
-$script:Texts.ServicesPage = @('Seite {0} von {1} | aktive Dienste: {2}', 'Page {0} of {1} | active services: {2}', 'Página {0} de {1} | servicios activos: {2}', 'Page {0} sur {1} | services actifs : {2}', 'Страница {0} из {1} | активных служб: {2}', 'Sayfa {0}/{1} | etkin hizmet: {2}')
+# Reihenfolge der Sprachcodes: Deutsch, Englisch, Spanisch, Französisch, Russisch, Türkisch.
+$script:Texts = Import-RemnexaLocalization -Root (Join-Path $PSScriptRoot 'locales') -LanguageCodes $script:LanguageCodes -FallbackLanguage 'de'
 
 function T {
     param(
@@ -313,12 +87,7 @@ function T {
         [AllowEmptyCollection()][object[]]$Values = @()
     )
 
-    $index = [Array]::IndexOf($script:LanguageCodes, $script:Language)
-    if ($index -lt 0) { $index = 0 }
-    $translations = $script:Texts[$Key]
-    if ($null -eq $translations) { return $Key }
-    $text = [string]$translations[$index]
-    if ([string]::IsNullOrWhiteSpace($text)) { $text = [string]$translations[0] }
+    $text = Get-RemnexaText -Texts $script:Texts -Key $Key -LanguageCode $script:Language -LanguageCodes $script:LanguageCodes -FallbackLanguage 'de'
     if ($Values.Count -gt 0) { return ($text -f $Values) }
     return $text
 }
@@ -365,22 +134,53 @@ function Initialize-DataMigration {
 
 function Initialize-AppSettings {
     Initialize-DataMigration
-    if (Test-Path -LiteralPath $script:SettingsPath) {
-        try {
-            $settings = Get-Content -LiteralPath $script:SettingsPath -Raw -Encoding UTF8 | ConvertFrom-Json
-            if ($script:LanguageCodes -contains [string]$settings.Language) {
-                $script:Language = [string]$settings.Language
-            }
-        }
-        catch { }
-    }
+    $script:Language = Get-RemnexaLanguage -Path $script:SettingsPath -SupportedLanguages $script:LanguageCodes -FallbackLanguage 'de'
     Import-HistoryFromExistingLogs
 }
 
+function Read-RemnexaInput {
+    param(
+        [Parameter(Position = 0)][AllowEmptyString()][string]$Prompt = '',
+        [switch]$ExitOptionAlreadyShown
+    )
+
+    # The caller still handles its existing zero choice. Keep x/exit as quiet
+    # compatibility aliases, but advertise just one exit option per prompt.
+    if (-not $ExitOptionAlreadyShown) { Write-Host ('  [X] ' + (T 'ExitApplication')) -ForegroundColor DarkGray }
+    $answer = Read-Host -Prompt $Prompt
+    if ($null -eq $answer) { return '' }
+    if ($answer.Trim() -ieq 'x' -or $answer.Trim() -ieq 'exit') {
+        Stop-RemnexaApplication
+    }
+    return $answer
+}
+
+function Stop-RemnexaApplication {
+    $script:ExitRequested = $true
+    try {
+        Complete-OperationProgress
+        Write-Status (T 'ProgramEnded') 'Success'
+        if ($script:LogLines.Count -gt 0) {
+            $exitLogPath = Save-ToolLog -Action ('SessionExit-' + [Guid]::NewGuid().ToString('N')) -Data ([PSCustomObject]@{
+                Reason = 'UserRequested'
+                LastRunLogPath = $script:LastRunLogPath
+                LastRunSummary = $script:LastRunSummary
+                LastOperationResult = $script:LastOperationResult
+                Entries = $script:LogLines.ToArray()
+            })
+            if ($exitLogPath) { Write-Host (T 'LogLabel' @($exitLogPath)) -ForegroundColor DarkGray }
+        }
+    }
+    catch {
+        Write-Host (T 'LogSaveError' @($_.Exception.Message)) -ForegroundColor Yellow
+    }
+    finally {
+        exit 0
+    }
+}
+
 function Save-AppSettings {
-    New-Item -ItemType Directory -Path $script:DataRoot -Force | Out-Null
-    [PSCustomObject]@{ Language = $script:Language } |
-        ConvertTo-Json | Set-Content -LiteralPath $script:SettingsPath -Encoding UTF8
+    Save-RemnexaLanguage -Path $script:SettingsPath -Language $script:Language -SupportedLanguages $script:LanguageCodes
 }
 
 function Get-LanguageDisplayName {
@@ -396,7 +196,7 @@ function global:Write-LogEntry {
         [string]$Component = 'REMNEXA'
     )
 
-    $global:ProgramCleanerLogLines.Add(('[{0:yyyy-MM-dd HH:mm:ss}] [{1}] [{2}] {3}' -f (Get-Date), $Level, $Component, $Message))
+    Write-RemnexaLogEntry -LogLines $script:LogLines -Message $Message -Level $Level -Component $Component
 }
 
 function Write-Status {
@@ -495,9 +295,7 @@ function Invoke-ConfiguredAntivirusScan {
 }
 
 function Test-IsAdministrator {
-    $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
-    $principal = New-Object Security.Principal.WindowsPrincipal($identity)
-    return $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+    return Test-RemnexaAdministrator
 }
 
 function ConvertTo-SingleQuotedLiteral {
@@ -519,6 +317,22 @@ function Complete-OperationProgress {
     Write-Progress -Activity $script:BrandName -Completed
 }
 
+function Confirm-AdministratorRequest {
+    param([Parameter(Mandatory = $true)][string]$ReasonKey)
+
+    Write-Status (T $ReasonKey) 'Info'
+    Write-Host (T 'AdminNoticeInstructions') -ForegroundColor Yellow
+    while ($true) {
+        $answer = Read-RemnexaInput (T 'AdminNoticePrompt')
+        if ([string]::IsNullOrWhiteSpace($answer)) { return $true }
+        if ($answer.Trim() -eq '0') {
+            Write-Status (T 'SelectionCancelled') 'Info'
+            return $false
+        }
+        Write-Status (T 'AdminNoticeInvalid') 'Warning'
+    }
+}
+
 function Request-ElevationForRemoval {
     param(
         [Parameter(Mandatory = $true)][string]$SearchName,
@@ -535,6 +349,8 @@ function Request-ElevationForRemoval {
         return $false
     }
 
+    $reasonKey = if ($IsResidualOnly) { 'AdminReasonResidual' } else { 'AdminReasonRemoval' }
+    if (-not (Confirm-AdministratorRequest -ReasonKey $reasonKey)) { return $false }
     Write-Status (T 'UacOpening') 'Warning'
 
     $parts = New-Object System.Collections.Generic.List[string]
@@ -585,12 +401,24 @@ function Request-ElevationForTool {
         return $false
     }
 
+    $reasonKey = switch ($Mode) {
+        'Registry' { 'AdminReasonRegistry' }
+        'Features' { 'AdminReasonFeatures' }
+        'Privacy' { 'AdminReasonPrivacy' }
+        'Antivirus' { 'AdminReasonAntivirus' }
+        'Startup' {
+            if ($ItemId.StartsWith('restore:', [StringComparison]::OrdinalIgnoreCase)) { 'AdminReasonStartupRestore' }
+            else { 'AdminReasonStartupDisable' }
+        }
+    }
+    if (-not (Confirm-AdministratorRequest -ReasonKey $reasonKey)) { return $false }
     Write-Status (T 'UacOpening') 'Warning'
     $parts = New-Object System.Collections.Generic.List[string]
     $parts.Add('& ' + (ConvertTo-SingleQuotedLiteral -Value $PSCommandPath))
     $parts.Add('-ToolMode ' + (ConvertTo-SingleQuotedLiteral -Value $Mode))
     $parts.Add('-ContinueInteractive')
     if ($Mode -eq 'Startup') { $parts.Add('-WorkspaceMode Startup') }
+    if ($Mode -eq 'Antivirus') { $parts.Add('-WorkspaceMode Antivirus') }
     if ($Mode -eq 'Startup' -and -not [string]::IsNullOrWhiteSpace($ItemId)) {
         $parts.Add('-SelectedStartupId ' + (ConvertTo-SingleQuotedLiteral -Value $ItemId))
     }
@@ -673,7 +501,7 @@ function Confirm-ProtectedComponentOverride {
     Write-Host ('  [1] ' + (T 'ProtectedAbort'))
     Write-Host ('  [2] ' + (T 'ProtectedOverride')) -ForegroundColor Red
     while ($true) {
-        $answer = (Read-Host (T 'SelectPrompt')).Trim()
+        $answer = (Read-RemnexaInput (T 'SelectPrompt')).Trim()
         if ($answer -eq '1') { return $false }
         if ($answer -eq '2') {
             $script:OverrideProtectedComponent = $true
@@ -821,6 +649,16 @@ function Select-Program {
     return Select-ProgramPaged -Programs $Candidates -Title (T 'FoundProgramsTitle')
 }
 
+function Show-PageNavigation {
+    param(
+        [Parameter(Mandatory = $true)][object]$PageState,
+        [string]$NextCommand = '-1',
+        [string]$PreviousCommand = '-2'
+    )
+    if ($PageState.HasNext) { Write-Host ('  [{0}] {1}' -f $NextCommand, (T 'PageNext')) -ForegroundColor DarkGray }
+    if ($PageState.HasPrevious) { Write-Host ('  [{0}] {1}' -f $PreviousCommand, (T 'PagePrevious')) -ForegroundColor DarkGray }
+}
+
 function Select-ProgramPaged {
     param(
         [Parameter(Mandatory = $true)][AllowEmptyCollection()][object[]]$Programs,
@@ -837,6 +675,7 @@ function Select-ProgramPaged {
     $filteredPrograms = $allPrograms
     $filterText = ''
     $page = 0
+    $pageNotice = ''
     if ($null -ne $ResumeContext) { $filterText = [string]$ResumeContext.Filter; $page = [int]$ResumeContext.Page }
     $filteredPrograms = if ($filterText) { @($allPrograms | Where-Object { $_.DisplayName.IndexOf($filterText, [StringComparison]::OrdinalIgnoreCase) -ge 0 -or $_.Publisher.IndexOf($filterText, [StringComparison]::OrdinalIgnoreCase) -ge 0 }) } else { $allPrograms }
     $pageSize = 18
@@ -847,9 +686,9 @@ function Select-ProgramPaged {
         Write-Host $Title -ForegroundColor White
         if ($filterText) { Write-Host (T 'FilterLabel' @($filterText)) -ForegroundColor Yellow }
 
-        $pageCount = [Math]::Max(1, [Math]::Ceiling($filteredPrograms.Count / [double]$pageSize))
-        if ($page -ge $pageCount) { $page = $pageCount - 1 }
-        if ($page -lt 0) { $page = 0 }
+        $pageState = Get-RemnexaPageState -ItemCount $filteredPrograms.Count -PageSize $pageSize -PageIndex $page
+        $pageCount = $pageState.PageCount
+        $page = $pageState.PageIndex
         $script:LastProgramListContext = [PSCustomObject]@{ Programs = $allPrograms; Title = $Title; Filter = $filterText; Page = $page }
         $start = $page * $pageSize
         $end = [Math]::Min($start + $pageSize - 1, $filteredPrograms.Count - 1)
@@ -871,7 +710,9 @@ function Select-ProgramPaged {
 
         Write-Host ''
         Write-Host (T 'ListCommands') -ForegroundColor DarkGray
-        $answer = Read-Host (T 'SelectPrompt')
+        Show-PageNavigation -PageState $pageState
+        if ($pageNotice) { Write-Status (T $pageNotice) 'Warning'; $pageNotice = '' }
+        $answer = Read-RemnexaInput (T 'SelectPrompt') -ExitOptionAlreadyShown
         if ([string]::IsNullOrWhiteSpace($answer)) {
             Write-Status (T 'InvalidList') 'Warning'
             Start-Sleep -Milliseconds 900
@@ -885,15 +726,17 @@ function Select-ProgramPaged {
         }
         if ($trimmedAnswer -in @('-5', 'b', 'back', 'menu')) { return $null }
         if ($trimmedAnswer -in @('-1', 'n')) {
-            if ($page + 1 -lt $pageCount) { $page++ }
+            if ($pageState.HasNext) { $page++ }
+            else { $pageNotice = 'PageNextUnavailable' }
             continue
         }
         if ($trimmedAnswer -in @('-2', 'z')) {
-            if ($page -gt 0) { $page-- }
+            if ($pageState.HasPrevious) { $page-- }
+            else { $pageNotice = 'PagePreviousUnavailable' }
             continue
         }
         if ($trimmedAnswer -in @('-3', 's')) {
-            $filterText = (Read-Host (T 'SearchPrompt')).Trim()
+            $filterText = (Read-RemnexaInput (T 'SearchPrompt')).Trim()
             if ($filterText) {
                 $filteredPrograms = @($allPrograms | Where-Object {
                     $_.DisplayName.IndexOf($filterText, [StringComparison]::OrdinalIgnoreCase) -ge 0 -or
@@ -920,7 +763,7 @@ function Select-ProgramPaged {
                 Write-Status (T 'ProtectedItem') 'Warning'
                 Write-Host (T 'Press1Back') -ForegroundColor DarkGray
                 while ($true) {
-                    $protectedChoice = (Read-Host (T 'SelectPrompt')).Trim()
+                    $protectedChoice = (Read-RemnexaInput (T 'SelectPrompt') -ExitOptionAlreadyShown).Trim()
                     if ($protectedChoice -eq '1') { break }
                     if ($protectedChoice -in @('0', 'exit')) {
                         $script:ExitRequested = $true
@@ -958,7 +801,7 @@ function Show-UninstallMenu {
     Write-Host ''
 
     while ($true) {
-        $answer = (Read-Host (T 'SelectPrompt')).Trim()
+        $answer = (Read-RemnexaInput (T 'SelectPrompt')).Trim()
         if ($answer -match '^[0-9]$') { return $answer }
         if ($answer -ieq 'exit') { return '0' }
         Write-Status (T 'InvalidMain') 'Warning'
@@ -977,14 +820,64 @@ function Show-HomeMenu {
     Write-Host ('  [6] ' + (T 'Home6'))
     Write-Host ('  [7] ' + (T 'Home7'))
     Write-Host ('  [8] ' + (T 'Home8'))
+    Write-Host ('  [9] ' + (T 'Home9'))
     Write-Host ('  [0] ' + (T 'Main0'))
     Write-Host ''
     while ($true) {
-        $answer = (Read-Host (T 'SelectPrompt')).Trim()
-        if ($answer -match '^[0-8]$') { return $answer }
+        $answer = (Read-RemnexaInput (T 'SelectPrompt') -ExitOptionAlreadyShown).Trim()
+        if ($answer -match '^[0-9]$') { return $answer }
         if ($answer -ieq 'exit') { return '0' }
         Write-Status (T 'HomeInvalid') 'Warning'
     }
+}
+
+function Show-SystemSnapshotScreen {
+    Write-Host (T 'SystemSnapshotTitle') -ForegroundColor White
+    Write-Host (T 'SystemSnapshotReadOnly') -ForegroundColor DarkGray
+    Write-Host ''
+
+    try {
+        $snapshot = Get-RemnexaSystemSnapshot
+        Write-Host (T 'SystemSnapshotOS' @($snapshot.WindowsCaption, $snapshot.WindowsVersion))
+        if (-not [string]::IsNullOrWhiteSpace([string]$snapshot.BuildNumber)) {
+            Write-Host (T 'SystemSnapshotBuild' @($snapshot.BuildNumber, $snapshot.Architecture))
+        }
+
+        $cpuText = if ($null -eq $snapshot.CpuLoadPercent) { T 'SystemSnapshotUnavailableValue' } else { '{0}%' -f $snapshot.CpuLoadPercent }
+        Write-Host (T 'SystemSnapshotCpu' @($cpuText))
+
+        if ($null -eq $snapshot.MemoryUsedPercent) {
+            Write-Host (T 'SystemSnapshotMemoryUnavailable')
+        }
+        else {
+            $memoryValues = @(
+                $snapshot.MemoryUsedPercent,
+                (Format-ByteSize -Bytes $snapshot.FreeMemoryBytes),
+                (Format-ByteSize -Bytes $snapshot.TotalMemoryBytes)
+            )
+            Write-Host (T 'SystemSnapshotMemory' $memoryValues)
+        }
+
+        if (@($snapshot.Volumes).Count -eq 0) {
+            Write-Host (T 'SystemSnapshotNoDrives') -ForegroundColor DarkGray
+        }
+        else {
+            foreach ($volume in @($snapshot.Volumes)) {
+                Write-Host (T 'SystemSnapshotDrive' @(
+                    $volume.Drive,
+                    $volume.UsedPercent,
+                    (Format-ByteSize -Bytes $volume.FreeBytes),
+                    (Format-ByteSize -Bytes $volume.TotalBytes)
+                ))
+            }
+        }
+    }
+    catch {
+        Write-Status (T 'SystemSnapshotError' @($_.Exception.Message)) 'Warning'
+    }
+
+    Write-Host ''
+    [void](Read-RemnexaInput (T 'SystemSnapshotContinue'))
 }
 
 function Read-AfterOperationChoice {
@@ -995,7 +888,7 @@ function Read-AfterOperationChoice {
     if ($script:LastRunLogPath) { Write-Host ('  [3] ' + (T 'OpenRunLog')) }
     Write-Host ('  [0] ' + (T 'Main0'))
     while ($true) {
-        $choice = (Read-Host (T 'SelectPrompt')).Trim()
+        $choice = (Read-RemnexaInput (T 'SelectPrompt') -ExitOptionAlreadyShown).Trim()
         if ($choice -eq '3' -and $script:LastRunLogPath) {
             if (Test-Path -LiteralPath $script:LastRunLogPath) {
                 Start-Process -FilePath 'notepad.exe' -ArgumentList ('"' + $script:LastRunLogPath + '"') -Wait
@@ -1017,6 +910,10 @@ function Read-AfterOperationChoice {
 }
 
 function Show-LastRunDetails {
+    if ($null -ne $script:LastOperationResult) {
+        $statusKey = 'OperationStatus' + [string]$script:LastOperationResult.Status
+        Write-Host ('  ' + (T $statusKey)) -ForegroundColor $(if ($script:LastOperationResult.Status -in @('Completed', 'DryRun')) { 'Green' } elseif ($script:LastOperationResult.Status -eq 'Partial') { 'Yellow' } else { 'Red' })
+    }
     if ($null -eq $script:LastRunSummary) { return }
     $summary = $script:LastRunSummary
     Write-Host ''
@@ -1024,15 +921,17 @@ function Show-LastRunDetails {
     Write-Host ('  Spuren vor der Deinstallation: {0}' -f $summary.Before)
     Write-Host ('  Spuren danach zur Bereinigung gefunden: {0}' -f $summary.Found)
     Write-Host ('  Entfernt: {0} | fehlgeschlagen: {1} | noch vorhanden: {2}' -f $summary.Removed, $summary.Failed, $summary.Remaining)
+    if ($summary.PSObject.Properties['Skipped'] -and $summary.Skipped -gt 0) {
+        Write-Host ('  ' + (T 'ManagedTraceCount' @($summary.Skipped))) -ForegroundColor DarkYellow
+    }
     if ($summary.Integrity) {
         if ($summary.Integrity.Warnings.Count -eq 0) { Write-Host '  Systemprüfung: keine Hinweise.' -ForegroundColor Green }
         else {
             Write-Host ('  Systemprüfung: {0} Hinweis(e)' -f $summary.Integrity.Warnings.Count) -ForegroundColor Yellow
             foreach ($warning in $summary.Integrity.Warnings) { Write-Host ('    - ' + $warning) -ForegroundColor Yellow }
-            foreach ($check in @($summary.Integrity.Checks | Where-Object { -not $_.Healthy })) {
-                Write-Host ('      {0}: {1}{2}' -f $check.Display, $check.State, $(if ($check.StartMode) { ' | Starttyp: ' + $check.StartMode } else { '' })) -ForegroundColor DarkYellow
-            }
         }
+        foreach ($check in @($summary.Integrity.Checks | Where-Object { $_.Type -eq 'AntivirusStatus' -and $_.Healthy })) { Write-Host ('    ' + $check.Message) -ForegroundColor DarkGray }
+        if ($summary.PSObject.Properties['IntegrityLogPath'] -and $summary.IntegrityLogPath) { Write-Host (T 'LogLabel' @($summary.IntegrityLogPath)) -ForegroundColor DarkGray }
     }
 }
 
@@ -1216,7 +1115,10 @@ function Add-Trace {
 function Test-ProtectedFilePath {
     param([Parameter(Mandatory = $true)][string]$Path)
 
+    if (Test-RemnexaWindowsManagedPath -Path $Path) { return $true }
     try { $full = [IO.Path]::GetFullPath($Path).TrimEnd('\') } catch { return $true }
+    $pathSafety = Get-RemnexaPathSafety -Path $full
+    if (-not $pathSafety.IsSafe) { return $true }
     $protected = New-Object System.Collections.Generic.List[string]
     foreach ($item in @(
         [IO.Path]::GetPathRoot($full),
@@ -1263,6 +1165,24 @@ function Add-FileTraceIfSafe {
     )
 
     if (-not (Test-Path -LiteralPath $Path)) { return }
+    if (Test-RemnexaWindowsManagedPath -Path $Path) {
+        # Keep Windows-owned packages visible as informational findings, while
+        # never offering their files to the generic recursive deletion engine.
+        $managedItem = Get-Item -LiteralPath $Path -Force -ErrorAction SilentlyContinue
+        $managedKind = if ($null -ne $managedItem -and -not $managedItem.PSIsContainer) { 'File' } else { 'Directory' }
+        Add-Trace -Kind $managedKind -Target ([IO.Path]::GetFullPath($Path)) -Reason $Reason -Personal $false
+        return
+    }
+    $pathSafety = Get-RemnexaPathSafety -Path $Path
+    if (-not $pathSafety.IsSafe) {
+        if ($pathSafety.Reason -eq 'ReparsePoint') {
+            Write-Status (T 'SafetyLink' @($pathSafety.Component)) 'Warning'
+        }
+        else {
+            Write-Status (T 'PathCheckError' @($pathSafety.Component)) 'Warning'
+        }
+        return
+    }
     if (Test-ProtectedFilePath -Path $Path) {
         Write-Status (T 'SafetyParent' @($Path)) 'Warning'
         return
@@ -1532,6 +1452,7 @@ function Show-TraceSummary {
         foreach ($trace in $visibleTraces) {
             $suffix = if ($trace.ValueName) { ' -> ' + $trace.ValueName } else { '' }
             $personal = if ($trace.Personal) { ' [' + (T 'PersonalFile') + ']' } else { '' }
+            if ($trace.Kind -in @('File', 'Directory') -and (Test-RemnexaWindowsManagedPath -Path $trace.Target)) { $personal += ' [' + (T 'ManagedTraceLabel') + ']' }
             Write-Host ('    ' + $trace.Target + $suffix + $personal) -ForegroundColor DarkGray
         }
         if (-not $ShowAll -and $group.Count -gt 8) {
@@ -1543,12 +1464,15 @@ function Show-TraceSummary {
 function Read-TraceDeletionConfirmation {
     param([Parameter(Mandatory = $true)][AllowEmptyCollection()][object[]]$Traces)
     if ($Traces.Count -eq 0) { return $false }
+    $managedCount = @($Traces | Where-Object { $_.Kind -in @('File', 'Directory') -and (Test-RemnexaWindowsManagedPath -Path $_.Target) }).Count
+    if ($managedCount -gt 0) { Write-Status (T 'ManagedTraceCount' @($managedCount)) 'Warning' }
+    if ($managedCount -eq $Traces.Count) { return $false }
 
     Write-Host ''
     Write-Host ('  [1] ' + (T 'DeleteFoundTraces')) -ForegroundColor Red
     Write-Host ('  [2] ' + (T 'KeepFoundTraces'))
     while ($true) {
-        $answer = (Read-Host (T 'SelectPrompt')).Trim()
+        $answer = (Read-RemnexaInput (T 'SelectPrompt')).Trim()
         if ($answer -eq '1') { return $true }
         if ($answer -eq '2') { return $false }
         Write-Status (T 'InvalidTraceDelete') 'Warning'
@@ -1563,18 +1487,22 @@ function New-RestorePointIfPossible {
         return $true
     }
     try {
-        Checkpoint-Computer -Description ('Vor Entfernung von ' + $ProgramName) -RestorePointType MODIFY_SETTINGS -ErrorAction Stop
+        $description = 'REMNEXA-' + [Guid]::NewGuid().ToString('N') + ': ' + $ProgramName
+        Checkpoint-Computer -Description $description -RestorePointType MODIFY_SETTINGS -ErrorAction Stop -WarningAction SilentlyContinue
+        $created = @(Get-ComputerRestorePoint -ErrorAction Stop | Where-Object { $_.Description -eq $description })
+        if ($created.Count -eq 0) { throw (T 'RestorePointUnverified') }
         Write-Status (T 'RestorePointDone') 'Success'
         return $true
     }
     catch {
         Write-Status (T 'RestorePointFailed') 'Error'
+        Write-Status $_.Exception.Message 'Warning'
         Write-Status (T 'RestoreBlocked') 'Error'
         if (-not $script:InteractiveSession) { return $false }
         Write-Host ('  [1] ' + (T 'RestoreAbort'))
         Write-Host ('  [2] ' + (T 'RestoreContinue')) -ForegroundColor Red
         while ($true) {
-            $answer = (Read-Host (T 'SelectPrompt')).Trim()
+            $answer = (Read-RemnexaInput (T 'SelectPrompt')).Trim()
             if ($answer -eq '1') { return $false }
             if ($answer -eq '2') { return $true }
             Write-Status (T 'InvalidRestore') 'Warning'
@@ -1655,7 +1583,7 @@ function Remove-RegistryTrace {
 
     if ($Trace.Kind -eq 'RegistryKey') {
         & reg.exe delete $Trace.Target /f 2>$null | Out-Null
-        if ($LASTEXITCODE -notin @(0, 1)) { throw ('Registry-Schlüssel konnte nicht gelöscht werden: ' + $Trace.Target) }
+        if ($LASTEXITCODE -ne 0) { throw ('Registry-Schlüssel konnte nicht gelöscht werden: ' + $Trace.Target) }
         return
     }
 
@@ -1666,7 +1594,7 @@ function Remove-RegistryTrace {
     else {
         & reg.exe delete $Trace.Target /v $Trace.ValueName /f 2>$null | Out-Null
     }
-    if ($LASTEXITCODE -notin @(0, 1)) { throw ('Registry-Wert konnte nicht gelöscht werden: ' + $Trace.Target + ' -> ' + $Trace.ValueName) }
+    if ($LASTEXITCODE -ne 0) { throw ('Registry-Wert konnte nicht gelöscht werden: ' + $Trace.Target + ' -> ' + $Trace.ValueName) }
 }
 
 function Remove-Traces {
@@ -1674,16 +1602,19 @@ function Remove-Traces {
 
     $removed = 0
     $failed = New-Object System.Collections.Generic.List[string]
+    $skipped = New-Object System.Collections.Generic.List[object]
 
-    # Untergeordnete Registry-Werte entfallen automatisch, wenn der Schlüssel gelöscht wird.
-    $keyTargets = @($Traces | Where-Object Kind -eq 'RegistryKey' | ForEach-Object { $_.Target.TrimEnd('\') })
+    # Only successful key deletions cover child values. A denied parent must not
+    # silently suppress a later attempt to remove an individually writable value.
+    $removedKeys = New-Object System.Collections.Generic.List[string]
+    $coveredCount = 0
     $ordered = @($Traces | Sort-Object @{
         Expression = {
             switch ($_.Kind) {
                 'Service' { 0 }
                 'Task' { 1 }
-                'RegistryValue' { 2 }
-                'RegistryKey' { 3 }
+                'RegistryKey' { 2 }
+                'RegistryValue' { 3 }
                 'File' { 4 }
                 'Directory' { 5 }
                 default { 9 }
@@ -1693,23 +1624,29 @@ function Remove-Traces {
 
     foreach ($trace in $ordered) {
         try {
-            if ($trace.Kind -eq 'RegistryValue') {
-                $covered = @($keyTargets | Where-Object { $trace.Target.StartsWith($_ + '\', [StringComparison]::OrdinalIgnoreCase) -or $trace.Target.Equals($_, [StringComparison]::OrdinalIgnoreCase) }).Count -gt 0
-                if ($covered) { continue }
+            if ($trace.Kind -in @('File', 'Directory') -and (Test-RemnexaWindowsManagedPath -Path $trace.Target)) {
+                $skipped.Add([PSCustomObject]@{ Kind = $trace.Kind; Target = $trace.Target; Reason = 'WindowsManaged' })
+                continue
+            }
+            if ($trace.Kind -in @('RegistryKey', 'RegistryValue')) {
+                $covered = @($removedKeys | Where-Object { $trace.Target.StartsWith($_ + '\', [StringComparison]::OrdinalIgnoreCase) -or $trace.Target.Equals($_, [StringComparison]::OrdinalIgnoreCase) }).Count -gt 0
+                if ($covered) { $coveredCount++; continue }
             }
 
             switch ($trace.Kind) {
                 'File' {
-                    if (-not (Test-ProtectedFilePath -Path $trace.Target) -and (Test-Path -LiteralPath $trace.Target)) {
+                    if (Test-Path -LiteralPath $trace.Target) {
+                        if (Test-ProtectedFilePath -Path $trace.Target) { throw 'Dateipfad ist geschuetzt, verlinkt oder nicht vollstaendig pruefbar.' }
                         Remove-Item -LiteralPath $trace.Target -Force -ErrorAction Stop
                     }
                 }
                 'Directory' {
-                    if (-not (Test-ProtectedFilePath -Path $trace.Target) -and (Test-Path -LiteralPath $trace.Target)) {
+                    if (Test-Path -LiteralPath $trace.Target) {
+                        if (Test-ProtectedFilePath -Path $trace.Target) { throw 'Ordnerpfad ist geschuetzt, verlinkt oder nicht vollstaendig pruefbar.' }
                         Remove-Item -LiteralPath $trace.Target -Recurse -Force -ErrorAction Stop
                     }
                 }
-                'RegistryKey' { Remove-RegistryTrace -Trace $trace }
+                'RegistryKey' { Remove-RegistryTrace -Trace $trace; $removedKeys.Add($trace.Target.TrimEnd('\')) }
                 'RegistryValue' { Remove-RegistryTrace -Trace $trace }
                 'Service' {
                     $service = Get-Service -Name $trace.Target -ErrorAction SilentlyContinue
@@ -1729,11 +1666,13 @@ function Remove-Traces {
             $removed++
         }
         catch {
-            $failed.Add($trace.Target + ' :: ' + $_.Exception.Message)
+            $failureText = $trace.Target
+            if ($_.Exception -is [UnauthorizedAccessException] -or $_.FullyQualifiedErrorId -match 'UnauthorizedAccess|PermissionDenied') { $failureText = T 'TraceAccessDenied' @($trace.Target) }
+            $failed.Add($failureText + ' :: ' + $_.Exception.Message)
         }
     }
 
-    return [PSCustomObject]@{ Removed = $removed; Failed = $failed.ToArray() }
+    return [PSCustomObject]@{ Removed = $removed; Failed = $failed.ToArray(); Skipped = $skipped.ToArray(); CoveredByParent = $coveredCount }
 }
 
 function Save-RunLog {
@@ -1803,27 +1742,32 @@ function Test-SystemIntegrity {
     $checks = New-Object System.Collections.Generic.List[object]
     $warnings = New-Object System.Collections.Generic.List[string]
     $serviceRules = @(
-        [PSCustomObject]@{ Name = 'wuauserv'; Display = 'Windows Update'; MustRun = $false },
-        [PSCustomObject]@{ Name = 'BITS'; Display = 'Background Intelligent Transfer Service'; MustRun = $false },
-        [PSCustomObject]@{ Name = 'WinDefend'; Display = 'Microsoft Defender Antivirus'; MustRun = $true },
-        [PSCustomObject]@{ Name = 'SecurityHealthService'; Display = 'Windows Security Health'; MustRun = $true },
-        [PSCustomObject]@{ Name = 'InstallService'; Display = 'Microsoft Store Install Service'; MustRun = $false }
+        [PSCustomObject]@{ Name = 'wuauserv'; Display = 'Windows Update' },
+        [PSCustomObject]@{ Name = 'BITS'; Display = 'Background Intelligent Transfer Service' },
+        [PSCustomObject]@{ Name = 'SecurityHealthService'; Display = 'Windows Security Health' },
+        [PSCustomObject]@{ Name = 'InstallService'; Display = 'Microsoft Store Install Service' }
     )
 
     Write-Host ''
     Write-Host (T 'IntegrityTitle') -ForegroundColor White
     foreach ($rule in $serviceRules) {
-        $service = Get-CimInstance Win32_Service -Filter ("Name='" + $rule.Name + "'") -ErrorAction SilentlyContinue
-        if ($null -eq $service) {
-            $state = 'Missing'
-            $startMode = 'Unknown'
-            $healthy = $false
-        }
-        else {
+        $state = 'Unknown'
+        $startMode = 'Unknown'
+        $severity = 'Info'
+        $detail = ''
+        try {
+            $service = Get-CimInstance -ClassName Win32_Service -Filter ("Name='" + $rule.Name + "'") -ErrorAction Stop
+            if ($null -eq $service) { throw 'Service was not returned.' }
             $state = [string]$service.State
             $startMode = [string]$service.StartMode
-            $healthy = ($startMode -ne 'Disabled') -and (-not $rule.MustRun -or $state -eq 'Running')
+            if ($startMode -eq 'Disabled') { $messageKey = 'ServiceDisabled'; $severity = 'Warning' }
+            elseif ($state -eq 'Running') { $messageKey = 'ServiceRunning' }
+            elseif ($state -eq 'Stopped' -and $startMode -eq 'Manual') { $messageKey = 'ServiceOnDemand' }
+            else { $messageKey = 'ServiceStopped' }
         }
+        catch { $messageKey = 'ServiceUnavailable'; $severity = 'Warning'; $detail = $_.Exception.Message }
+        $message = T $messageKey @($rule.Display)
+        $healthy = $severity -ne 'Warning'
         $check = [PSCustomObject]@{
             Type      = 'Service'
             Name      = $rule.Name
@@ -1831,34 +1775,49 @@ function Test-SystemIntegrity {
             State     = $state
             StartMode = $startMode
             Healthy   = [bool]$healthy
+            Severity  = $severity
+            Message   = $message
+            ErrorDetail = $detail
         }
         $checks.Add($check)
         Write-Host ('  ' + (T 'IntegrityLine' @($rule.Display, $state, $startMode))) -ForegroundColor $(if ($healthy) { 'Green' } else { 'Yellow' })
-        if (-not $healthy) { $warnings.Add($rule.Display + ': ' + $state + '/' + $startMode) }
+        Write-Host ('    ' + $message) -ForegroundColor $(if ($healthy) { 'DarkGray' } else { 'Yellow' })
+        if (-not $healthy) { $warnings.Add($message) }
     }
 
+    $defender = $null
+    $defenderAvailable = $false
+    $securityCenterAvailable = $false
+    $registeredProducts = @()
+    $providerErrors = New-Object System.Collections.Generic.List[string]
     try {
         $defender = Get-MpComputerStatus -ErrorAction Stop
-        $defenderHealthy = [bool]$defender.AntivirusEnabled -and [bool]$defender.RealTimeProtectionEnabled
-        $checks.Add([PSCustomObject]@{
-            Type = 'DefenderStatus'; Name = 'Get-MpComputerStatus'; Display = 'Microsoft Defender';
-            State = $(if ($defenderHealthy) { 'Enabled' } else { 'Not fully enabled' }); StartMode = ''; Healthy = $defenderHealthy
-        })
-        if (-not $defenderHealthy) { $warnings.Add('Microsoft Defender: Antivirus or real-time protection is not enabled') }
+        $defenderAvailable = $null -ne $defender
     }
-    catch {
-        $checks.Add([PSCustomObject]@{
-            Type = 'DefenderStatus'; Name = 'Get-MpComputerStatus'; Display = 'Microsoft Defender';
-            State = 'Unavailable'; StartMode = ''; Healthy = $false
-        })
-        $warnings.Add('Microsoft Defender status unavailable')
+    catch { $providerErrors.Add('Get-MpComputerStatus: ' + $_.Exception.Message) }
+    try {
+        $registeredProducts = @(Get-CimInstance -Namespace 'root/SecurityCenter2' -ClassName AntivirusProduct -ErrorAction Stop |
+            Select-Object displayName, productState, timestamp)
+        $securityCenterAvailable = $true
     }
+    catch { $providerErrors.Add('SecurityCenter2: ' + $_.Exception.Message) }
+    $assessment = Get-RemnexaAntivirusAssessment -Defender $defender -DefenderAvailable $defenderAvailable -RegisteredProducts $registeredProducts -SecurityCenterAvailable $securityCenterAvailable
+    $securityMessage = T $assessment.MessageKey @(($assessment.ProductNames -join ', '))
+    $checks.Add([PSCustomObject]@{
+        Type = 'AntivirusStatus'; Name = 'Antivirus'; Display = 'Antivirus'; State = $assessment.MessageKey;
+        StartMode = ''; Healthy = ($assessment.Severity -ne 'Warning'); Severity = $assessment.Severity; Message = $securityMessage
+    })
+    Write-Host ('  ' + $securityMessage) -ForegroundColor $(if ($assessment.Severity -eq 'Warning') { 'Yellow' } else { 'DarkGray' })
+    if ($assessment.Severity -eq 'Warning') { $warnings.Add($securityMessage) }
 
     $result = [PSCustomObject]@{
         Timestamp = [DateTimeOffset]::Now.ToString('o')
         Passed    = ($warnings.Count -eq 0)
         Warnings  = $warnings.ToArray()
         Checks    = $checks.ToArray()
+        AntivirusAssessment = $assessment
+        RegisteredAntivirusProducts = @($registeredProducts)
+        ProviderErrors = $providerErrors.ToArray()
     }
     if ($result.Passed) {
         Write-Status (T 'IntegrityHealthy') 'Success'
@@ -1877,10 +1836,32 @@ function Read-IntegrityCheckChoice {
     Write-Host ('  [1] ' + (T 'IntegrityRun'))
     Write-Host ('  [2] ' + (T 'IntegritySkip'))
     while ($true) {
-        $answer = (Read-Host (T 'SelectPrompt')).Trim()
+        $answer = (Read-RemnexaInput (T 'SelectPrompt')).Trim()
         if ($answer -eq '1') { return $true }
         if ($answer -eq '2') { return $false }
         Write-Status (T 'InvalidOneTwo') 'Warning'
+    }
+}
+
+function Invoke-PostRemovalIntegrityCheck {
+    # The removal result and its log already exist before this optional prompt.
+    if ($null -eq $script:LastRunSummary -or $null -eq $script:LastOperationResult -or
+        $script:LastOperationResult.Status -notin @('Completed', 'Partial')) { return }
+    if (-not (Read-IntegrityCheckChoice)) { return }
+    try {
+        $checkResult = Test-SystemIntegrity
+        $script:LastRunSummary.Integrity = $checkResult
+        $logPath = Save-ToolLog -Action 'PostRemovalSystemCheck' -Data ([PSCustomObject]@{
+            RemovalLogPath = $script:LastRunLogPath
+            OperationId = $script:LastOperationResult.OperationId
+            CheckResult = $checkResult
+        })
+        $script:LastRunSummary | Add-Member -NotePropertyName IntegrityLogPath -NotePropertyValue ([string]$logPath) -Force
+        if ($logPath) { Write-Host (T 'LogLabel' @($logPath)) -ForegroundColor DarkGray }
+    }
+    catch {
+        # A diagnostic failure must not relabel a completed uninstall as failed.
+        Write-Status (T 'OptionalCheckFailed' @($_.Exception.Message)) 'Warning'
     }
 }
 
@@ -2037,7 +2018,7 @@ function Show-HistorySummary {
 
 function Read-MainOrExitChoice {
     while ($true) {
-        $answer = (Read-Host (T 'SelectPrompt')).Trim()
+        $answer = (Read-RemnexaInput (T 'SelectPrompt') -ExitOptionAlreadyShown).Trim()
         if ($answer -in @('1', 'menu', 'm')) { return 'menu' }
         if ($answer -in @('0', 'exit')) { return 'exit' }
         Write-Status (T 'InvalidPost') 'Warning'
@@ -2086,7 +2067,7 @@ function Show-LanguageMenu {
     Write-Host ('  [0] ' + (T 'BackMain'))
 
     while ($true) {
-        $answer = (Read-Host (T 'SelectPrompt')).Trim()
+        $answer = (Read-RemnexaInput (T 'SelectPrompt')).Trim()
         if ($answer -eq '0') { return }
         $mapping = @{ '1' = 'de'; '2' = 'en'; '3' = 'es'; '4' = 'fr'; '5' = 'ru'; '6' = 'tr' }
         if ($mapping.ContainsKey($answer)) {
@@ -2113,13 +2094,14 @@ function Show-AdvancedToolsMenu {
     Write-Host ('  [6] ' + (T 'Tools6'))
     Write-Host ('  [0] ' + (T 'BackMain'))
     while ($true) {
-        $answer = (Read-Host (T 'SelectPrompt')).Trim()
+        $answer = (Read-RemnexaInput (T 'SelectPrompt')).Trim()
         if ($answer -match '^[0-6]$') { return $answer }
         Write-Status (T 'InvalidTools') 'Warning'
     }
 }
 
 function Invoke-AntivirusMenu {
+    if (-not (Request-ElevationForTool -Mode Antivirus)) { return 'menu' }
     if (-not (Initialize-AntivirusModule)) { return 'menu' }
 
     :antivirusLoop while ($true) {
@@ -2135,7 +2117,7 @@ function Invoke-AntivirusMenu {
         Write-Host ('  [6] ' + (T 'AV6'))
         Write-Host ('  [7] ' + (T 'AV7'))
         Write-Host ('  [0] ' + (T 'BackPreviousMenu'))
-        $choice = (Read-Host (T 'SelectPrompt')).Trim()
+        $choice = (Read-RemnexaInput (T 'SelectPrompt')).Trim()
         if ($choice -eq '0') { return 'menu' }
         if ($choice -notmatch '^[1-7]$') {
             Write-Status (T 'InvalidAVChoice') 'Warning'
@@ -2162,7 +2144,7 @@ function Invoke-AntivirusMenu {
                     $results | Format-Table Status, Severity, Signature, Path -AutoSize | Out-Host
                 }
                 '6' {
-                    $customPath = (Read-Host (T 'AVPathPrompt')).Trim().Trim('"')
+                    $customPath = (Read-RemnexaInput (T 'AVPathPrompt')).Trim().Trim('"')
                     if (-not [string]::IsNullOrWhiteSpace($customPath)) {
                         $results = @(Invoke-ClamAVScan -Path $customPath -ScanType Custom)
                         $results | Format-Table Status, Severity, Signature, Path -AutoSize | Out-Host
@@ -2177,10 +2159,20 @@ function Invoke-AntivirusMenu {
                         for ($index = 0; $index -lt $entries.Count; $index++) {
                             Write-Host ('  [{0}] {1} | {2} | {3}' -f ($index + 1), $entries[$index].Signature, $entries[$index].QuarantinedAt, $entries[$index].OriginalPath)
                         }
-                        $restoreChoice = (Read-Host (T 'AVRestorePrompt')).Trim()
-                        $restoreNumber = 0
-                        if ([int]::TryParse($restoreChoice, [ref]$restoreNumber) -and $restoreNumber -ge 1 -and $restoreNumber -le $entries.Count) {
-                            Restore-FromClamAVQuarantine -Identifier $entries[$restoreNumber - 1].QuarantineId | Format-List | Out-Host
+                        while ($true) {
+                            $restoreChoice = Read-RemnexaInput (T 'AVRestorePrompt')
+                            $restoreNumber = ConvertFrom-RemnexaMenuChoice -InputText $restoreChoice -Maximum $entries.Count
+                            if ($null -eq $restoreNumber) {
+                                Write-Status (T 'AVInvalidRestore' @($entries.Count)) 'Warning'
+                                continue
+                            }
+                            if ($restoreNumber -eq 0) { break }
+                            $restoreEntry = $entries[$restoreNumber - 1]
+                            $restoreConfirmation = Read-ExplicitConfirmation -WarningText (T 'AVRestoreWarning' @($restoreEntry.Signature, $restoreEntry.OriginalPath)) -ActionText (T 'AVRestoreAction')
+                            if ($restoreConfirmation -eq 'exit') { Stop-RemnexaApplication }
+                            if ($restoreConfirmation -eq 'menu') { return 'menu' }
+                            Restore-FromClamAVQuarantine -Identifier $restoreEntry.QuarantineId -Force -Confirm:$false | Format-List | Out-Host
+                            break
                         }
                     }
                 }
@@ -2194,7 +2186,7 @@ function Invoke-AntivirusMenu {
         Write-Host ('  [1] ' + (T 'AVReturnMenu'))
         Write-Host ('  [0] ' + (T 'BackMain'))
         while ($true) {
-            $afterChoice = (Read-Host (T 'SelectPrompt')).Trim()
+            $afterChoice = (Read-RemnexaInput (T 'SelectPrompt')).Trim()
             if ($afterChoice -eq '1') { continue antivirusLoop }
             if ($afterChoice -eq '0') { return 'menu' }
             Write-Status (T 'InvalidPost') 'Warning'
@@ -2213,7 +2205,7 @@ function Read-ExplicitConfirmation {
     Write-Host ('  [2] ' + (T 'BackMain'))
     Write-Host ('  [0] ' + (T 'Main0'))
     while ($true) {
-        $answer = (Read-Host (T 'SelectPrompt')).Trim()
+        $answer = (Read-RemnexaInput (T 'SelectPrompt') -ExitOptionAlreadyShown).Trim()
         if ($answer -eq '1') { return 'start' }
         if ($answer -eq '2') { return 'menu' }
         if ($answer -eq '0') { return 'exit' }
@@ -2402,6 +2394,8 @@ function Set-PrivacyProfile {
 function Restore-PrivacyProfile {
     if (-not (Test-Path -LiteralPath $script:PrivacyBackupPath)) { return $false }
     $backup = Get-Content -LiteralPath $script:PrivacyBackupPath -Raw -Encoding UTF8 | ConvertFrom-Json -DateKind String
+    $registryChanges = @(Get-PrivacyRegistryChanges)
+    [void](Assert-RemnexaPrivacyBackup -Backup $backup -AllowedChanges $registryChanges)
     foreach ($snapshot in @($backup.Registry)) {
         if ([bool]$snapshot.Existed) {
             New-Item -Path ([string]$snapshot.Path) -Force | Out-Null
@@ -2437,7 +2431,7 @@ function Invoke-PrivacyMenu {
     Write-Host ('  [3] ' + (T 'BackMain'))
     Write-Host ('  [0] ' + (T 'Main0'))
     while ($true) {
-        $answer = (Read-Host (T 'SelectPrompt')).Trim()
+        $answer = (Read-RemnexaInput (T 'SelectPrompt') -ExitOptionAlreadyShown).Trim()
         if ($answer -eq '0') { return 'exit' }
         if ($answer -eq '3') { return 'menu' }
         if ($answer -eq '1') {
@@ -2505,7 +2499,7 @@ function Invoke-LogCleanupMenu {
     Write-Host ('  [0] ' + (T 'Main0'))
 
     while ($true) {
-        $answer = (Read-Host (T 'SelectPrompt')).Trim()
+        $answer = (Read-RemnexaInput (T 'SelectPrompt') -ExitOptionAlreadyShown).Trim()
         if ($answer -in @('0', 'exit')) { return 'exit' }
         if ($answer -in @('2', 'menu', 'm')) { return 'menu' }
         if ($answer -eq '1') {
@@ -2524,7 +2518,7 @@ function Invoke-LogCleanupMenu {
             Write-Host ('  [1] ' + (T 'LogsTitle'))
             Write-Host ('  [0] ' + (T 'BackPreviousMenu'))
             while ($true) {
-                $afterChoice = (Read-Host (T 'SelectPrompt')).Trim()
+                $afterChoice = (Read-RemnexaInput (T 'SelectPrompt')).Trim()
                 if ($afterChoice -eq '1') { continue logCleanupLoop }
                 if ($afterChoice -eq '0') { return 'menu' }
                 Write-Status (T 'InvalidPost') 'Warning'
@@ -2845,11 +2839,12 @@ function Show-StartupHistoryScreen {
     }
     Write-Host ''
     Write-Host ('  [0] ' + (T 'BackHome'))
-    while ((Read-Host (T 'SelectPrompt')).Trim() -ne '0') { Write-Status (T 'StartupInvalid') 'Warning' }
+    while ((Read-RemnexaInput (T 'SelectPrompt')).Trim() -ne '0') { Write-Status (T 'StartupInvalid') 'Warning' }
 }
 
 function Invoke-StartupList {
     $page = 0
+    $pageNotice = ''
     :startupListLoop while ($true) {
         Clear-Host
         Show-BrandHeader -Section (T 'StartupTitle')
@@ -2859,7 +2854,7 @@ function Invoke-StartupList {
         if ($items.Count -eq 0) {
             Write-Host (T 'StartupNone') -ForegroundColor DarkGray
             Write-Host ('  [0] ' + (T 'BackHome'))
-            while ((Read-Host (T 'SelectPrompt')).Trim() -ne '0') { Write-Status (T 'StartupInvalid') 'Warning' }
+            while ((Read-RemnexaInput (T 'SelectPrompt')).Trim() -ne '0') { Write-Status (T 'StartupInvalid') 'Warning' }
             return
         }
 
@@ -2867,11 +2862,12 @@ function Invoke-StartupList {
         :startupPageLoop while ($true) {
             Clear-Host
             Show-BrandHeader -Section (T 'StartupTitle')
-            $pageCount = [Math]::Max(1, [Math]::Ceiling($items.Count / [double]$pageSize))
-            if ($page -ge $pageCount) { $page = $pageCount - 1 }
+            $pageState = Get-RemnexaPageState -ItemCount $items.Count -PageSize $pageSize -PageIndex $page
+            $pageCount = $pageState.PageCount
+            $page = $pageState.PageIndex
             $start = $page * $pageSize
             $end = [Math]::Min($start + $pageSize - 1, $items.Count - 1)
-            Write-Host ('Seite {0}/{1} | Einträge: {2}' -f ($page + 1), $pageCount, $items.Count) -ForegroundColor DarkGray
+            Write-Host (T 'PageLabel' @(($page + 1), $pageCount, $items.Count)) -ForegroundColor DarkGray
             Write-Host ''
             for ($index = $start; $index -le $end; $index++) {
                 $item = $items[$index]
@@ -2881,11 +2877,19 @@ function Invoke-StartupList {
             }
             Write-Host ''
             Write-Host (T 'StartupSelect') -ForegroundColor DarkGray
-            Write-Host '  [-1] nächste Seite | [-2] vorherige Seite | [0] zurück' -ForegroundColor DarkGray
-            $answer = (Read-Host (T 'SelectPrompt')).Trim()
+            Show-PageNavigation -PageState $pageState
+            Write-Host ('  [0] ' + (T 'BackPreviousMenu')) -ForegroundColor DarkGray
+            if ($pageNotice) { Write-Status (T $pageNotice) 'Warning'; $pageNotice = '' }
+            $answer = (Read-RemnexaInput (T 'SelectPrompt')).Trim()
             if ($answer -eq '0') { return }
-            if ($answer -eq '-1') { if ($page + 1 -lt $pageCount) { $page++ }; continue startupPageLoop }
-            if ($answer -eq '-2') { if ($page -gt 0) { $page-- }; continue startupPageLoop }
+            if ($answer -eq '-1') {
+                if ($pageState.HasNext) { $page++ } else { $pageNotice = 'PageNextUnavailable' }
+                continue startupPageLoop
+            }
+            if ($answer -eq '-2') {
+                if ($pageState.HasPrevious) { $page-- } else { $pageNotice = 'PagePreviousUnavailable' }
+                continue startupPageLoop
+            }
             $number = 0
             if ([int]::TryParse($answer, [ref]$number) -and $number -ge 1 -and $number -le $items.Count) {
                 $selected = $items[$number - 1]
@@ -2906,7 +2910,7 @@ function Invoke-StartupRestoreList {
     if ($backups.Count -eq 0) {
         Write-Host (T 'StartupBackupsNone') -ForegroundColor DarkGray
         Write-Host ('  [0] ' + (T 'BackHome'))
-        while ((Read-Host (T 'SelectPrompt')).Trim() -ne '0') { Write-Status (T 'StartupInvalid') 'Warning' }
+        while ((Read-RemnexaInput (T 'SelectPrompt')).Trim() -ne '0') { Write-Status (T 'StartupInvalid') 'Warning' }
         return
     }
     for ($index = 0; $index -lt $backups.Count; $index++) {
@@ -2915,7 +2919,7 @@ function Invoke-StartupRestoreList {
     }
     Write-Host ('  [0] ' + (T 'BackHome'))
     while ($true) {
-        $answer = (Read-Host (T 'SelectPrompt')).Trim()
+        $answer = (Read-RemnexaInput (T 'SelectPrompt')).Trim()
         if ($answer -eq '0') { return }
         $number = 0
         if ([int]::TryParse($answer, [ref]$number) -and $number -ge 1 -and $number -le $backups.Count) {
@@ -2952,7 +2956,7 @@ function Invoke-StartupMenu {
         Write-Host ('  [2] ' + (T 'Startup2'))
         Write-Host ('  [3] ' + (T 'Startup3'))
         Write-Host ('  [0] ' + (T 'BackHome'))
-        $choice = (Read-Host (T 'SelectPrompt')).Trim()
+        $choice = (Read-RemnexaInput (T 'SelectPrompt')).Trim()
         switch ($choice) {
             '0' { return 'menu' }
             '1' { Invoke-StartupList; continue startupMenuLoop }
@@ -2977,6 +2981,7 @@ function Invoke-ActiveServicesScreen {
     $filter = ''
     $page = 0
     $pageSize = 20
+    $pageNotice = ''
     while ($true) {
         $services = if ([string]::IsNullOrWhiteSpace($filter)) {
             $allServices
@@ -2984,8 +2989,9 @@ function Invoke-ActiveServicesScreen {
         else {
             @($allServices | Where-Object { $_.DisplayName -like ('*' + $filter + '*') -or $_.Name -like ('*' + $filter + '*') })
         }
-        $pageCount = [Math]::Max(1, [Math]::Ceiling($services.Count / [double]$pageSize))
-        if ($page -ge $pageCount) { $page = $pageCount - 1 }
+        $pageState = Get-RemnexaPageState -ItemCount $services.Count -PageSize $pageSize -PageIndex $page
+        $pageCount = $pageState.PageCount
+        $page = $pageState.PageIndex
         Clear-Host
         Show-BrandHeader -Section (T 'ServicesTitle')
         Write-Host (T 'ServicesDescription') -ForegroundColor DarkGray
@@ -3005,12 +3011,14 @@ function Invoke-ActiveServicesScreen {
         }
         Write-Host ''
         Write-Host (T 'ServicesCommands') -ForegroundColor DarkGray
-        $choice = (Read-Host (T 'SelectPrompt')).Trim()
+        Show-PageNavigation -PageState $pageState -NextCommand '1' -PreviousCommand '2'
+        if ($pageNotice) { Write-Status (T $pageNotice) 'Warning'; $pageNotice = '' }
+        $choice = (Read-RemnexaInput (T 'SelectPrompt')).Trim()
         switch ($choice) {
             '0' { return 'menu' }
-            '1' { if ($page + 1 -lt $pageCount) { $page++ } }
-            '2' { if ($page -gt 0) { $page-- } }
-            '3' { $filter = (Read-Host (T 'SearchPrompt')).Trim(); $page = 0 }
+            '1' { if ($pageState.HasNext) { $page++ } else { $pageNotice = 'PageNextUnavailable' } }
+            '2' { if ($pageState.HasPrevious) { $page-- } else { $pageNotice = 'PagePreviousUnavailable' } }
+            '3' { $filter = (Read-RemnexaInput (T 'SearchPrompt')).Trim(); $page = 0 }
             '4' { $filter = ''; $page = 0 }
             default { Write-Status (T 'StartupInvalid') 'Warning'; Start-Sleep -Milliseconds 700 }
         }
@@ -3030,7 +3038,7 @@ function Read-RemovalConfirmation {
     Write-Host ('  [0] ' + (T 'Main0'))
 
     while ($true) {
-        $answer = (Read-Host (T 'SelectPrompt')).Trim()
+        $answer = (Read-RemnexaInput (T 'SelectPrompt') -ExitOptionAlreadyShown).Trim()
         if ($answer -in @('1', 'ent')) { return 'start' }
         if ($answer -in @('2', 'menu', 'm')) { return 'menu' }
         if ($answer -in @('0', 'exit')) { return 'exit' }
@@ -3046,7 +3054,7 @@ function Read-AppxRemovalScope {
     Write-Host ('  [3] ' + (T 'BackMain'))
     Write-Host ('  [0] ' + (T 'Main0'))
     while ($true) {
-        $answer = (Read-Host (T 'SelectPrompt')).Trim()
+        $answer = (Read-RemnexaInput (T 'SelectPrompt') -ExitOptionAlreadyShown).Trim()
         if ($answer -eq '1') { return 'current' }
         if ($answer -eq '2') { return 'provisioned' }
         if ($answer -eq '3') { return 'menu' }
@@ -3055,7 +3063,7 @@ function Read-AppxRemovalScope {
     }
 }
 
-function Invoke-RemovalOperation {
+function Invoke-RemovalOperationCore {
     param(
         [Parameter(Mandatory = $true)][string]$OperationName,
         [bool]$OperationResidualOnly,
@@ -3072,6 +3080,7 @@ function Invoke-RemovalOperation {
     # innerhalb dieses Durchlaufs die tatsächlich gewählten Optionen sehen.
     $Name = $OperationName.Trim()
     $script:LastRunLogPath = ''
+    $script:LastRunSummary = $null
     $ResidualOnly = $OperationResidualOnly
     $DryRun = $OperationDryRun
     $programs = @($PreloadedPrograms)
@@ -3121,7 +3130,7 @@ function Invoke-RemovalOperation {
             Write-Host ('  [2] ' + (T 'BackMain'))
             Write-Host ('  [0] ' + (T 'Main0'))
             while ($true) {
-                $answer = (Read-Host (T 'SelectPrompt')).Trim()
+                $answer = (Read-RemnexaInput (T 'SelectPrompt') -ExitOptionAlreadyShown).Trim()
                 if ($answer -in @('1', 'j', 'ja', 'y', 'yes')) {
                     $ResidualOnly = $true
                     break
@@ -3161,6 +3170,7 @@ function Invoke-RemovalOperation {
         $logPath = Save-RunLog -Program $selected -SearchName $Name -Traces $traces -Result $null
         $script:LastRunLogPath = [string]$logPath
         if ($logPath) { Write-Host (T 'LogLabel' @($logPath)) -ForegroundColor DarkGray }
+        $script:LastRunSummary = [PSCustomObject]@{ Before = $initialTraceCount; Found = $initialTraceCount; Removed = 0; Failed = 0; Remaining = $initialTraceCount; Integrity = $null }
         Set-OperationProgress -Percent 100 -Status (T 'ProgressDryDone')
         Complete-OperationProgress
         return $true
@@ -3231,11 +3241,15 @@ function Invoke-RemovalOperation {
         $result = Remove-Traces -Traces $traces
     }
     else {
-        $result = [PSCustomObject]@{ Removed = 0; Failed = @() }
+        $managed = @($traces | Where-Object { $_.Kind -in @('File', 'Directory') -and (Test-RemnexaWindowsManagedPath -Path $_.Target) } |
+            ForEach-Object { [PSCustomObject]@{ Kind = $_.Kind; Target = $_.Target; Reason = 'WindowsManaged' } })
+        $result = [PSCustomObject]@{ Removed = 0; Failed = @(); Skipped = $managed; CoveredByParent = 0 }
         if ($traces.Count -gt 0) { Write-Status (T 'KeepFoundTraces') 'Warning' }
     }
     Set-OperationProgress -Percent 88 -Status (T 'ProgressCleanupDone')
     Write-Status (T 'RemovedCount' @($result.Removed)) 'Success'
+    if ($result.Skipped.Count -gt 0) { Write-Status (T 'ManagedTraceCount' @($result.Skipped.Count)) 'Warning' }
+    if ($result.CoveredByParent -gt 0) { Write-Status (T 'TraceCoveredCount' @($result.CoveredByParent)) }
 
     if ($result.Failed.Count -gt 0) {
         Write-Status (T 'FailedCount' @($result.Failed.Count)) 'Warning'
@@ -3266,10 +3280,10 @@ function Invoke-RemovalOperation {
     }
 
     $integrityResult = $null
-    if (Read-IntegrityCheckChoice) { $integrityResult = Test-SystemIntegrity }
     $result | Add-Member -NotePropertyName FreedBytes -NotePropertyValue $freedBytes -Force
     $result | Add-Member -NotePropertyName ProvisionedAppxRemoved -NotePropertyValue ([int]$script:ProvisionedRemovedCount) -Force
     $result | Add-Member -NotePropertyName IntegrityCheck -NotePropertyValue $integrityResult -Force
+    $result | Add-Member -NotePropertyName RemainingTraces -NotePropertyValue @($remaining) -Force
     $result | Add-Member -NotePropertyName AntivirusBefore -NotePropertyValue @($antivirusBeforeResults) -Force
     $result | Add-Member -NotePropertyName AntivirusAfter -NotePropertyValue @($antivirusAfterResults) -Force
 
@@ -3288,10 +3302,68 @@ function Invoke-RemovalOperation {
     }
     if ($logPath) { Write-Host (T 'LogLabel' @($logPath)) -ForegroundColor DarkGray }
     Add-RemovalHistory -ProgramName $Name -ResidualMode $ResidualOnly -RemovedCount ([int]$result.Removed) -FailedCount $result.Failed.Count -RemainingCount $remaining.Count -FreedBytes $freedBytes -LogPath $logPath
-    $script:LastRunSummary = [PSCustomObject]@{ Before = $initialTraceCount; Found = $traces.Count; Removed = [int]$result.Removed; Failed = $result.Failed.Count; Remaining = $remaining.Count; Integrity = $integrityResult }
+    $script:LastRunSummary = [PSCustomObject]@{ Before = $initialTraceCount; Found = $traces.Count; Removed = [int]$result.Removed; Failed = $result.Failed.Count; Skipped = $result.Skipped.Count; CoveredByParent = $result.CoveredByParent; Remaining = $remaining.Count; FreedBytes = $freedBytes; Integrity = $integrityResult }
     Set-OperationProgress -Percent 100 -Status (T 'ProgressDone')
     Complete-OperationProgress
     return $true
+}
+
+function Invoke-RemovalOperation {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)][string]$OperationName,
+        [bool]$OperationResidualOnly,
+        [bool]$OperationDryRun,
+        [AllowNull()][object]$PreselectedProgram,
+        [Parameter(Mandatory = $true)][AllowEmptyCollection()][object[]]$PreloadedPrograms,
+        [bool]$SkipConfirmation,
+        [bool]$ContinueAfterElevation,
+        [AllowEmptyString()][string]$ExpectedRegistryPath,
+        [AllowEmptyString()][string]$ExpectedPackageFullName
+    )
+
+    $operationId = [guid]::NewGuid()
+    $startedAt = [DateTimeOffset]::UtcNow
+    $script:LastOperationResult = New-RemnexaOperationResult -OperationId $operationId -OperationName $OperationName -Status Started -StartedAtUtc $startedAt -CompletedAtUtc $startedAt
+    try {
+        $completed = Invoke-RemovalOperationCore @PSBoundParameters
+        $summary = $script:LastRunSummary
+        $status = if (-not $completed) { 'Cancelled' }
+            elseif ($OperationDryRun) { 'DryRun' }
+            elseif ($null -ne $summary -and (($summary.Failed -gt 0) -or ($summary.Remaining -gt 0))) { 'Partial' }
+            else { 'Completed' }
+
+        $script:LastOperationResult = New-RemnexaOperationResult `
+            -OperationId $operationId `
+            -OperationName $OperationName `
+            -Status $status `
+            -StartedAtUtc $startedAt `
+            -CompletedAtUtc ([DateTimeOffset]::UtcNow) `
+            -FoundCount $(if ($null -ne $summary) { [int]$summary.Found } else { 0 }) `
+            -RemovedCount $(if ($null -ne $summary) { [int]$summary.Removed } else { 0 }) `
+            -FailedCount $(if ($null -ne $summary) { [int]$summary.Failed } else { 0 }) `
+            -RemainingCount $(if ($null -ne $summary) { [int]$summary.Remaining } else { 0 }) `
+            -FreedBytes $(if ($null -ne $summary -and $null -ne $summary.PSObject.Properties['FreedBytes']) { [long]$summary.FreedBytes } else { 0 }) `
+            -LogPath ([string]$script:LastRunLogPath)
+        if ($status -eq 'Cancelled') { Write-Status (T 'OperationStatusCancelled') 'Warning' }
+        return [bool]$completed
+    }
+    catch {
+        $summary = $script:LastRunSummary
+        $script:LastOperationResult = New-RemnexaOperationResult `
+            -OperationId $operationId `
+            -OperationName $OperationName `
+            -Status Failed `
+            -StartedAtUtc $startedAt `
+            -CompletedAtUtc ([DateTimeOffset]::UtcNow) `
+            -FoundCount $(if ($null -ne $summary) { [int]$summary.Found } else { 0 }) `
+            -RemovedCount $(if ($null -ne $summary) { [int]$summary.Removed } else { 0 }) `
+            -FailedCount $(if ($null -ne $summary) { [int]$summary.Failed } else { 0 }) `
+            -RemainingCount $(if ($null -ne $summary) { [int]$summary.Remaining } else { 0 }) `
+            -LogPath ([string]$script:LastRunLogPath) `
+            -ErrorMessage $_.Exception.Message
+        throw
+    }
 }
 
 function Invoke-RemnexaSelfTest {
@@ -3301,15 +3373,49 @@ function Invoke-RemnexaSelfTest {
         $checks.Add([PSCustomObject]@{ Name = $Name; Passed = $Passed; Details = $Details })
     }
 
-    & $addCheck 'Brand' ($script:BrandName -eq 'REMNEXA' -and $script:CleanerVersion -eq '2.1.3') "$($script:BrandName) $($script:CleanerVersion)"
+    & $addCheck 'Brand' ($script:BrandName -eq 'REMNEXA' -and $script:CleanerVersion -eq '2.2.0') "$($script:BrandName) $($script:CleanerVersion)"
+    $translationProblems = @(
+        foreach ($key in $script:Texts.Keys) {
+            $translations = @($script:Texts[$key])
+            if ($translations.Count -ne $script:LanguageCodes.Count) {
+                "${key}: expected $($script:LanguageCodes.Count) entries, found $($translations.Count)"
+                continue
+            }
+            for ($index = 0; $index -lt $translations.Count; $index++) {
+                if ([string]::IsNullOrWhiteSpace([string]$translations[$index])) {
+                    "${key}: empty translation for '$($script:LanguageCodes[$index])'"
+                }
+            }
+        }
+    )
+    $translationDetails = if ($translationProblems.Count -eq 0) {
+        "All $($script:Texts.Count) text keys contain entries for $($script:LanguageCodes.Count) languages."
+    }
+    else {
+        ($translationProblems | Select-Object -First 10) -join '; '
+    }
+    & $addCheck 'Übersetzungen' ($translationProblems.Count -eq 0) $translationDetails
+
     foreach ($requiredPath in @(
-        (Join-Path $PSScriptRoot 'runtime\pwsh.exe'),
         (Join-Path $PSScriptRoot 'Antivirus\Antivirus.psd1'),
         (Join-Path $PSScriptRoot 'config\antivirus.json'),
+        (Join-Path $PSScriptRoot 'Core\OperationResults.psd1'),
+        (Join-Path $PSScriptRoot 'Core\AiContracts.psd1'),
+        (Join-Path $PSScriptRoot 'Core\SystemSnapshot.psd1'),
         (Join-Path $PSScriptRoot 'assets\remnexa-logo.png')
     )) {
         & $addCheck ('Datei: ' + [IO.Path]::GetFileName($requiredPath)) (Test-Path -LiteralPath $requiredPath -PathType Leaf) $requiredPath
     }
+
+    $portableRuntimePath = Join-Path $PSScriptRoot 'runtime\pwsh.exe'
+    $portableRuntimePresent = Test-Path -LiteralPath $portableRuntimePath -PathType Leaf
+    $portableRuntimeDetails = if ($portableRuntimePresent) {
+        "Optionale portable Laufzeit vorhanden: $portableRuntimePath"
+    }
+    else {
+        'Nicht gebündelt; REMNEXA verwendet PowerShell 7.5 oder neuer aus dem System.'
+    }
+    & $addCheck 'Portable PowerShell-Laufzeit (optional)' $true $portableRuntimeDetails
 
     try {
         $startupCount = @(Get-StartupItems).Count
@@ -3326,7 +3432,16 @@ function Invoke-RemnexaSelfTest {
     try {
         if (-not (Initialize-AntivirusModule)) { throw 'Antivirus-Modul konnte nicht geladen werden.' }
         $avStatus = Get-ClamAVStatus
-        & $addCheck 'ClamAV' ([bool]$avStatus.Installed) ("Version {0}; Signaturen: {1}" -f $avStatus.Version, $avStatus.Signatures)
+        if ($null -eq $avStatus -or $null -eq $avStatus.PSObject.Properties['Installed']) {
+            throw 'ClamAV-Status lieferte kein gueltiges Statusobjekt.'
+        }
+        $avDetails = if ($avStatus.Installed) {
+            "Installiert: Version $($avStatus.Version); Signaturen: $($avStatus.Signatures)"
+        }
+        else {
+            'ClamAV-Engine nicht installiert; die Integration ist optional.'
+        }
+        & $addCheck 'ClamAV (optionale Engine)' $true $avDetails
     }
     catch { & $addCheck 'ClamAV' $false $_.Exception.Message }
 
@@ -3408,6 +3523,10 @@ function Main {
                             Show-LanguageMenu
                             continue mainLoop
                         }
+                        '9' {
+                            Show-SystemSnapshotScreen
+                            continue mainLoop
+                        }
                         '8' {
                             :homeToolsLoop while ($true) {
                                 $homeToolChoice = Show-AdvancedToolsMenu
@@ -3474,7 +3593,7 @@ function Main {
             switch ($menuChoice) {
                 '99' { $operationName = $preselected.DisplayName }
                 '1' {
-                    $operationName = Read-Host (T 'ProgramNamePrompt')
+                    $operationName = Read-RemnexaInput (T 'ProgramNamePrompt')
                 }
                 '2' {
                     Write-Status (T 'InventoryReading')
@@ -3494,11 +3613,11 @@ function Main {
                     $operationName = $preselected.DisplayName
                 }
                 '4' {
-                    $operationName = Read-Host (T 'ResidualNamePrompt')
+                    $operationName = Read-RemnexaInput (T 'ResidualNamePrompt')
                     $operationResidualOnly = $true
                 }
                 '5' {
-                    $operationName = Read-Host (T 'DryRunNamePrompt')
+                    $operationName = Read-RemnexaInput (T 'DryRunNamePrompt')
                     $operationDryRun = $true
                 }
                 '6' {
@@ -3575,11 +3694,13 @@ function Main {
         catch {
             Complete-OperationProgress
             Write-Status (T 'ErrorPrefix' @($_.Exception.Message)) 'Error'
-            Save-RunLog -Program $preselected -SearchName $operationName -Traces @() -Result $null | Out-Null
+            $failureLogPath = Save-RunLog -Program $preselected -SearchName $operationName -Traces @() -Result $null
+            if ($null -ne $script:LastOperationResult) { $script:LastOperationResult.LogPath = [string]$failureLogPath }
             $completed = $true
         }
 
         if ($script:ExitRequested) { return }
+        if ($completed) { Invoke-PostRemovalIntegrityCheck }
         if (-not $interactiveSession) { return }
         if (-not $completed) { continue mainLoop }
 

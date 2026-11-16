@@ -18,6 +18,10 @@ function Initialize-ClamAV {
     Direkte offizielle ZIP-Adresse. Ohne ZIP-Adresse wird das neueste offizielle
     GitHub-Release automatisch ermittelt.
 
+    .PARAMETER ExpectedSha256
+    Erwarteter SHA-256-Pruefwert fuer eine direkte ZIP-Adresse, bei der keine
+    Release-Metadaten mit Digest vorliegen.
+
     .PARAMETER Force
     Erlaubt das Ersetzen eines unvollstaendigen Zielordners.
 
@@ -38,10 +42,15 @@ function Initialize-ClamAV {
         [switch]$Install,
         [string]$InstallPath,
         [string]$DownloadUri,
+        [string]$ExpectedSha256,
         [switch]$Force,
         [switch]$SkipSignatureUpdate,
         [string]$ConfigPath = $script:AVConfigPath
     )
+
+    if (-not [string]::IsNullOrWhiteSpace($ExpectedSha256) -and $ExpectedSha256 -notmatch '^[a-fA-F0-9]{64}$') {
+        throw 'ExpectedSha256 muss aus genau 64 hexadezimalen Zeichen bestehen.'
+    }
 
     $config = Get-AVConfig -Path $ConfigPath
     $existing = Find-ClamAVInstallation -Config $config
@@ -72,32 +81,28 @@ function Initialize-ClamAV {
     try {
         New-Item -ItemType Directory -Path $extractPath -Force -ErrorAction Stop | Out-Null
         $asset = Resolve-ClamAVReleaseAsset -DownloadUri $(if ($DownloadUri) { $DownloadUri } else { [string]$config.DownloadUri })
+        $asset = Assert-ClamAVReleaseAsset -Asset $asset -ExpectedSha256 $ExpectedSha256
+        $downloadUri = [uri]$asset.Uri
         Write-AVLog -Message "ClamAV-Download gestartet: $($asset.Uri)" -Event 'Initialize'
         Write-Progress -Activity 'ClamAV-Einrichtung' -Status 'Offizielles Paket wird heruntergeladen' -PercentComplete 15
-        Invoke-WebRequest -Uri $asset.Uri -OutFile $archivePath -UseBasicParsing -ErrorAction Stop
+        Invoke-WebRequest -Uri $downloadUri -OutFile $archivePath -UseBasicParsing -ErrorAction Stop
 
-        if ($asset.Digest -match '^sha256:([a-fA-F0-9]{64})$') {
-            $actualHash = (Get-FileHash -LiteralPath $archivePath -Algorithm SHA256 -ErrorAction Stop).Hash
-            if ($actualHash -ne $Matches[1]) { throw 'Die SHA-256-Pruefung des ClamAV-Pakets ist fehlgeschlagen. Installation wurde abgebrochen.' }
-        }
+        [void](Assert-ClamAVArchiveDigest -Digest ([string]$asset.Digest) -ArchivePath $archivePath)
         Write-Progress -Activity 'ClamAV-Einrichtung' -Status 'Paket wird entpackt' -PercentComplete 45
         Expand-Archive -LiteralPath $archivePath -DestinationPath $extractPath -Force -ErrorAction Stop
         $clamScan = Get-ChildItem -LiteralPath $extractPath -Filter 'clamscan.exe' -File -Recurse -ErrorAction Stop | Select-Object -First 1
         if ($null -eq $clamScan) { throw 'Das heruntergeladene Paket enthaelt keine clamscan.exe.' }
         $sourceRoot = Split-Path -Parent $clamScan.FullName
-
-        if (Test-Path -LiteralPath $target) {
-            if (-not $Force) { throw "Zielordner '$target' existiert bereits. Fuer bewusstes Ersetzen -Force angeben." }
-            Remove-Item -LiteralPath $target -Recurse -Force -ErrorAction Stop
-        }
-        New-Item -ItemType Directory -Path $target -Force -ErrorAction Stop | Out-Null
-        Copy-Item -Path (Join-Path $sourceRoot '*') -Destination $target -Recurse -Force -ErrorAction Stop
         $databasePath = if ($InstallPath) { Join-Path $target 'database' } else { Expand-AVPath ([string]$config.DatabasePath) }
-        New-Item -ItemType Directory -Path $databasePath -Force -ErrorAction Stop | Out-Null
-        [void](New-FreshClamConfiguration -ClamAVPath $target -DatabasePath $databasePath)
-        $storedClamAVPath = ConvertTo-AVPortableConfigPath -Path $target
-        $storedDatabasePath = ConvertTo-AVPortableConfigPath -Path $databasePath
-        Set-AVConfig -Path $ConfigPath -Values @{ ClamAVPath = $storedClamAVPath; DatabasePath = $storedDatabasePath } -Confirm:$false
+        $commitConfiguration = {
+            param($installedTarget, $installedDatabase)
+            $storedClamAVPath = ConvertTo-AVPortableConfigPath -Path $installedTarget
+            $storedDatabasePath = ConvertTo-AVPortableConfigPath -Path $installedDatabase
+            Set-AVConfig -Path $ConfigPath -Values @{ ClamAVPath = $storedClamAVPath; DatabasePath = $storedDatabasePath } -Confirm:$false
+        }
+        $installResult = Install-ClamAVPayload -SourceRoot $sourceRoot -TargetPath $target -DatabasePath $databasePath -CommitAction $commitConfiguration -Force:$Force
+        $target = $installResult.Path
+        $databasePath = $installResult.DatabasePath
         Write-Progress -Activity 'ClamAV-Einrichtung' -Status 'Installation wurde eingerichtet' -PercentComplete 75
         Write-AVLog -Message "ClamAV wurde unter '$target' eingerichtet." -Level 'Success' -Event 'Initialize'
 

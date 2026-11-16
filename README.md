@@ -2,10 +2,12 @@
 
 REMNEXA is a Windows utility for removing applications, reviewing leftover traces, managing startup entries, checking selected Windows settings, and optionally running local ClamAV scans.
 
-**Current version:** 2.1.3  
-**Platform:** Windows 10/11  
-**PowerShell:** 7.5 or newer  
+**Current version:** 2.2.0\
+**Platform:** Windows 10/11\
+**PowerShell:** 7.5 or newer\
 **License:** MIT; third-party components retain their own licenses.
+
+**Development build 2.2.0:** imported from the maintainer's verified OneDrive development folder into the existing Git history on `feature/2.2.0-development`. The optional runtime, ClamAV payload and local test-tool modules remain outside version control. This is not a published production release. The historical audit documents describe the baseline and earlier checkpoints; see docs/VERSION_2.2.0.md for the delivery record and docs/DEVELOPMENT_WORKFLOW.md for the current working location. REMNEXA 3.0 remains a future target. Local AI inference, a full graphical dashboard, installer, and release candidate are not implemented yet.
 
 ## Start
 
@@ -22,6 +24,7 @@ The source repository excludes the portable runtime and ClamAV engine/signature 
 - Offers optional system-integrity checks and keeps a JSON log for each run.
 - Manages startup entries with a backup and restore path.
 - Lists running Windows services and provides selected Windows maintenance tools.
+- Shows Windows build, CPU load, memory, and fixed-drive usage on demand from the home menu; this overview is read-only.
 - Provides optional on-demand ClamAV scans and quarantine workflows; it is not a real-time antivirus or a replacement for Microsoft Defender.
 - Supports German, English, Spanish, French, Russian, and Turkish interface text.
 
@@ -35,15 +38,21 @@ Integrity-check warnings are informational. A stopped or manually started Window
 
 ## Documentation
 
+- [Git development workflow and 2.2.0 import](docs/DEVELOPMENT_WORKFLOW.md)
 - [Detailed German guide](README-Programm-Entferner.txt)
 - [ClamAV integration guide](Antivirus/README.md)
 - [Interactive ClamAV workflow example](Examples/Invoke-AntivirusWorkflow.ps1)
+- [Architecture audit](docs/ARCHITECTURE_AUDIT.md)
+- [Development roadmap](docs/DEVELOPMENT_ROADMAP.md)
+- [Security model](docs/SECURITY_MODEL.md)
+- [Compatibility matrix](docs/COMPATIBILITY_MATRIX.md)
+- [Phase B progress](docs/PHASE_B_PROGRESS.md)
 - [Official PowerShell documentation](https://learn.microsoft.com/powershell/)
 - [Official ClamAV documentation](https://docs.clamav.net/)
 
 ## Donations
 
-PayPal donation link: https://www.paypal.com/pool/9uaOjAIYHS?sr=wccr
+Support REMNEXA through the [PayPal donation page](https://www.paypal.com/pool/9uaOjAIYHS?sr=wccr).
 
 ## Third-party components
 
@@ -52,4 +61,3 @@ The optional ClamAV integration downloads ClamAV from the official Cisco Talos r
 ## License
 
 REMNEXA is released under the MIT License. See [LICENSE](LICENSE). Third-party components remain subject to their respective licenses.
-

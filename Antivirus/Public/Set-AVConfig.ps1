@@ -40,7 +40,28 @@ function Set-AVConfig {
     if ($PSCmdlet.ShouldProcess($resolvedPath, 'Antivirus-Konfiguration speichern')) {
         $directory = Split-Path -Parent $resolvedPath
         New-Item -ItemType Directory -Path $directory -Force -ErrorAction Stop | Out-Null
-        $config | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $resolvedPath -Encoding UTF8 -ErrorAction Stop
+        $operationId = [guid]::NewGuid().ToString('N')
+        $fileName = [IO.Path]::GetFileName($resolvedPath)
+        $temporaryPath = Join-Path $directory ('.' + $fileName + '.remnexa.' + $operationId + '.tmp')
+        $backupPath = Join-Path $directory ('.' + $fileName + '.remnexa.backup.' + $operationId + '.tmp')
+        $json = $config | ConvertTo-Json -Depth 8
+        try {
+            [IO.File]::WriteAllText($temporaryPath, $json + [Environment]::NewLine, [System.Text.UTF8Encoding]::new($false))
+            if (Test-Path -LiteralPath $resolvedPath -PathType Leaf) {
+                [IO.File]::Replace($temporaryPath, $resolvedPath, $backupPath)
+                if (Test-Path -LiteralPath $backupPath -PathType Leaf) {
+                    Remove-Item -LiteralPath $backupPath -Force -ErrorAction SilentlyContinue
+                }
+            }
+            else {
+                [IO.File]::Move($temporaryPath, $resolvedPath)
+            }
+        }
+        finally {
+            if (Test-Path -LiteralPath $temporaryPath) {
+                Remove-Item -LiteralPath $temporaryPath -Force -ErrorAction SilentlyContinue
+            }
+        }
         Write-AVLog -Message "Antivirus-Konfiguration gespeichert: $resolvedPath" -Event 'Configuration'
     }
     if ($PassThru) { return $config }

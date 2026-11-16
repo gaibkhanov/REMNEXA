@@ -1,6 +1,10 @@
-REMNEXA 2.1.3 FÜR WINDOWS
+REMNEXA 2.2.0 FÜR WINDOWS
 
-VERSION 2.1.3
+VERSION 2.2.0
+  - Lokale neue Version auf Basis des getrennt geprüften Entwicklungsstands; keine Veröffentlichung auf GitHub.
+  - Neue rein lesende Systemübersicht im Hauptmenü unter [9].
+  - Übersetzungen, Einstellungsverwaltung, Downloadprüfung und Backup-Validierung wurden verbessert.
+  - Details und weiterhin offene Punkte: docs\VERSION_2.2.0.md.
   - Setzt die dokumentierte Mindestversion PowerShell 7.5 durch und erlaubt den Start mit einer installierten PowerShell-Laufzeit.
   - Nach Werkzeugen führt die Rückkehr wieder zur vorherigen Funktionsauswahl, auch im erweiterten Werkzeugbereich.
   - Ergebnisbildschirme erklären genau, welche Nummern hier gültig sind und wie man zur Funktionsauswahl zurückkehrt.
@@ -16,12 +20,25 @@ VERSION 2.1.3
 Start:
   Doppelklick auf "REMNEXA.cmd"
 
+Direkt beenden:
+  Bei jeder REMNEXA-Eingabe erscheint zusätzlich [X] Anwendung komplett beenden.
+  X oder exit eingeben und mit Enter bestätigen. Die Rückkehr ins Hauptmenü ist
+  dafür nicht nötig. [0] und die bisherigen Zurück-Optionen behalten ihre Bedeutung.
+  Vor dem Schließen wird versucht, das Sitzungsprotokoll zu speichern.
+  Die Option ist verfügbar, wenn REMNEXA auf eine Eingabe wartet. Ein laufender
+  Scan oder ein fremdes Deinstallationsprogramm wird dadurch nicht unterbrochen.
+
 Der Ordner "runtime" enthält eine eigene portable PowerShell-Laufzeit. Beim
 Kopieren oder Verschieben muss der komplette Ordner "REMNEXA" zusammenbleiben.
 
-Das Hauptmenü startet ohne Administratorabfrage. Windows fragt erst dann nach
-Administratorrechten, wenn eine tatsächlich schreibende Systemaktion ausgewählt
-und bestätigt wurde.
+Das Hauptmenü startet ohne Administratorabfrage. Windows fragt bei Bedarf vor
+Systemänderungen sowie beim Öffnen des Antivirus-Bereichs nach Administratorrechten.
+Vor dieser Windows-Abfrage erklärt REMNEXA, warum der ausgewählte Bereich die
+Rechte braucht. Nach dem Lesen öffnet Enter die Windows-Abfrage. Dort erlaubt
+"Ja" den Start mit erweiterten Rechten; "Nein" bricht die Freigabe ab. Im Hinweis
+führen 0 zurück und X beendet die Anwendung. Sind bereits Administratorrechte
+vorhanden, gibt es keine erneute Abfrage. Bestätigungen für konkrete Änderungen
+bleiben weiterhin erforderlich.
 
 Arbeitsbereiche:
   [1] Programme deinstallieren und Spuren bereinigen
@@ -32,6 +49,7 @@ Arbeitsbereiche:
   [6] Anwendungs-Logs verwalten
   [7] Sprache ändern
   [8] Erweiterte Windows-Werkzeuge
+  [9] Systemübersicht anzeigen (nur Anzeige)
   [0] REMNEXA beenden
 
 Erweiterte Windows-Werkzeuge:
