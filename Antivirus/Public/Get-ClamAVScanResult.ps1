@@ -37,11 +37,12 @@ function Get-ClamAVScanResult {
             $trimmed = $line.Trim()
             if ($trimmed -match '^(?<Path>.+):\s+(?<Signature>.+)\s+FOUND\s*$') {
                 $signature = [string]$Matches.Signature
+                $limited=$signature.StartsWith('Heuristics.Limits.Exceeded',[StringComparison]::OrdinalIgnoreCase)
                 [PSCustomObject]@{
                     Path          = [string]$Matches.Path
                     Signature     = $signature
-                    Severity      = if ($signature.StartsWith('PUA.', [StringComparison]::OrdinalIgnoreCase)) { 'PotentiallyUnwanted' } else { 'Malware' }
-                    Status        = 'Infected'
+                    Severity      = if($limited){'Warning'}elseif ($signature.StartsWith('PUA.', [StringComparison]::OrdinalIgnoreCase)) { 'PotentiallyUnwanted' } else { 'Malware' }
+                    Status        = if($limited){'LimitExceeded'}else{'Infected'}
                     ExitCode      = $ExitCode
                     ScanType      = $ScanType
                     Quarantined   = $false

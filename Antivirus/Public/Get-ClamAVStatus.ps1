@@ -15,7 +15,7 @@ function Get-ClamAVStatus {
     Get-ClamAVStatus | Format-List
     #>
     [CmdletBinding()]
-    param([string]$ConfigPath = $script:AVConfigPath)
+    param([string]$ConfigPath = $script:AVConfigPath,[switch]$ForScan)
     $remnexaWorkProgress = New-RemnexaProgress -Activity (Get-RemnexaProgressText 'ProgressTaskStatus')
     try {
         $config = Get-AVConfig -Path $ConfigPath
@@ -43,9 +43,11 @@ function Get-ClamAVStatus {
         }
         $version = $null
         try {
+          if(-not $ForScan) {
             $versionRun = Invoke-AVNativeProcess -FilePath $paths.ClamScan -ArgumentList @('--version') -TimeoutSeconds 30
             $versionText = ($versionRun.StandardOutput + "`n" + $versionRun.StandardError).Trim()
             if ($versionText -match '(?i)ClamAV\s+([^\s/]+)') { $version = $Matches[1] } else { $version = $versionText }
+          }
         }
         catch { Write-AVLog -Message $_.Exception.Message -Level 'Warning' -Event 'Status' }
 
@@ -58,7 +60,7 @@ function Get-ClamAVStatus {
 
         [int64]$signatureCount = 0
         $hasCount = $false
-        if (Test-Path -LiteralPath $paths.SigTool -PathType Leaf) {
+        if (-not $ForScan -and (Test-Path -LiteralPath $paths.SigTool -PathType Leaf)) {
             foreach ($databaseFile in $databaseFiles) {
                 try {
                     $info = Invoke-AVNativeProcess -FilePath $paths.SigTool -ArgumentList @('--info', $databaseFile.FullName) -TimeoutSeconds 30

@@ -41,7 +41,7 @@ Import-Module -Name (Join-Path $PSScriptRoot 'Core\NativeProcess.psd1') -ErrorAc
 Import-Module -Name (Join-Path $PSScriptRoot 'Core\SecurityAssessment.psd1') -Force -ErrorAction Stop
 
 $script:BrandName = 'REMNEXA'
-$script:CleanerVersion = '2.2.0-rc.3'
+$script:CleanerVersion = '2.2.0-rc.4'
 $script:OperationProgress = $null
 $script:RestartRequired = $false
 $script:ExitRequested = $false
@@ -2291,6 +2291,25 @@ function Invoke-AVScanWithUpdatePrompt {
     return @(Invoke-ClamAVScan @parameters)
 }
 
+function Invoke-AVPerformanceMenu {
+    while($true) {
+        Write-Host (T 'AVPerformanceTitle') -ForegroundColor White
+        Write-Host (T 'AVPerformanceCurrent' @((Get-AVConfig).ScanPerformanceMode))
+        Write-Host ('  [1] '+(T 'AVPerformanceEco'))
+        Write-Host ('  [2] '+(T 'AVPerformanceBalanced'))
+        Write-Host ('  [3] '+(T 'AVPerformanceFast'))
+        Write-Host ('  [0] '+(T 'BackPreviousMenu'))
+        $choice=(Read-RemnexaInput (T 'SelectPrompt')).Trim()
+        if($choice -eq '0'){return}
+        if($choice -in @('1','2','3')) {
+            $mode=@{ '1'='Eco';'2'='Balanced';'3'='Fast' }[$choice]
+            Set-AVConfig -Values @{ScanPerformanceMode=$mode} -Confirm:$false
+            return
+        }
+        Write-Status (T 'AVUpdateInvalidChoice') 'Warning'
+    }
+}
+
 function Invoke-AntivirusMenu {
     if (-not (Request-ElevationForTool -Mode Antivirus)) { return 'menu' }
     if (-not (Initialize-AntivirusModule)) { return 'menu' }
@@ -2310,10 +2329,11 @@ function Invoke-AntivirusMenu {
         Write-Host ('  [7] ' + (T 'AV7'))
         Write-Host ('  [U] ' + (T 'AVUpdateCheck'))
         Write-Host ('  [I] ' + (T 'AVUpdateInfo'))
+        Write-Host ('  [P] ' + (T 'AVPerformanceMenu'))
         Write-Host ('  [0] ' + (T 'BackPreviousMenu'))
         $choice = (Read-RemnexaInput (T 'SelectPrompt')).Trim().ToUpperInvariant()
         if ($choice -eq '0') { return 'menu' }
-        if ($choice -notmatch '^[1-7UI]$') {
+        if ($choice -notmatch '^[1-7UIP]$') {
             Write-Status (T 'InvalidAVChoice') 'Warning'
             Start-Sleep -Milliseconds 800
             continue antivirusLoop
@@ -2321,6 +2341,7 @@ function Invoke-AntivirusMenu {
 
         try {
             switch ($choice) {
+                'P' { Invoke-AVPerformanceMenu;continue antivirusLoop }
                 'U' { Invoke-AVUpdateMenu;continue antivirusLoop }
                 'I' { Show-AVUpdateSummary -Detailed }
                 '1' {
@@ -3634,7 +3655,7 @@ function Invoke-RemnexaSelfTest {
         $checks.Add([PSCustomObject]@{ Name = $Name; Passed = $Passed; Details = $Details })
     }
 
-    & $addCheck 'Brand' ($script:BrandName -eq 'REMNEXA' -and $script:CleanerVersion -eq '2.2.0-rc.3') "$($script:BrandName) $($script:CleanerVersion)"
+    & $addCheck 'Brand' ($script:BrandName -eq 'REMNEXA' -and $script:CleanerVersion -eq '2.2.0-rc.4') "$($script:BrandName) $($script:CleanerVersion)"
     $translationProblems = @(
         foreach ($key in $script:Texts.Keys) {
             $translations = @($script:Texts[$key])

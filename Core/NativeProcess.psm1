@@ -39,7 +39,9 @@ function Invoke-RemnexaNativeProcess {
         [scriptblock]$OnOutput,
         [scriptblock]$OnHeartbeat,
         [scriptblock]$CaptureFilter,
-        [ValidateRange(1024, 67108864)][int]$MaxCapturedCharacters = 16777216
+        [ValidateRange(1024, 67108864)][int]$MaxCapturedCharacters = 16777216,
+        [ValidateSet('Idle','BelowNormal','Normal')][string]$ProcessPriority='Normal',
+        [Threading.CancellationToken]$CancellationToken=[Threading.CancellationToken]::None
     )
 
     if (-not (Test-Path -LiteralPath $FilePath -PathType Leaf)) {
@@ -64,8 +66,8 @@ function Invoke-RemnexaNativeProcess {
         $startInfo.Arguments = (@($ArgumentList | ForEach-Object { ConvertTo-RemnexaNativeArgument ([string]$_) }) -join ' ')
     }
 
-    if ($OnOutput -or $OnHeartbeat -or $CaptureFilter) {
-        return Invoke-RemnexaObservedProcess -StartInfo $startInfo -TimeoutSeconds $TimeoutSeconds -OnOutput $OnOutput -OnHeartbeat $OnHeartbeat -CaptureFilter $CaptureFilter -MaxCapturedCharacters $MaxCapturedCharacters -Arguments $ArgumentList
+    if ($OnOutput -or $OnHeartbeat -or $CaptureFilter -or $CancellationToken.CanBeCanceled -or $ProcessPriority -ne 'Normal') {
+        return Invoke-RemnexaObservedProcess -StartInfo $startInfo -TimeoutSeconds $TimeoutSeconds -OnOutput $OnOutput -OnHeartbeat $OnHeartbeat -CaptureFilter $CaptureFilter -MaxCapturedCharacters $MaxCapturedCharacters -Arguments $ArgumentList -ProcessPriority $ProcessPriority -CancellationToken $CancellationToken
     }
 
     $process = New-Object Diagnostics.Process
@@ -112,7 +114,8 @@ function Invoke-RemnexaNativeProcess {
 Export-ModuleMember -Function ConvertTo-RemnexaNativeArgument, Invoke-RemnexaNativeProcess
 
 function Invoke-RemnexaObservedProcess {
-    param([Diagnostics.ProcessStartInfo]$StartInfo, [int]$TimeoutSeconds, [scriptblock]$OnOutput, [scriptblock]$OnHeartbeat, [scriptblock]$CaptureFilter, [int]$MaxCapturedCharacters, [string[]]$Arguments)
+    param([Diagnostics.ProcessStartInfo]$StartInfo, [int]$TimeoutSeconds, [scriptblock]$OnOutput, [scriptblock]$OnHeartbeat, [scriptblock]$CaptureFilter, [int]$MaxCapturedCharacters, [string[]]$Arguments,
+        [string]$ProcessPriority='Normal',[Threading.CancellationToken]$CancellationToken=[Threading.CancellationToken]::None)
     $process = [Diagnostics.Process]::new()
     $process.StartInfo = $StartInfo
     $started = $false
@@ -121,11 +124,14 @@ function Invoke-RemnexaObservedProcess {
     $captured = 0
     $lastHeartbeat = [long]-1000
     try {
+        $CancellationToken.ThrowIfCancellationRequested()
         $started = $process.Start()
         if (-not $started) { throw 'The native process could not start.' }
+        try { $process.PriorityClass=[Diagnostics.ProcessPriorityClass]::$ProcessPriority } catch { Write-Verbose $_.Exception.Message }
         $readers = @{ Stdout=$process.StandardOutput; Stderr=$process.StandardError }
         $pending = @{ Stdout=$readers.Stdout.ReadLineAsync(); Stderr=$readers.Stderr.ReadLineAsync() }
         while ($pending.Count -gt 0 -or -not $process.HasExited) {
+            $CancellationToken.ThrowIfCancellationRequested()
             if ($watch.Elapsed.TotalSeconds -ge $TimeoutSeconds) { throw "Process '$($StartInfo.FileName)' exceeded the $TimeoutSeconds second timeout." }
             foreach ($streamName in @($pending.Keys)) {
                 # Bound each batch so stderr, heartbeats and the deadline cannot
@@ -150,18 +156,27 @@ function Invoke-RemnexaObservedProcess {
                 $lastHeartbeat = $watch.ElapsedMilliseconds
             }
             $ready = @($pending.Values | Where-Object IsCompleted).Count -gt 0
-            if (-not $ready -and ($pending.Count -gt 0 -or -not $process.HasExited)) { [Threading.Thread]::Sleep(50) }
+            # Wake as soon as either redirected stream has data. A fixed 50 ms
+            # sleep per asynchronous read throttles fast scanners unnecessarily.
+            if (-not $ready -and $pending.Count -gt 0) { [void][Threading.Tasks.Task]::WaitAny([Threading.Tasks.Task[]]@($pending.Values),50) }
+            elseif (-not $ready -and -not $process.HasExited) { [void]$process.WaitForExit(50) }
         }
         return [PSCustomObject]@{ FilePath=$StartInfo.FileName; Arguments=@($Arguments); ExitCode=[int]$process.ExitCode; StandardOutput=$output.Stdout.ToString(); StandardError=$output.Stderr.ToString(); TimedOut=$false }
     }
     finally {
+        $cleanupFailure=$null
         if ($started -and -not $process.HasExited) {
             try {
                 $process.Kill($true)
                 if (-not $process.WaitForExit(5000)) { throw 'The owned process did not exit within the cleanup window.' }
             }
-            catch { Write-Warning ('Native process cleanup could not be confirmed: ' + $_.Exception.Message) }
+            catch { $cleanupFailure=$_.Exception }
         }
         $process.Dispose()
+        if($cleanupFailure){
+            $failure=[InvalidOperationException]::new('Native process cleanup could not be confirmed.',$cleanupFailure)
+            $failure.Data['NativeCleanupFailed']=$true
+            throw $failure
+        }
     }
 }

@@ -279,7 +279,7 @@
   "Startup3": "Mostrar historial de inicio",
   "ProgressDone": "Operación completada",
   "ProtectedOverride": "Anular: continuar de todos modos",
-  "InvalidAVChoice": "Elige del 1 al 7, U, I, 0 o X.",
+  "InvalidAVChoice": "Elige del 1 al 7, U, I, P, 0 o X.",
   "RestorePointDone": "Se creó un punto de restauración de Windows.",
   "InvalidLanguage": "Introduce un número del 0 al 6.",
   "UacOpening": "Ahora se abrirá la solicitud de administrador de Windows para el apartado seleccionado.",
@@ -344,5 +344,15 @@
   "AVUpdateFailure": "Falló la actualización. Se volverá a comprobar la instalación antes de otro análisis.",
   "AVUpdateContinueAfterFailure": "Analizar con la instalación existente",
   "AVUpdateDone": "Actualización terminada y disponibilidad local comprobada.",
-  "AVUpdateInvalidChoice": "Elige una de las opciones mostradas."
+  "AVUpdateInvalidChoice": "Elige una de las opciones mostradas.",
+  "AVPerformanceMenu": "Rendimiento del análisis",
+  "AVPerformanceTitle": "ANTIVIRUS – RENDIMIENTO",
+  "AVPerformanceEco": "Eco – menor prioridad del proceso",
+  "AVPerformanceBalanced": "Balanced – recomendado",
+  "AVPerformanceFast": "Fast – prioridad normal del proceso",
+  "AVPerformanceCurrent": "Modo actual: {0}",
+  "AVScanLive": "Modo: {0} | Amenazas: {1} | {2} archivos/s | X / Esc / Ctrl+C: cancelar",
+  "AVScanCancelled": "Análisis cancelado: incompleto. Los hallazgos siguen visibles; sin cuarentena automática.",
+  "AVScanBusy": "Ya hay un análisis o actualización de REMNEXA para esta instalación. Espere a que termine.",
+  "AVScanMemoryLow": "Memoria disponible insuficiente para un análisis seguro (mínimo 2 GiB). Cierre otros programas e inténtelo de nuevo."
 }

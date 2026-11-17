@@ -103,8 +103,10 @@ function Invoke-ClamAVManagedUpdate {
     Stop-ClamAVUpdateCheck
     $path=Get-AVUpdateStatePath $StatePath
     $lease=Enter-AVUpdateLease $path
+    $scanLease=$null
     try {
     $config=Get-AVConfig -Path $ConfigPath
+    $scanLease=Enter-AVScanLease $config
     $state=Read-AVUpdateState -Path $path -Context (Get-AVUpdateContext $config)
     $checked=$state.lastSuccessfulCheckUtc
     $verifiedEnginePackage=$state.engine.canUpdate
@@ -141,5 +143,5 @@ function Invoke-ClamAVManagedUpdate {
     }
     catch { $state.status='check_failed';Save-AVUpdateState $state $path;throw }
     }
-    finally { $lease.Dispose() }
+    finally { if($scanLease){$scanLease.ReleaseMutex();$scanLease.Dispose()};$lease.Dispose() }
 }

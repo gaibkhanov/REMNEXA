@@ -42,8 +42,10 @@ function Update-ClamAVEngine {
         [switch]$UpdateSignatures
     )
     $remnexaWorkProgress = New-RemnexaProgress -Activity (Get-RemnexaProgressText 'ProgressTaskInstall')
+    $scanLease=$null
     try {
         $config = Get-AVConfig -Path $ConfigPath
+        $scanLease=Enter-AVScanLease $config
         $statusBefore = Get-ClamAVStatus -ConfigPath $ConfigPath
         if (-not $statusBefore.Installed) {
             throw "ClamAV ist noch nicht installiert. Bitte zuerst Initialize-ClamAV ausfuehren."
@@ -163,5 +165,5 @@ function Update-ClamAVEngine {
         }
     }
     catch { Complete-RemnexaProgress $remnexaWorkProgress -Outcome Failed; throw }
-    finally { if ($remnexaWorkProgress.Outcome -eq 'Running') { Complete-RemnexaProgress $remnexaWorkProgress } }
+    finally { if($scanLease){$scanLease.ReleaseMutex();$scanLease.Dispose()};if ($remnexaWorkProgress.Outcome -eq 'Running') { Complete-RemnexaProgress $remnexaWorkProgress } }
 }

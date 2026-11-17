@@ -14,6 +14,7 @@
         'Update-ClamAVEngine',
         'Update-ClamAVSignature',
         'Get-ClamAVStatus',
+        'Get-ClamAVScanPerformance',
         'Invoke-ClamAVScan',
         'Invoke-ClamAVTargetedScan',
         'Get-ClamAVScanResult',

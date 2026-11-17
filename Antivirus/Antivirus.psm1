@@ -6,6 +6,7 @@ $script:AVConfigPath = Join-Path (Split-Path -Parent $PSScriptRoot) 'config\anti
 Import-Module (Join-Path $PSScriptRoot '..\Core\Progress.psd1') -ErrorAction Stop
 $script:AVDiscoveryProgress = $null
 $script:AVDiscoverySkipped = 0
+$script:AVCancellation = $null
 $script:AVUpdateWorker = $null
 $ExecutionContext.SessionState.Module.OnRemove = { Stop-ClamAVUpdateCheck }
 
@@ -23,6 +24,7 @@ Export-ModuleMember -Function @(
     'Update-ClamAVEngine',
     'Update-ClamAVSignature',
     'Get-ClamAVStatus',
+    'Get-ClamAVScanPerformance',
     'Invoke-ClamAVScan',
     'Invoke-ClamAVTargetedScan',
     'Get-ClamAVScanResult',

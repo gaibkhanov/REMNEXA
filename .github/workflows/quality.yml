@@ -6,6 +6,7 @@ on:
       - '**.ps1'
       - '**.psm1'
       - '**.psd1'
+      - '**.cs'
       - 'tests/**'
       - 'locales/**'
       - 'config/**'
@@ -15,6 +16,7 @@ on:
       - '**.ps1'
       - '**.psm1'
       - '**.psd1'
+      - '**.cs'
       - 'tests/**'
       - 'locales/**'
       - 'config/**'
@@ -67,12 +69,12 @@ jobs:
       - name: Build and verify source release candidate
         shell: pwsh
         run: |
-          $package = ./tools/New-RemnexaPackage.ps1 -Version '2.2.0-rc.3'
+          $package = ./tools/New-RemnexaPackage.ps1 -Version '2.2.0-rc.4'
           ./tools/Test-RemnexaPackage.ps1 -Path $package.Package -ExpectedSha256 $package.SHA256
 
       - name: Upload verified source candidate
         uses: actions/upload-artifact@v4
         with:
           name: REMNEXA-source-candidate
-          path: dist/REMNEXA-2.2.0-rc.3-source.zip*
+          path: dist/REMNEXA-2.2.0-rc.4-source.zip*
           if-no-files-found: error

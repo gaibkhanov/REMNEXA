@@ -26,8 +26,10 @@ function Update-ClamAVSignature {
         [ValidateRange(30, 86400)][int]$Timeout = 1800
     )
     $remnexaWorkProgress = New-RemnexaProgress -Activity (Get-RemnexaProgressText 'ProgressTaskUpdate')
+    $scanLease=$null
     try {
         $config = Get-AVConfig -Path $ConfigPath
+        $scanLease=Enter-AVScanLease $config
         $root = Find-ClamAVInstallation -Config $config
         if (-not $root) {
             throw "ClamAV nicht gefunden unter '$([Environment]::ExpandEnvironmentVariables([string]$config.ClamAVPath))'. Bitte Initialize-ClamAV ausfuehren oder ClamAVPath in antivirus.json setzen."
@@ -73,5 +75,5 @@ function Update-ClamAVSignature {
         }
     }
     catch { Complete-RemnexaProgress $remnexaWorkProgress -Outcome Failed; throw }
-    finally { if ($remnexaWorkProgress.Outcome -eq 'Running') { Complete-RemnexaProgress $remnexaWorkProgress } }
+    finally { if($scanLease){$scanLease.ReleaseMutex();$scanLease.Dispose()};if ($remnexaWorkProgress.Outcome -eq 'Running') { Complete-RemnexaProgress $remnexaWorkProgress } }
 }

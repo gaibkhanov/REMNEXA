@@ -279,7 +279,7 @@
   "Startup3": "Başlangıç geçmişini göster",
   "ProgressDone": "İşlem tamamlandı",
   "ProtectedOverride": "Geçersiz kıl: yine de devam et",
-  "InvalidAVChoice": "1–7, U, I, 0 veya X seçin.",
+  "InvalidAVChoice": "1–7, U, I, P, 0 veya X seçin.",
   "RestorePointDone": "Windows geri yükleme noktası oluşturuldu.",
   "InvalidLanguage": "Lütfen 0 ile 6 arasında bir sayı girin.",
   "UacOpening": "Seçilen bölüm için Windows yönetici istemi şimdi açılacak.",
@@ -344,5 +344,15 @@
   "AVUpdateFailure": "Güncelleme başarısız. Yeni taramadan önce kurulum yeniden denetlenecek.",
   "AVUpdateContinueAfterFailure": "Mevcut kurulumla tara",
   "AVUpdateDone": "Güncelleme bitti ve yerel hazır olma durumu denetlendi.",
-  "AVUpdateInvalidChoice": "Burada gösterilen seçeneklerden birini seçin."
+  "AVUpdateInvalidChoice": "Burada gösterilen seçeneklerden birini seçin.",
+  "AVPerformanceMenu": "Tarama performansı",
+  "AVPerformanceTitle": "ANTİVİRÜS – TARAMA PERFORMANSI",
+  "AVPerformanceEco": "Eco – düşük işlem önceliği",
+  "AVPerformanceBalanced": "Balanced – önerilen",
+  "AVPerformanceFast": "Fast – normal işlem önceliği",
+  "AVPerformanceCurrent": "Geçerli mod: {0}",
+  "AVScanLive": "Mod: {0} | Tehditler: {1} | {2} dosya/sn | X / Esc / Ctrl+C: iptal",
+  "AVScanCancelled": "Tarama iptal edildi, tamamlanmadı. Bulgular görünür kalır; otomatik karantina uygulanmaz.",
+  "AVScanBusy": "Bu kurulum için bir REMNEXA taraması veya güncellemesi zaten çalışıyor. Tamamlanmasını bekleyin.",
+  "AVScanMemoryLow": "Güvenli tarama için yeterli boş bellek yok (en az 2 GiB gerekli). Diğer uygulamaları kapatıp yeniden deneyin."
 }

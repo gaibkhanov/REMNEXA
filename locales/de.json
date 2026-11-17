@@ -279,7 +279,7 @@
   "Startup3": "Autostart-Historie anzeigen",
   "ProgressDone": "Vorgang abgeschlossen",
   "ProtectedOverride": "Override: trotzdem fortfahren",
-  "InvalidAVChoice": "Bitte wähle 1 bis 7, U, I, 0 oder X.",
+  "InvalidAVChoice": "Bitte wähle 1 bis 7, U, I, P, 0 oder X.",
   "RestorePointDone": "Windows-Wiederherstellungspunkt wurde erstellt.",
   "InvalidLanguage": "Bitte eine Zahl von 0 bis 6 eingeben.",
   "UacOpening": "Die Windows-Administratorabfrage für den ausgewählten Bereich wird jetzt geöffnet.",
@@ -344,5 +344,15 @@
   "AVUpdateFailure": "Aktualisierung fehlgeschlagen. Der aktuelle Arbeitsstand wird vor einem weiteren Scan erneut geprüft.",
   "AVUpdateContinueAfterFailure": "Mit dem vorhandenen Stand scannen",
   "AVUpdateDone": "Aktualisierung beendet und lokale Einsatzbereitschaft geprüft.",
-  "AVUpdateInvalidChoice": "Bitte wähle eine der hier angezeigten Optionen."
+  "AVUpdateInvalidChoice": "Bitte wähle eine der hier angezeigten Optionen.",
+  "AVPerformanceMenu": "Scan-Leistung",
+  "AVPerformanceTitle": "ANTIVIRUS – SCAN-LEISTUNG",
+  "AVPerformanceEco": "Eco – geringere Prozesspriorität",
+  "AVPerformanceBalanced": "Balanced – empfohlen",
+  "AVPerformanceFast": "Fast – normale Prozesspriorität",
+  "AVPerformanceCurrent": "Aktueller Modus: {0}",
+  "AVScanLive": "Modus: {0} | Funde: {1} | {2} Dateien/s | X / Esc / Strg+C: Scan abbrechen",
+  "AVScanCancelled": "Scan abgebrochen – unvollständig. Vorhandene Funde bleiben sichtbar; keine automatische Quarantäne.",
+  "AVScanBusy": "Ein REMNEXA-Scan oder Update dieser Installation läuft bereits. Bitte dessen Abschluss abwarten.",
+  "AVScanMemoryLow": "Zu wenig freier Arbeitsspeicher für einen sicheren Scan (mindestens 2 GiB erforderlich). Schließe andere Programme und versuche es erneut."
 }

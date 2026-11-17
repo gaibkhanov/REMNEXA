@@ -279,7 +279,7 @@
   "Startup3": "Show startup history",
   "ProgressDone": "Operation completed",
   "ProtectedOverride": "Override: continue anyway",
-  "InvalidAVChoice": "Choose 1 to 7, U, I, 0 or X.",
+  "InvalidAVChoice": "Choose 1 to 7, U, I, P, 0 or X.",
   "RestorePointDone": "Windows restore point was created.",
   "InvalidLanguage": "Please enter a number from 0 to 6.",
   "UacOpening": "The Windows administrator prompt for the selected area will now open.",
@@ -344,5 +344,15 @@
   "AVUpdateFailure": "Update failed. The existing installation will be checked again before another scan.",
   "AVUpdateContinueAfterFailure": "Scan using the existing installation",
   "AVUpdateDone": "Update finished and local readiness checked.",
-  "AVUpdateInvalidChoice": "Choose one of the options displayed here."
+  "AVUpdateInvalidChoice": "Choose one of the options displayed here.",
+  "AVPerformanceMenu": "Scan performance",
+  "AVPerformanceTitle": "ANTIVIRUS – SCAN PERFORMANCE",
+  "AVPerformanceEco": "Eco – lower process priority",
+  "AVPerformanceBalanced": "Balanced – recommended",
+  "AVPerformanceFast": "Fast – normal process priority",
+  "AVPerformanceCurrent": "Current mode: {0}",
+  "AVScanLive": "Mode: {0} | Threats: {1} | {2} files/s | X / Esc / Ctrl+C: cancel scan",
+  "AVScanCancelled": "Scan cancelled – incomplete. Existing findings remain visible; no automatic quarantine.",
+  "AVScanBusy": "A REMNEXA scan or update of this installation is already running. Wait for it to finish.",
+  "AVScanMemoryLow": "Not enough available memory for a safe scan (at least 2 GiB required). Close other applications and try again."
 }

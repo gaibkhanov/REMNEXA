@@ -19,6 +19,7 @@ function Get-AVQuickScanTargets {
         $pending = [Collections.Generic.Stack[string]]::new()
         $pending.Push($env:ProgramData)
         while ($pending.Count -gt 0) {
+            if($script:AVCancellation){$script:AVCancellation.Poll()}
             $directory = $pending.Pop()
             if ($script:AVDiscoveryProgress) { Update-RemnexaProgress -Progress $script:AVDiscoveryProgress -CurrentItem $directory }
             $readErrors=@()
@@ -82,6 +83,7 @@ function Resolve-AVScanTargets {
         if ([string]::IsNullOrWhiteSpace([string]$rawTarget)) { continue }
         $expanded = [Environment]::ExpandEnvironmentVariables([string]$rawTarget)
         if (-not (Test-Path -LiteralPath $expanded)) {
+            $script:AVDiscoverySkipped++
             Write-Warning "Scan-Ziel existiert nicht und wird uebersprungen: '$expanded'."
             Write-AVLog -Message "Scan-Ziel nicht gefunden: $expanded" -Level 'Warning' -Event 'Scan'
             continue

@@ -37,6 +37,7 @@ function Set-AVConfig {
         $config.$name = $Values[$name]
     }
     [void](Get-AVUpdateOptions $config)
+    if($config.ScanPerformanceMode -notin @('Eco','Balanced','Fast')) { throw 'Invalid ScanPerformanceMode. Use Eco, Balanced or Fast.' }
 
     if ($PSCmdlet.ShouldProcess($resolvedPath, 'Antivirus-Konfiguration speichern')) {
         $directory = Split-Path -Parent $resolvedPath
