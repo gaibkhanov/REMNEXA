@@ -89,6 +89,8 @@ Supported privacy backups are checked against a fixed Registry allowlist before 
 
 The optional Antivirus area explains elevation and supports engine/signature setup, scans and quarantine operations. See the [ClamAV guide](../Antivirus/README.md) before using it. A scan is not real-time protection.
 
+In rc.3, the startup metadata check stays quiet until you open Antivirus. **U** checks immediately and offers supported engine/database updates; **I** shows the known versions and check time. Before a scan, **J** updates then scans, **N** uses the existing database, and **0** returns. After an update failure, a separate confirmation is required to scan anyway. Offline or uncertain metadata is labeled explicitly. Full settings and limits: [smart updates](CLAMAV_SMART_UPDATES.md).
+
 ## Logs, history and recovery
 
 Removal logs are stored under `%LOCALAPPDATA%\REMNEXA\Logs`; history uses `%LOCALAPPDATA%\REMNEXA\History.jsonl`. These are generic application locations. The log-opening action returns to the result screen after you close the viewer. Keep useful logs before clearing them.

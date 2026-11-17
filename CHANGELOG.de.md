@@ -6,6 +6,14 @@ Entwicklungsänderungen sind keine veröffentlichten Releases. Dieses Dokument v
 
 ## 2.2.0 — Entwicklung, nicht veröffentlicht
 
+### Kandidat 2.2.0-rc.3
+
+- Stille asynchrone ClamAV-Metadatenprüfung für Engine/Datenbanken mit konfigurierbaren Zeitlimits, standardmäßig 24 Stunden Cache, begrenzten Wiederholungen/Wartefristen und Beenden eigener Prüfprozesse.
+- Getrennter semantischer Engine-Vergleich und offizielle Datenbank-TXT-/Headerversionen; unbekannte, veraltete oder offline ermittelte Angaben erscheinen nicht als aktuell.
+- Antivirus-Auswahl U/I, bestätigte komponentenbezogene Updates und eine Updateentscheidung je Scan mit gesonderter Zustimmung nach Fehlern.
+- Atomarer Updatezustand und exklusive Metadaten-/Updatesperre; fehlende Prüfsummen, nicht vertrauenswürdige Paketquellen und Downgrades bleiben gesperrt.
+- Alle sechs Oberflächensprachen sowie Anleitungen auf Englisch/Deutsch. Vorhandene Antivirus-Nummern/APIs und rc.2-Fortschrittsanzeigen bleiben erhalten. [Verhalten und Prüfung](docs/CLAMAV_SMART_UPDATES.de.md).
+
 ### Kandidat 2.2.0-rc.2
 
 - Gemeinsamer messbarer/unbestimmter Fortschritt, aktuelle Phasen/Einträge, Laufzeit, Eingabewarten und beschriftete Farben in den Verarbeitungsbereichen.

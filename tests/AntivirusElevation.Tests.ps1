@@ -7,7 +7,7 @@ Describe 'REMNEXA antivirus elevation flow' {
             $errors = $null
             $ast = [Management.Automation.Language.Parser]::ParseFile($ApplicationPath, [ref]$tokens, [ref]$errors)
             if ($errors.Count -gt 0) { throw 'Application source did not parse.' }
-            foreach ($name in @('Confirm-AdministratorRequest', 'Request-ElevationForRemoval', 'Request-ElevationForTool', 'Invoke-AntivirusMenu', 'ConvertTo-SingleQuotedLiteral')) {
+            foreach ($name in @('Confirm-AdministratorRequest', 'Request-ElevationForRemoval', 'Request-ElevationForTool', 'Get-AVUpdateStatusText','Show-AVUpdateSummary','Invoke-AntivirusMenu', 'ConvertTo-SingleQuotedLiteral')) {
                 $definition = $ast.Find({ param($node) $node -is [Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq $name }, $true)
                 if ($null -eq $definition) { throw "Missing application function: $name" }
                 . ([scriptblock]::Create($definition.Extent.Text))

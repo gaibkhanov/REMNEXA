@@ -18,7 +18,9 @@
         'Invoke-ClamAVTargetedScan',
         'Get-ClamAVScanResult',
         'Get-ClamAVQuarantine',
-        'Restore-FromClamAVQuarantine'
+        'Restore-FromClamAVQuarantine',
+        'Start-ClamAVUpdateCheck', 'Stop-ClamAVUpdateCheck', 'Get-ClamAVUpdateState',
+        'Invoke-ClamAVUpdateCheck', 'Invoke-ClamAVManagedUpdate'
     )
     CmdletsToExport   = @()
     VariablesToExport = @()

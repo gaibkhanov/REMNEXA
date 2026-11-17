@@ -89,6 +89,8 @@ Unterstützte Datenschutzsicherungen werden vor Wiederherstellung gegen eine fes
 
 Der optionale Antivirus-Bereich erklärt die Rechteerhöhung und bietet Engine-/Signatur-Einrichtung, Scans und Quarantäne. Lies vor Verwendung die [ClamAV-Anleitung](../Antivirus/README.de.md). Ein Scan bietet keinen Echtzeitschutz.
 
+In rc.3 bleibt die Metadatenprüfung beim Start still, bis du Antivirus öffnest. **U** prüft sofort und bietet unterstützte Engine-/Datenbankupdates an; **I** zeigt bekannte Versionen und Prüfzeitpunkt. Vor einem Scan aktualisiert **J** und scannt anschließend, **N** nutzt den bisherigen Stand und **0** kehrt zurück. Nach einem Updatefehler ist zum Weiterlaufen eine gesonderte Zustimmung nötig. Offlinebetrieb und unsichere Angaben werden ausdrücklich markiert. Einstellungen und Grenzen: [intelligente Updates](CLAMAV_SMART_UPDATES.de.md).
+
 ## Protokolle, Historie und Wiederherstellung
 
 Entfernungsprotokolle liegen unter `%LOCALAPPDATA%\REMNEXA\Logs`, die Historie unter `%LOCALAPPDATA%\REMNEXA\History.jsonl`. Dies sind allgemeine Anwendungspfade. Nach Schließen des Protokollfensters kehrt die Öffnen-Aktion zum Ergebnis zurück. Bewahre benötigte Protokolle vor dem Leeren auf.

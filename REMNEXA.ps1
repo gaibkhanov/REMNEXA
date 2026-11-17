@@ -41,7 +41,7 @@ Import-Module -Name (Join-Path $PSScriptRoot 'Core\NativeProcess.psd1') -ErrorAc
 Import-Module -Name (Join-Path $PSScriptRoot 'Core\SecurityAssessment.psd1') -Force -ErrorAction Stop
 
 $script:BrandName = 'REMNEXA'
-$script:CleanerVersion = '2.2.0-rc.2'
+$script:CleanerVersion = '2.2.0-rc.3'
 $script:OperationProgress = $null
 $script:RestartRequired = $false
 $script:ExitRequested = $false
@@ -172,6 +172,7 @@ function Read-RemnexaInput {
 function Stop-RemnexaApplication {
     $script:ExitRequested = $true
     try {
+        if(Get-Command Stop-ClamAVUpdateCheck -ErrorAction SilentlyContinue) { Stop-ClamAVUpdateCheck }
         Complete-OperationProgress
         if (Get-Command Get-RemnexaActiveProgress -ErrorAction SilentlyContinue) {
             while ($activeProgress = Get-RemnexaActiveProgress) { Complete-RemnexaProgress $activeProgress -Outcome Cancelled }
@@ -292,11 +293,9 @@ function Invoke-ConfiguredAntivirusScan {
         if (-not $status.Installed) {
             throw "ClamAV nicht gefunden unter '$($status.ClamScanPath)'. Bitte im Hauptmenue [9], dann [6] einrichten."
         }
-        if ([bool]$config.AutoUpdateSignatures -and $status.SignaturesOutdated) {
-            try { [void](Update-ClamAVSignature) }
-            catch { Write-Status (T 'AVOptionalFailed' @($_.Exception.Message)) 'Warning' }
-        }
-        $scanResults = @(Invoke-ClamAVTargetedScan -Path $targets)
+        # Updates require consent; optional noninteractive scans remain offline.
+        $scanResults = if($script:InteractiveSession) { @(Invoke-AVScanWithUpdatePrompt -Path $targets -Targeted) } else { @(Invoke-ClamAVTargetedScan -Path $targets) }
+        if($scanResults.Count -eq 0) { return @() }
         $findings = @($scanResults | Where-Object { $_.Severity -in @('Malware', 'PotentiallyUnwanted') })
         if ($findings.Count -gt 0) {
             Write-Status (T 'AVFindings' @($findings.Count)) 'Warning'
@@ -2182,6 +2181,116 @@ function Show-AdvancedToolsMenu {
     }
 }
 
+function Get-AVUpdateStatusText {
+    param([string]$Status)
+    if($Status -notin @('current','update_available','unknown','offline','check_failed','not_installed')) { $Status='unknown' }
+    T ('AVUpdateState_'+$Status)
+}
+
+function Show-AVUpdateSummary {
+    param($State,[switch]$Detailed)
+    if($null -eq $State) {
+        try { $State=Get-ClamAVUpdateState }
+        catch { Write-Host (T 'AVUpdateState_check_failed') -ForegroundColor Yellow;return }
+    }
+    $color=if($State.status -eq 'current' -and -not $State.isStale){'Green'}else{'Yellow'}
+    if($State.isChecking) { Write-Host (T 'AVUpdateChecking') -ForegroundColor Cyan }
+    elseif($State.status -eq 'not_installed') { Write-Host (T 'AVUpdateState_not_installed') -ForegroundColor Yellow;return }
+    elseif($State.status -eq 'offline') { Write-Host (T 'AVUpdateState_offline') -ForegroundColor Yellow }
+    if($State.isStale) { Write-Host (T 'AVUpdateStale') -ForegroundColor Yellow }
+    $installed=if($State.engine.installedVersion){$State.engine.installedVersion}else{'?'}
+    $available=if($State.engine.availableVersion){$State.engine.availableVersion}else{'?'}
+    Write-Host (T 'AVUpdateEngineLine' @($installed,$available,(Get-AVUpdateStatusText $State.engine.status))) -ForegroundColor $color
+    Write-Host (T 'AVUpdateSignatureLine' @((Get-AVUpdateStatusText $State.signatures.status))) -ForegroundColor $color
+    if($State.signatures.recommended -and $State.signatures.status -ne 'update_available') { Write-Host (T 'AVUpdateRecommended') -ForegroundColor Yellow }
+    if($State.engine.updateAvailable -and -not $State.engine.canUpdate) { Write-Host (T 'AVUpdatePackageBlocked') -ForegroundColor Yellow }
+    if($Detailed) {
+        foreach($db in $State.signatures.databases) {
+            Write-Host (T 'AVUpdateDatabaseLine' @($db.name,$db.installedVersion,$db.availableVersion,(Get-AVUpdateStatusText $db.status)))
+        }
+        $checked=if($State.lastSuccessfulCheckUtc){Format-HistoryTimestamp $State.lastSuccessfulCheckUtc}else{T 'AVUpdateState_unknown'}
+        Write-Host (T 'AVUpdateLastCheck' @($checked)) -ForegroundColor DarkGray
+    }
+    Write-Host ''
+}
+
+function Invoke-AVConfirmedUpdate {
+    param([ValidateSet('Engine','Signatures','Both')][string]$Component)
+    Write-Host ('  [J] '+(T 'AVUpdateConfirm'))
+    Write-Host ('  [0] '+(T 'BackPreviousMenu'))
+    while($true) {
+        $answer=(Read-RemnexaInput (T 'SelectPrompt')).Trim().ToUpperInvariant()
+        if($answer -in @('0','N')) { return $false }
+        if($answer -in @('J','Y')) { [void](Invoke-ClamAVManagedUpdate -Component $Component -Confirm:$false);Write-Status (T 'AVUpdateDone') 'Success';return $true }
+        Write-Status (T 'AVUpdateInvalidChoice') 'Warning'
+    }
+}
+
+function Invoke-AVUpdateMenu {
+    $state=Invoke-ClamAVUpdateCheck -Force
+    while($true) {
+        Show-AVUpdateSummary -State $state -Detailed
+        $actions=@{}
+        if($state.status -ne 'offline' -and $state.status -ne 'not_installed') {
+            if($state.signatures.canUpdate) { $actions['1']='Signatures';Write-Host ('  [1] '+(T 'AVUpdateSignaturesOnly')) }
+            if($state.engine.updateAvailable -and $state.engine.canUpdate -and -not $state.engine.isStale) {
+                $actions['2']='Engine';Write-Host ('  [2] '+(T 'AVUpdateEngineOnly'))
+                if($state.signatures.canUpdate) { $actions['3']='Both';Write-Host ('  [3] '+(T 'AVUpdateBoth')) }
+            }
+        }
+        Write-Host ('  [0] '+(T 'BackPreviousMenu'))
+        $answer=(Read-RemnexaInput (T 'SelectPrompt')).Trim()
+        if($answer -eq '0') { return }
+        if($actions.ContainsKey($answer)) { [void](Invoke-AVConfirmedUpdate -Component $actions[$answer]);return }
+        Write-Status (T 'AVUpdateInvalidChoice') 'Warning'
+    }
+}
+
+function Invoke-AVScanWithUpdatePrompt {
+    param([ValidateSet('Quick','Full','Custom')][string]$ScanType='Custom',[string[]]$Path=@(),[switch]$Targeted)
+    $state=Get-ClamAVUpdateState
+    $signatures=($state.signatures.status -eq 'update_available' -and $state.signatures.canUpdate -and -not $state.signatures.isStale)
+    $engine=($state.engine.updateAvailable -and $state.engine.canUpdate -and -not $state.engine.isStale)
+    if($signatures -or $engine) {
+        if($signatures) { Write-Host (T 'AVUpdateBeforeScanSignatures') -ForegroundColor Yellow }
+        if($engine) { Write-Host (T 'AVUpdateBeforeScanEngine' @($state.engine.availableVersion)) -ForegroundColor Yellow }
+        $update=$false
+        while($true) {
+            Write-Host ('  [J] '+(T 'AVUpdateAndScan'))
+            Write-Host ('  [N] '+(T 'AVUpdateSkipAndScan'))
+            Write-Host ('  [I] '+(T 'AVUpdateInfo'))
+            Write-Host ('  [0] '+(T 'BackPreviousMenu'))
+            $answer=(Read-RemnexaInput (T 'SelectPrompt')).Trim().ToUpperInvariant()
+            if($answer -eq '0') { return @() }
+            if($answer -eq 'N') { break }
+            if($answer -eq 'I') { Show-AVUpdateSummary -State $state -Detailed;continue }
+            if($answer -in @('J','Y')) { $update=$true;break }
+            Write-Status (T 'AVUpdateInvalidChoice') 'Warning'
+        }
+        if($update) {
+            $component=if($signatures -and $engine){'Both'}elseif($engine){'Engine'}else{'Signatures'}
+            try { [void](Invoke-ClamAVManagedUpdate -Component $component -Confirm:$false) }
+            catch {
+                Write-Status (T 'AVUpdateFailure') 'Warning'
+                Write-LogEntry -Message $_.Exception.Message -Level Warning -Component 'Antivirus/Update'
+                # One separate consent after failure; never retry the update here.
+                while($true) {
+                    Write-Host ('  [J] '+(T 'AVUpdateContinueAfterFailure'))
+                    Write-Host ('  [0] '+(T 'BackPreviousMenu'))
+                    $answer=(Read-RemnexaInput (T 'SelectPrompt')).Trim().ToUpperInvariant()
+                    if($answer -in @('0','N')) { return @() }
+                    if($answer -in @('J','Y')) { break }
+                    Write-Status (T 'AVUpdateInvalidChoice') 'Warning'
+                }
+            }
+        }
+    }
+    if($Targeted) { return @(Invoke-ClamAVTargetedScan -Path $Path) }
+    $parameters=@{ScanType=$ScanType}
+    if($Path.Count) { $parameters.Path=$Path }
+    return @(Invoke-ClamAVScan @parameters)
+}
+
 function Invoke-AntivirusMenu {
     if (-not (Request-ElevationForTool -Mode Antivirus)) { return 'menu' }
     if (-not (Initialize-AntivirusModule)) { return 'menu' }
@@ -2191,6 +2300,7 @@ function Invoke-AntivirusMenu {
         Show-BrandHeader
         Write-Host (T 'AVTitle') -ForegroundColor White
         Write-Host ''
+        Show-AVUpdateSummary
         Write-Host ('  [1] ' + (T 'AV1'))
         Write-Host ('  [2] ' + (T 'AV2'))
         Write-Host ('  [3] ' + (T 'AV3'))
@@ -2198,10 +2308,12 @@ function Invoke-AntivirusMenu {
         Write-Host ('  [5] ' + (T 'AV5'))
         Write-Host ('  [6] ' + (T 'AV6'))
         Write-Host ('  [7] ' + (T 'AV7'))
+        Write-Host ('  [U] ' + (T 'AVUpdateCheck'))
+        Write-Host ('  [I] ' + (T 'AVUpdateInfo'))
         Write-Host ('  [0] ' + (T 'BackPreviousMenu'))
-        $choice = (Read-RemnexaInput (T 'SelectPrompt')).Trim()
+        $choice = (Read-RemnexaInput (T 'SelectPrompt')).Trim().ToUpperInvariant()
         if ($choice -eq '0') { return 'menu' }
-        if ($choice -notmatch '^[1-7]$') {
+        if ($choice -notmatch '^[1-7UI]$') {
             Write-Status (T 'InvalidAVChoice') 'Warning'
             Start-Sleep -Milliseconds 800
             continue antivirusLoop
@@ -2209,6 +2321,8 @@ function Invoke-AntivirusMenu {
 
         try {
             switch ($choice) {
+                'U' { Invoke-AVUpdateMenu;continue antivirusLoop }
+                'I' { Show-AVUpdateSummary -Detailed }
                 '1' {
                     Get-ClamAVStatus | Format-List Installed, Ready, Version, SignatureDate, SignatureAgeDays, Signatures, SignaturesOutdated, ClamScanPath, FreshClamPath, DatabasePath | Out-Host
                 }
@@ -2216,19 +2330,21 @@ function Invoke-AntivirusMenu {
                     Initialize-ClamAV -Install -Confirm:$false | Format-List | Out-Host
                 }
                 '3' {
-                    Update-ClamAVEngine -Confirm:$false | Format-List | Out-Host
+                    [void](Invoke-AVConfirmedUpdate -Component Engine)
                 }
                 '4' {
-                    Update-ClamAVSignature | Format-List | Out-Host
+                    [void](Invoke-AVConfirmedUpdate -Component Signatures)
                 }
                 '5' {
-                    $results = @(Invoke-ClamAVScan -ScanType Quick)
+                    $results = @(Invoke-AVScanWithUpdatePrompt -ScanType Quick)
+                    if($results.Count -eq 0) { continue antivirusLoop }
                     $results | Format-Table Status, Severity, Signature, Path -AutoSize | Out-Host
                 }
                 '6' {
                     $customPath = (Read-RemnexaInput (T 'AVPathPrompt')).Trim().Trim('"')
                     if (-not [string]::IsNullOrWhiteSpace($customPath)) {
-                        $results = @(Invoke-ClamAVScan -Path $customPath -ScanType Custom)
+                        $results = @(Invoke-AVScanWithUpdatePrompt -Path $customPath -ScanType Custom)
+                        if($results.Count -eq 0) { continue antivirusLoop }
                         $results | Format-Table Status, Severity, Signature, Path -AutoSize | Out-Host
                     }
                 }
@@ -3518,7 +3634,7 @@ function Invoke-RemnexaSelfTest {
         $checks.Add([PSCustomObject]@{ Name = $Name; Passed = $Passed; Details = $Details })
     }
 
-    & $addCheck 'Brand' ($script:BrandName -eq 'REMNEXA' -and $script:CleanerVersion -eq '2.2.0-rc.2') "$($script:BrandName) $($script:CleanerVersion)"
+    & $addCheck 'Brand' ($script:BrandName -eq 'REMNEXA' -and $script:CleanerVersion -eq '2.2.0-rc.3') "$($script:BrandName) $($script:CleanerVersion)"
     $translationProblems = @(
         foreach ($key in $script:Texts.Keys) {
             $translations = @($script:Texts[$key])
@@ -3604,6 +3720,7 @@ function Invoke-RemnexaSelfTest {
 function Main {
     Initialize-AppSettings
     [void](Initialize-AntivirusModule)
+    try { if($script:AntivirusAvailable) { [void](Start-ClamAVUpdateCheck) } } catch { Write-Verbose 'Antivirus metadata check was skipped.' }
     $interactiveSession = (([string]::IsNullOrWhiteSpace($Name) -and -not $ResidualOnly -and -not $DryRun) -or $ContinueInteractive)
     $script:InteractiveSession = [bool]$interactiveSession
     $hasProvidedRequest = -not [string]::IsNullOrWhiteSpace($Name)
@@ -3875,6 +3992,9 @@ catch {
     Write-Status (T 'ErrorPrefix' @($_.Exception.Message)) 'Error'
     Save-RunLog -Program $null -SearchName $(if ($Name) { $Name } else { 'unbekannt' }) -Traces @() -Result $null | Out-Null
     $scriptExitCode = 1
+}
+finally {
+    if(Get-Command Stop-ClamAVUpdateCheck -ErrorAction SilentlyContinue) { try { Stop-ClamAVUpdateCheck } catch { Write-Verbose 'Antivirus metadata worker cleanup failed.' } }
 }
 Complete-OperationProgress
 
