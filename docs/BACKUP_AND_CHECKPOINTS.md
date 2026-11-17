@@ -12,13 +12,13 @@ Close REMNEXA and stop editing the source during copying. From the project root:
 pwsh -NoProfile -File .\tools\New-RemnexaBackup.ps1 -Version 2.2.0-checkpoint
 ```
 
-Choose a unique version suffix for each checkpoint. Specify `-Version` explicitly: the tool's legacy default is not the current development version. `-SourcePath` can select a different source root.
+Choose a unique version suffix for each checkpoint. Specify `-Version` explicitly to identify the intended checkpoint; the current default is `2.2.0-rc.1`. `-SourcePath` can select a different source root.
 
 The tool checks space, stages the copy, verifies copied files with SHA-256, checks its manifest and only then names the directory `Backup-<Version>`. An existing destination is never overwritten. Failed staging is retained for inspection rather than presented as a completed backup.
 
 ## Coverage and exclusions
 
-Existing top-level `Backup-*` directories and reparse points are skipped. Linked or placeholder content may therefore be absent; inspect the manifest rather than assuming a full disk image. The source is not locked, so concurrent changes can make a snapshot inconsistent.
+Top-level `.git`, `dist`, `Backup-*` and `.Backup-*.partial-*` directories, and reparse points, are skipped. Linked or placeholder content may therefore be absent; inspect the manifest rather than assuming a full disk image. The source is not locked, so concurrent changes can make a snapshot inconsistent.
 
 A successful checkpoint contains:
 

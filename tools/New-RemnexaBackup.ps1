@@ -5,7 +5,7 @@ param(
 
     [Parameter()]
     [ValidatePattern('^\d+\.\d+\.\d+(?:-[A-Za-z0-9.-]+)?$')]
-    [string]$Version = '2.1.3'
+    [string]$Version = '2.2.0-rc.1'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -33,6 +33,13 @@ while ($pending.Count -gt 0) {
     foreach ($entry in Get-ChildItem -LiteralPath $directory -Force -ErrorAction Stop) {
         $relativePath = $entry.FullName.Substring($sourcePrefix.Length)
         $topLevelName = ($relativePath -split '[\\/]')[0]
+
+        # Source checkpoints must not copy credentials/hooks in Git metadata or
+        # generated packages and abandoned staging directories into themselves.
+        if ($topLevelName -in @('.git', 'dist') -or
+            $topLevelName -like 'Backup-*' -or $topLevelName -like '.Backup-*.partial-*') {
+            continue
+        }
 
         if ($directory -eq $sourceRoot -and $entry.PSIsContainer -and $entry.Name -like 'Backup-*') {
             continue
@@ -99,7 +106,7 @@ try {
         ('Files verified: ' + $manifestRows.Count)
         ('Payload bytes: ' + $totalBytes)
         'Integrity: SHA-256 verified for every copied file'
-        'Existing top-level Backup-* folders and reparse points are excluded.'
+        'Top-level Git metadata, dist, backup/staging folders and reparse points are excluded.'
     )
     Set-Content -LiteralPath (Join-Path $stagePath 'BACKUP-INFO.txt') -Value $backupInfo -Encoding UTF8
 

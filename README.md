@@ -8,7 +8,7 @@ A free, open-source Windows utility for application removal, startup management,
 
 **Windows 10 / 11 · PowerShell 7.5+ · MIT License · Six interface languages**
 
-> **2.2.0 is a development build**, available on the [development branch](https://github.com/gaibkhanov/REMNEXA/tree/feature/2.2.0-development). It is not a published stable release. The default branch may contain an earlier version.
+> **Current candidate: 2.2.0-rc.1**, available on the [candidate branch](https://github.com/gaibkhanov/REMNEXA/tree/feature/2.2.0-release-candidate). It is not a stable release. Read the [candidate notes and package instructions](docs/RELEASE_2.2.0_RC1.md). The default branch may contain an earlier version.
 
 ## Features
 
@@ -42,10 +42,10 @@ German, English, Spanish, French, Russian and Turkish. Translation resources are
 
 Requirements: Windows 10 or 11, PowerShell **7.5 or newer**, and administrator approval for operations requiring elevated access. Windows PowerShell 5.1 cannot run the application. Consult the [compatibility matrix](docs/COMPATIBILITY_MATRIX.md) for tested limits.
 
-Download the development branch ZIP or use Git:
+Download the candidate branch ZIP or use Git:
 
 ```powershell
-git clone --branch feature/2.2.0-development https://github.com/gaibkhanov/REMNEXA.git
+git clone --branch feature/2.2.0-release-candidate https://github.com/gaibkhanov/REMNEXA.git
 Set-Location REMNEXA
 .\REMNEXA.cmd
 ```
@@ -72,6 +72,8 @@ Backups and restore points do not guarantee full recovery. Uninstalling another 
 Service and antivirus checks are snapshots. A stopped demand-start service is not automatically faulty. Another registered antivirus can explain Defender standing down, but registration alone does not prove active protection.
 
 ## What's new in 2.2.0
+
+Candidate rc.1 adds bounded native-process timeout cleanup, source backups without Git metadata/generated packages, and a verified source ZIP with per-file and archive SHA-256 checks. It has 88 passing local tests; see the [candidate report](docs/RELEASE_2.2.0_RC1.md) for versions and remaining limits.
 
 - HTTPS and SHA-256 checks for supported ClamAV downloads; staged installation and configuration recovery.
 - Additional linked-path checks and validation of supported privacy backups.

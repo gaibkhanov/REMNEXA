@@ -2,6 +2,8 @@
 
 # REMNEXA 2.2.0: Entwicklungsbericht
 
+Diese historische Entwicklungsbasis wird durch [Kandidat 2.2.0-rc.1](RELEASE_2.2.0_RC1.de.md) mit neueren Testergebnissen und Quellpaket-Werkzeugen erweitert. Die folgenden Basiswerte bleiben historische Ergebnisse.
+
 **Status:** Entwicklungsquellcode, keine veröffentlichte stabile Version und kein REMNEXA 3.0. Aktueller Entwicklungsbranch: `feature/2.2.0-development`. Einstieg: [README](../README.de.md).
 
 ## Implementierte Änderungen

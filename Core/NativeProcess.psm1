@@ -5,6 +5,7 @@ function ConvertTo-RemnexaNativeArgument {
     [CmdletBinding()]
     param([AllowEmptyString()][string]$Argument)
 
+    if ($Argument.Length -eq 0) { return '""' }
     if ($Argument -notmatch '[\s"]') { return $Argument }
     $builder = New-Object Text.StringBuilder
     [void]$builder.Append('"')
@@ -62,13 +63,27 @@ function Invoke-RemnexaNativeProcess {
     $process = New-Object Diagnostics.Process
     $process.StartInfo = $startInfo
     try {
+        $deadline = [Diagnostics.Stopwatch]::StartNew()
         if (-not $process.Start()) { throw "Could not start process '$FilePath'." }
         $stdoutTask = $process.StandardOutput.ReadToEndAsync()
         $stderrTask = $process.StandardError.ReadToEndAsync()
         if (-not $process.WaitForExit($TimeoutSeconds * 1000)) {
-            try { $process.Kill() } catch { Write-Debug $_.Exception.Message }
-            try { $process.WaitForExit() } catch { Write-Debug $_.Exception.Message }
-            throw "Process '$FilePath' exceeded the $TimeoutSeconds second timeout and was stopped."
+            try {
+                # PowerShell 7.5+ supports terminating the owned process tree.
+                $process.Kill($true)
+                if (-not $process.WaitForExit(5000)) { throw 'The parent process did not exit within the cleanup window.' }
+            }
+            catch {
+                throw "Process '$FilePath' exceeded the $TimeoutSeconds second timeout; cleanup could not be confirmed: $($_.Exception.Message)"
+            }
+            throw "Process '$FilePath' exceeded the $TimeoutSeconds second timeout; process-tree termination was requested."
+        }
+        # A child inheriting redirected pipes must not cause an unbounded read
+        # after its parent exits. The deadline covers output draining as well.
+        $remaining = [int][Math]::Max(0, ($TimeoutSeconds * 1000) - $deadline.ElapsedMilliseconds)
+        $streams = [Threading.Tasks.Task[]]@($stdoutTask, $stderrTask)
+        if (-not [Threading.Tasks.Task]::WaitAll($streams, $remaining)) {
+            throw "Process '$FilePath' exited, but its output streams did not close within the $TimeoutSeconds second timeout."
         }
         $stdout = $stdoutTask.GetAwaiter().GetResult()
         $stderr = $stderrTask.GetAwaiter().GetResult()

@@ -8,6 +8,7 @@ Maßgeblicher Quellcode ist das [REMNEXA-Repository](https://github.com/gaibkhan
 
 - `main`: bestehende stabile Basis.
 - `feature/2.2.0-development`: aktuelle Entwicklung von 2.2.0.
+- `feature/2.2.0-release-candidate`: Härtung und Quellpaket-Vorbereitung für 2.2.0-rc.1.
 - Weitere Feature-Branches: klar abgegrenzte Änderungen von einem benannten Commit.
 
 Prüfe vor Änderungen `git status`, Branch, Remote und Diff. Erhalte uncommittete Arbeit. Ohne erforderliche Maintainer-Freigabe keine Releases überschreiben, gemeinsame Historie umschreiben, Force-Pushes durchführen oder in den stabilen Branch zusammenführen.
@@ -34,6 +35,8 @@ Der Selbsttest inventarisiert ausgewählte Systemfähigkeiten. Er deinstalliert 
 [quality.yml](../.github/workflows/quality.yml) verwendet `windows-latest`, Pester 5.7.1 und PSScriptAnalyzer 1.24.0, führt Pester und eine Analyzer-Fehlerprüfung aus und verlangt PowerShell ab 7.5.
 
 Pfadfilter starten den Workflow bei PowerShell-, Test- und Workflow-Änderungen; reine Dokumentations-Pushes lösen ihn nicht automatisch aus. Manueller Start ist vorgesehen. Eine konfigurierte CI ist kein Beleg eines erfolgreichen Laufs; prüfe die tatsächlichen Ergebnisse vor dem Zusammenführen.
+
+Der Workflow baut/prüft außerdem den Quellkandidaten und lädt ZIP/Prüfsumme als Workflow-Artefakt hoch. Das ist kein GitHub-Release. Build-Befehle und lokale Ergebnisse stehen im [Kandidatenbericht](RELEASE_2.2.0_RC1.de.md).
 
 ## Prüfung und Veröffentlichung
 

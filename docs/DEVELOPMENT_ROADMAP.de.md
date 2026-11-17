@@ -15,7 +15,7 @@ Die Entwicklungsversion 2.2.0 ist ein schrittweiser Ausbau von 2.1.3 und nicht d
 | E: Systemmodule | Teilweise implementiert | Lesende Systemdaten/Oberfläche und bestehende Werkzeuge | Erweiterte Speicheranalyse und bessere Deinstallationszuordnung. |
 | F: UI/UX | Teilweise implementiert | Konsolennavigation, Beenden/Seitenwechsel und Rechtehinweise | Bewertete GUI, Barrierearmut und bedienbare Aufgaben/Abbrüche. |
 | G: QA | Teilweise implementiert | Lokale Tests/Selbsttest/Fehlerprüfung und CI-Definition | Bestätigte CI, VM-Matrix, Restore-, Offline-, Leistungs- und Pakettests. |
-| H: Release Candidate | Nicht implementiert | Entwicklungsquellcode | Geprüfter Installer/Artefakte, Prüfsummen, Release Notes und Freigabe. |
+| H: Release Candidate | Teilweise implementiert | Quellkandidat-Werkzeug, Integritätsprüfung und Kandidatenhinweise | Installer, breitere Windows-/Wiederherstellungsprüfung und ausdrückliche Freigabe. |
 
 ## Priorität 1: Sicherheit und Zuverlässigkeit
 

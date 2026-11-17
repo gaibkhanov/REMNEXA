@@ -2,6 +2,8 @@
 
 # REMNEXA 2.2.0 development report
 
+This historical development baseline is extended by [candidate 2.2.0-rc.1](RELEASE_2.2.0_RC1.md), with newer test results and source-package tooling. The baseline results below remain historical.
+
 **Status:** development source, not a published stable release or REMNEXA 3.0. The current development branch is `feature/2.2.0-development`. Start from the [README](../README.md).
 
 ## Implemented changes

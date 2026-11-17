@@ -6,5 +6,7 @@
 /FILES-SHA256.csv
 /COPY-PROVENANCE.csv
 /TestResults.xml
+/dist/
+/.Backup-*.partial-*/
 *.log
 *.jsonl

@@ -6,6 +6,15 @@ Entwicklungsänderungen sind keine veröffentlichten Releases. Dieses Dokument v
 
 ## 2.2.0 — Entwicklung, nicht veröffentlicht
 
+### Kandidat 2.2.0-rc.1
+
+- Prozess-Zeitlimits fordern das Beenden des gestarteten Prozessbaums an und warten begrenzt auf Aufräumen. Ausgabeabschluss teilt das Zeitlimit; leere Argumente bleiben erhalten.
+- Quellsicherungen schließen oberste Git-Metadaten, erzeugte Pakete und alte Zwischenordner aus; die Standardversion entspricht dem Kandidaten.
+- Paketierung eines sauberen Commits erzeugt ZIP, internes Datei-SHA-256-Manifest und Archiv-Prüfsumme. Vorhandene Ausgaben werden nie überschrieben.
+- Prüfung weist geänderte Inhalte, fehlende/nicht gelistete Dateien, unsichere Pfade, auch bei Groß-/Kleinschreibung doppelte Namen und falsche Archiv-Prüfsummen ohne Entpacken ab.
+- CI baut, prüft und lädt den Quellkandidaten als Workflow-Artefakt hoch; sie veröffentlicht kein GitHub-Release.
+- Regressionstests wachsen auf 88 Fälle. Siehe [Prüfstand und Grenzen](docs/RELEASE_2.2.0_RC1.de.md).
+
 ### Ergänzt
 
 - Architekturprüfung, priorisierte Roadmap, Sicherheitsmodell und Kompatibilitätsmatrix.

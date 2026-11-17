@@ -12,13 +12,13 @@ Schließe REMNEXA und ändere während des Kopierens keine Quelldateien. Im Proj
 pwsh -NoProfile -File .\tools\New-RemnexaBackup.ps1 -Version 2.2.0-checkpoint
 ```
 
-Wähle für jeden Zwischenstand einen eindeutigen Versionszusatz. Gib `-Version` ausdrücklich an: Der ältere Standardwert des Werkzeugs entspricht nicht dem aktuellen Entwicklungsstand. `-SourcePath` erlaubt einen anderen Quellordner.
+Wähle für jeden Zwischenstand einen eindeutigen Versionszusatz. Gib `-Version` ausdrücklich an, um den gewünschten Stand zu kennzeichnen; der aktuelle Standard lautet `2.2.0-rc.1`. `-SourcePath` erlaubt einen anderen Quellordner.
 
 Das Werkzeug prüft freien Platz, erstellt eine Zwischenkopie, prüft kopierte Dateien per SHA-256 und kontrolliert das Manifest. Erst danach heißt das Verzeichnis `Backup-<Version>`. Vorhandene Ziele werden nie überschrieben. Ein fehlgeschlagener Zwischenstand bleibt zur Prüfung erhalten und gilt nicht als fertige Sicherung.
 
 ## Umfang und Ausschlüsse
 
-Bestehende oberste `Backup-*`-Ordner und Reparse Points werden übersprungen. Verknüpfte oder als Platzhalter vorhandene Inhalte können fehlen; prüfe das Manifest, statt eine vollständige Datenträgerkopie anzunehmen. Die Quelle ist nicht gesperrt; gleichzeitige Änderungen können den Stand inkonsistent machen.
+Oberste `.git`-, `dist`-, `Backup-*`- und `.Backup-*.partial-*`-Ordner sowie Reparse Points werden übersprungen. Verknüpfte oder als Platzhalter vorhandene Inhalte können fehlen; prüfe das Manifest, statt eine vollständige Datenträgerkopie anzunehmen. Die Quelle ist nicht gesperrt; gleichzeitige Änderungen können den Stand inkonsistent machen.
 
 Eine erfolgreiche Sicherung enthält:
 

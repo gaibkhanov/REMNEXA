@@ -1,4 +1,26 @@
 Describe 'REMNEXA backup tool' {
+    It 'excludes Git metadata, generated packages and abandoned staging content' {
+        $scriptPath = Join-Path (Split-Path -Parent $PSScriptRoot) 'tools\New-RemnexaBackup.ps1'
+        $tempRoot = Join-Path ([IO.Path]::GetTempPath()) ('REMNEXA-BackupExclusions-' + [guid]::NewGuid().ToString('N'))
+        try {
+            New-Item -ItemType Directory -Path $tempRoot | Out-Null
+            foreach ($folder in @('.git','dist','.Backup-1.0.0.partial-test')) {
+                $path = Join-Path $tempRoot $folder
+                New-Item -ItemType Directory -Path $path | Out-Null
+                Set-Content -LiteralPath (Join-Path $path 'private.txt') -Value 'excluded fixture'
+            }
+            Set-Content -LiteralPath (Join-Path $tempRoot 'active.txt') -Value 'active fixture'
+            $result = & $scriptPath -SourcePath $tempRoot -Version '1.2.3'
+            if ($result.FilesVerified -ne 1) { throw 'Generated or private metadata entered the source checkpoint.' }
+            $entries = @(Import-Csv -LiteralPath $result.Manifest)
+            if ($entries.Count -ne 1 -or $entries[0].Path -ne 'active.txt') { throw 'Unexpected backup manifest.' }
+        }
+        finally {
+            $resolved = [IO.Path]::GetFullPath($tempRoot)
+            if ($resolved.StartsWith([IO.Path]::GetTempPath(), [StringComparison]::OrdinalIgnoreCase) -and (Split-Path -Leaf $resolved) -like 'REMNEXA-BackupExclusions-*' -and (Test-Path -LiteralPath $resolved)) { Remove-Item -LiteralPath $resolved -Recurse -Force }
+        }
+    }
+
     It 'copies active files, excludes historical backups and verifies the manifest' {
         $projectRoot = Split-Path -Parent $PSScriptRoot
         $scriptPath = Join-Path $projectRoot 'tools\New-RemnexaBackup.ps1'

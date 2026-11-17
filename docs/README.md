@@ -6,6 +6,8 @@ Documentation for the **2.2.0 development build**. Each Markdown guide has an En
 
 ## For users
 
+- [Current candidate: 2.2.0-rc.1](RELEASE_2.2.0_RC1.md): changes, checksums, packaging and validation limits.
+
 - [Project overview and installation](../README.md)
 - [User guide](USER_GUIDE.md): navigation, removal, startup, permissions, results and logs.
 - [ClamAV guide](../Antivirus/README.md): setup, scans, signatures and quarantine.

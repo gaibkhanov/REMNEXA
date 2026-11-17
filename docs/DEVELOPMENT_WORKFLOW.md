@@ -8,6 +8,7 @@ The canonical source is the [REMNEXA repository](https://github.com/gaibkhanov/R
 
 - `main`: existing stable baseline.
 - `feature/2.2.0-development`: current 2.2.0 development work.
+- `feature/2.2.0-release-candidate`: 2.2.0-rc.1 hardening and source-package preparation.
 - Further feature branches: focused changes based on an identified commit.
 
 Inspect `git status`, branch, remote and diff before editing. Preserve uncommitted changes. Do not overwrite releases, rewrite shared history, force-push or merge into the stable branch without the required maintainer approval.
@@ -34,6 +35,8 @@ The self-test inventories selected system capabilities but does not uninstall ap
 [quality.yml](../.github/workflows/quality.yml) targets `windows-latest`, pins Pester 5.7.1 and PSScriptAnalyzer 1.24.0, runs Pester and an analyzer error gate, and requires PowerShell 7.5+.
 
 Its path filters run on PowerShell/test/workflow changes; documentation-only pushes do not automatically trigger that workflow. A manual dispatch is available. Configured CI is not proof of a successful run; check actual results before merging.
+
+The workflow also builds/verifies the source candidate and uploads its ZIP/checksum as a workflow artifact. This is not a GitHub release. Build commands and local candidate results are in the [candidate report](RELEASE_2.2.0_RC1.md).
 
 ## Review and publication
 

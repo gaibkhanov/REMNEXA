@@ -1,4 +1,48 @@
 Describe 'REMNEXA native process execution' {
+    It 'preserves an empty Windows argument instead of silently dropping it' {
+        $projectRoot = Split-Path -Parent $PSScriptRoot
+        Import-Module (Join-Path $projectRoot 'Core\NativeProcess.psd1') -Force
+        try {
+            if ((ConvertTo-RemnexaNativeArgument '') -cne '""') { throw 'An empty argument was lost.' }
+        }
+        finally { Remove-Module NativeProcess -ErrorAction SilentlyContinue }
+    }
+
+    It 'bounds timeout cleanup and terminates an owned child process' {
+        $projectRoot = Split-Path -Parent $PSScriptRoot
+        Import-Module (Join-Path $projectRoot 'Core\NativeProcess.psd1') -Force
+        $pwshPath = Join-Path $PSHOME 'pwsh.exe'
+        $tempRoot = Join-Path ([IO.Path]::GetTempPath()) ('REMNEXA-Timeout-' + [guid]::NewGuid().ToString('N'))
+        New-Item -ItemType Directory -Path $tempRoot | Out-Null
+        $pidFile = Join-Path $tempRoot 'child.pid'
+        $child = $null
+        try {
+            # Only these isolated test processes are started or terminated.
+            $code = '$p = Start-Process -FilePath ' + "'" + $pwshPath.Replace("'", "''") + "'" + ' -ArgumentList @(''-NoProfile'',''-NonInteractive'',''-Command'',''Start-Sleep -Seconds 60'') -WindowStyle Hidden -PassThru; [IO.File]::WriteAllText(' + "'" + $pidFile.Replace("'", "''") + "'" + ', [string]$p.Id); Start-Sleep -Seconds 60'
+            $watch = [Diagnostics.Stopwatch]::StartNew()
+            $failure = ''
+            try { Invoke-RemnexaNativeProcess -FilePath $pwshPath -ArgumentList @('-NoProfile','-NonInteractive','-Command',$code) -TimeoutSeconds 4 | Out-Null }
+            catch { $failure = $_.Exception.Message }
+            if ($failure -notmatch 'timeout') { throw 'The timeout was not reported.' }
+            if ($watch.Elapsed.TotalSeconds -gt 14) { throw 'Timeout cleanup exceeded its bounded window.' }
+            if (-not (Test-Path -LiteralPath $pidFile)) { throw 'The child fixture did not start.' }
+            $childId = [int][IO.File]::ReadAllText($pidFile)
+            $child = Get-Process -Id $childId -ErrorAction SilentlyContinue
+            if ($null -ne $child -and -not $child.WaitForExit(3000)) { throw 'The owned child survived timeout cleanup.' }
+        }
+        finally {
+            if (Test-Path -LiteralPath $pidFile) {
+                $ownedId = [int][IO.File]::ReadAllText($pidFile)
+                $owned = Get-Process -Id $ownedId -ErrorAction SilentlyContinue
+                if ($null -ne $owned) { $owned.Kill($true); [void]$owned.WaitForExit(3000); $owned.Dispose() }
+            }
+            if ($null -ne $child) { $child.Dispose() }
+            $resolved = [IO.Path]::GetFullPath($tempRoot)
+            if ($resolved.StartsWith([IO.Path]::GetTempPath(), [StringComparison]::OrdinalIgnoreCase) -and (Split-Path -Leaf $resolved) -like 'REMNEXA-Timeout-*') { Remove-Item -LiteralPath $resolved -Recurse -Force }
+            Remove-Module NativeProcess -ErrorAction SilentlyContinue
+        }
+    }
+
     It 'quotes Windows command-line arguments with trailing backslashes' {
         $projectRoot = Split-Path -Parent $PSScriptRoot
         Import-Module -Name (Join-Path $projectRoot 'Core\NativeProcess.psd1') -Force -ErrorAction Stop

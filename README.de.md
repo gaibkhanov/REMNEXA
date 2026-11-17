@@ -8,7 +8,7 @@ Ein kostenloses Open-Source-Werkzeug für die Deinstallation von Anwendungen, Au
 
 **Windows 10 / 11 · PowerShell 7.5+ · MIT-Lizenz · Sechs Oberflächensprachen**
 
-> **2.2.0 ist eine Entwicklungsversion**, verfügbar im [Entwicklungsbranch](https://github.com/gaibkhanov/REMNEXA/tree/feature/2.2.0-development). Sie ist keine veröffentlichte stabile Version. Der Standardbranch kann eine ältere Version enthalten.
+> **Aktueller Kandidat: 2.2.0-rc.1**, verfügbar im [Kandidatenbranch](https://github.com/gaibkhanov/REMNEXA/tree/feature/2.2.0-release-candidate). Dies ist kein stabiles Release. Beachte [Kandidatenbericht und Paketanleitung](docs/RELEASE_2.2.0_RC1.de.md). Der Standardbranch kann eine ältere Version enthalten.
 
 ## Funktionen
 
@@ -42,10 +42,10 @@ Deutsch, Englisch, Spanisch, Französisch, Russisch und Türkisch. Übersetzunge
 
 Voraussetzungen: Windows 10 oder 11, PowerShell **ab Version 7.5** sowie Administratorfreigabe für Aktionen, die erhöhte Rechte benötigen. Windows PowerShell 5.1 kann die Anwendung nicht ausführen. Die [Kompatibilitätsmatrix](docs/COMPATIBILITY_MATRIX.de.md) beschreibt die Prüfgrenzen.
 
-Lade das ZIP des Entwicklungsbranches herunter oder verwende Git:
+Lade das ZIP des Kandidatenbranches herunter oder verwende Git:
 
 ```powershell
-git clone --branch feature/2.2.0-development https://github.com/gaibkhanov/REMNEXA.git
+git clone --branch feature/2.2.0-release-candidate https://github.com/gaibkhanov/REMNEXA.git
 Set-Location REMNEXA
 .\REMNEXA.cmd
 ```
@@ -72,6 +72,8 @@ Sicherungen und Wiederherstellungspunkte garantieren keine vollständige Wiederh
 Dienste- und Antivirus-Prüfungen sind Momentaufnahmen. Ein gestoppter Dienst mit Start bei Bedarf ist nicht automatisch fehlerhaft. Ein anderer registrierter Antivirus kann einen ruhenden Defender erklären; die Registrierung allein belegt keinen aktiven Schutz.
 
 ## Neu in 2.2.0
+
+Kandidat rc.1 ergänzt begrenzte Prozess-Zeitlimits mit Aufräumen, Quellsicherungen ohne Git-Metadaten/erzeugte Pakete und ein geprüftes Quell-ZIP mit SHA-256 je Datei und Archiv. 88 lokale Tests bestehen; Werkzeugversionen und Grenzen stehen im [Kandidatenbericht](docs/RELEASE_2.2.0_RC1.de.md).
 
 - HTTPS- und SHA-256-Prüfung unterstützter ClamAV-Downloads; gestufte Installation und Konfigurationswiederherstellung.
 - Zusätzliche Prüfungen verknüpfter Pfade und unterstützter Datenschutzsicherungen.

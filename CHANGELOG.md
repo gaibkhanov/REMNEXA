@@ -6,6 +6,15 @@ Development changes are not published release claims. Existing release artifacts
 
 ## 2.2.0 — development, not released
 
+### Candidate 2.2.0-rc.1
+
+- Native-process timeouts request owned-process-tree termination with a bounded cleanup wait. Redirected output draining shares the deadline; empty arguments are preserved.
+- Source backups exclude top-level Git metadata, generated packages and abandoned staging directories; the default version is updated to this candidate.
+- Clean-commit source packaging produces a ZIP, an internal per-file SHA-256 manifest and an archive checksum sidecar. Existing outputs are never overwritten.
+- Verification rejects changed content, missing/unlisted files, unsafe paths, case-insensitive duplicates and incorrect expected archive hashes without extracting files.
+- CI now builds, verifies and uploads the source candidate as a workflow artifact; it does not publish a GitHub release.
+- Regression coverage increases to 88 tests. See [candidate verification and limitations](docs/RELEASE_2.2.0_RC1.md).
+
 ### Added
 
 - Architecture audit, prioritized roadmap, security model and compatibility matrix.

@@ -15,7 +15,7 @@ The 2.2.0 development build is an incremental step from 2.1.3, not the completed
 | E: system modules | Partially implemented | Read-only snapshot/UI plus existing maintenance tools | Advanced storage analysis and stronger uninstall attribution. |
 | F: UI/UX | Partially implemented | Current console navigation, exit/pagination and permission explanations | Evaluated graphical UI, accessibility and responsive task/cancel support. |
 | G: QA | Partially implemented | Local regression/self-test/error gate and CI definition | Verified CI, VM matrix, recovery, offline, performance and package tests. |
-| H: release candidate | Not implemented | Development source only | Validated installer/artifacts, checksums, release notes and explicit approval. |
+| H: release candidate | Partially implemented | Source-candidate builder, integrity checks and candidate notes | Installer, broader Windows/recovery validation and explicit publication approval. |
 
 ## Priority 1: safety and reliability
 
