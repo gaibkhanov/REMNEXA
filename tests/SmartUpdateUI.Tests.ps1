@@ -5,7 +5,7 @@ Describe 'ClamAV smart-update console workflows' {
             param($Root)
             $tokens=$null;$errors=$null
             $ast=[Management.Automation.Language.Parser]::ParseInput([IO.File]::ReadAllText((Join-Path $Root 'REMNEXA.ps1')),[ref]$tokens,[ref]$errors)
-            foreach($name in @('Get-AVUpdateStatusText','Show-AVUpdateSummary','Invoke-AVConfirmedUpdate','Invoke-AVUpdateMenu','Invoke-AVScanWithUpdatePrompt','Invoke-AntivirusMenu')) {
+            foreach($name in @('Get-AVUpdateStatusText','Show-AVUpdateSummary','Invoke-AVConfirmedUpdate','Invoke-AVUpdateMenu','Invoke-AVScanWithUpdatePrompt','Invoke-AVPerformanceMenu','Invoke-AntivirusMenu')) {
                 $definition=$ast.Find({param($node)$node -is [Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq $name},$true)
                 . ([scriptblock]::Create($definition.Extent.Text))
             }
@@ -26,7 +26,15 @@ Describe 'ClamAV smart-update console workflows' {
             function Read-RemnexaInput {param($Prompt)if(-not $script:InputQueue.Count){throw 'Unexpected extra prompt.'};$script:InputQueue.Dequeue()}
             function Get-ClamAVUpdateState {return $script:UIState}
             function Invoke-ClamAVUpdateCheck {param([switch]$Force)$script:Checks++;$script:Forced=[bool]$Force;return $script:UIState}
-            function Invoke-ClamAVManagedUpdate {param($Component,[bool]$Confirm)$script:Updates++;$script:Component=$Component;$script:Events.Add('update');if($script:FailUpdate){throw 'fixture failure'};[pscustomobject]@{Ready=$true}}
+            function Invoke-ClamAVManagedUpdate {
+                [CmdletBinding(SupportsShouldProcess=$true)]
+                param($Component)
+                if($PSCmdlet.ShouldProcess('fixture','update component')) {
+                    $script:Updates++;$script:Component=$Component;$script:Events.Add('update')
+                    if($script:FailUpdate){throw 'fixture failure'}
+                    [pscustomobject]@{Ready=$true}
+                }
+            }
             function Invoke-ClamAVScan {param($ScanType,$Path)$script:Scans++;$script:Events.Add('scan');[pscustomobject]@{Status='Clean';Severity='None';Signature='';Path='fixture'}}
             function Invoke-ClamAVTargetedScan {param($Path)Invoke-ClamAVScan -ScanType Custom -Path $Path}
             function Format-HistoryTimestamp {param($Timestamp)$Timestamp}
@@ -35,6 +43,13 @@ Describe 'ClamAV smart-update console workflows' {
             function Clear-RemnexaScreen {}
             function Show-BrandHeader {}
             function Get-ClamAVStatus {[pscustomobject]@{Installed=$true;Ready=$true;Version='1.5.4'}}
+            $script:PerformanceMode='Balanced'
+            function Get-AVConfig {[pscustomobject]@{ScanPerformanceMode=$script:PerformanceMode}}
+            function Set-AVConfig {
+                [CmdletBinding(SupportsShouldProcess=$true)]
+                param($Values)
+                if($PSCmdlet.ShouldProcess('fixture','set scan mode')){$script:PerformanceMode=$Values.ScanPerformanceMode}
+            }
         }
     }
     AfterEach {Remove-Module $script:smartUI -ErrorAction SilentlyContinue}
@@ -81,6 +96,13 @@ Describe 'ClamAV smart-update console workflows' {
     }
     It 'keeps existing read-only status and Back actions reachable' {
         & $script:smartUI {foreach($value in @('1','1','0')){$script:InputQueue.Enqueue($value)};[void](Invoke-AntivirusMenu);if($script:Updates -or $script:Checks -or $script:Scans){throw 'Existing status navigation performed another action.'}}
+    }
+    It 'routes P to performance settings and saves a selected mode without starting a scan' {
+        & $script:smartUI {
+            foreach($value in @('P','invalid','3','0')){$script:InputQueue.Enqueue($value)}
+            [void](Invoke-AntivirusMenu)
+            if($script:PerformanceMode -ne 'Fast' -or $script:Scans -or $script:Updates){throw 'Performance menu did not save independently.'}
+        }
     }
     It 'contains all new translated messages and matching format placeholders in six languages' {
         $root=Split-Path -Parent $PSScriptRoot

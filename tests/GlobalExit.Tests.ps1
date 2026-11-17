@@ -7,7 +7,7 @@ Describe 'REMNEXA global exit at interactive prompts' {
         $errors = $null
         $script:applicationAst = [Management.Automation.Language.Parser]::ParseFile((Join-Path $projectRoot 'REMNEXA.ps1'), [ref]$tokens, [ref]$errors)
         if ($errors.Count -gt 0) { throw 'The application did not parse.' }
-        $definitions = foreach ($name in @('Read-RemnexaInput', 'Stop-RemnexaApplication', 'Save-ToolLog', 'Normalize-Text', 'Read-ExplicitConfirmation', 'Confirm-AdministratorRequest', 'Show-AdvancedToolsMenu', 'Get-AVUpdateStatusText','Show-AVUpdateSummary','Invoke-AVConfirmedUpdate','Invoke-AVUpdateMenu','Invoke-AVScanWithUpdatePrompt','Invoke-AntivirusMenu')) {
+        $definitions = foreach ($name in @('Read-RemnexaInput', 'Stop-RemnexaApplication', 'Save-ToolLog', 'Normalize-Text', 'Read-ExplicitConfirmation', 'Confirm-AdministratorRequest', 'Show-AdvancedToolsMenu', 'Get-AVUpdateStatusText','Show-AVUpdateSummary','Invoke-AVConfirmedUpdate','Invoke-AVUpdateMenu','Invoke-AVScanWithUpdatePrompt','Invoke-AVPerformanceMenu','Invoke-AntivirusMenu')) {
             $node = $script:applicationAst.Find({ param($candidate) $candidate -is [Management.Automation.Language.FunctionDefinitionAst] -and $candidate.Name -eq $name }, $true)
             if ($null -eq $node) { throw "Missing application function: $name" }
             $node.Extent.Text
@@ -50,6 +50,7 @@ function Request-ElevationForTool { param($Mode) return $true }
 function Initialize-AntivirusModule { return $true }
 function Get-ClamAVUpdateState { [PSCustomObject]@{status='not_installed';isChecking=$false;isStale=$true} }
 function Get-ClamAVStatus { [PSCustomObject]@{ Installed = $true; Ready = $true; Version = 'fixture'; SignatureDate = ''; SignatureAgeDays = 0; Signatures = 0; SignaturesOutdated = $false; ClamScanPath = ''; FreshClamPath = ''; DatabasePath = '' } }
+function Get-AVConfig { [PSCustomObject]@{ScanPerformanceMode='Balanced'} }
 function Invoke-ClamAVScan { throw 'A scan must not run in this exit test.' }
 function Get-ClamAVQuarantine { [PSCustomObject]@{ Signature = 'fixture'; QuarantinedAt = ''; OriginalPath = 'fixture'; QuarantineId = 'fixture' } }
 function ConvertFrom-RemnexaMenuChoice { param($InputText, $Maximum) $number = 0; if ([int]::TryParse($InputText, [ref]$number) -and $number -ge 0 -and $number -le $Maximum) { return $number }; return $null }
@@ -185,5 +186,10 @@ Set-Content -LiteralPath (Join-Path $PSScriptRoot 'Continued.txt') -Value 'The a
         @('x') | ConvertTo-Json -Compress | Set-Content -LiteralPath (Join-Path $script:exitFixture 'Input.json')
         $output = & (Join-Path $PSHOME 'pwsh.exe') -NoProfile -File (Join-Path $script:exitFixture 'Driver.ps1') -Scenario AdminNotice 2>&1
         if ($LASTEXITCODE -ne 0 -or (Test-Path -LiteralPath (Join-Path $script:exitFixture 'Continued.txt'))) { throw "Exiting from the administrator explanation failed: $output" }
+    }
+    It 'exits directly from the scan performance settings without returning to the main menu' {
+        @('P','x')|ConvertTo-Json -Compress|Set-Content -LiteralPath (Join-Path $script:exitFixture 'Input.json')
+        $output=& (Join-Path $PSHOME 'pwsh.exe') -NoProfile -File (Join-Path $script:exitFixture 'Driver.ps1') -Scenario Antivirus 2>&1
+        if($LASTEXITCODE -ne 0 -or (Test-Path (Join-Path $script:exitFixture 'Continued.txt'))){throw "Performance settings exit failed: $output"}
     }
 }

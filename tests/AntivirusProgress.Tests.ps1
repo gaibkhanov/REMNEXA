@@ -25,6 +25,8 @@ Describe 'REMNEXA antivirus measured progress' {
         $config.LogPath=Join-Path $script:avProgressFixture 'logs'
         $config.QuarantinePath=Join-Path $script:avProgressFixture 'quarantine'
         $config.ExcludedPaths=@()
+        $config.ClamAVPath=Join-Path $script:avProgressFixture 'engine'
+        $config.DatabasePath=Join-Path $script:avProgressFixture 'database'
         $configPath=Join-Path $script:avProgressFixture 'config.json'
         $config|ConvertTo-Json -Depth 5|Set-Content -LiteralPath $configPath -Encoding utf8
         & $script:avProgressModule {
