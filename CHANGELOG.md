@@ -13,7 +13,8 @@ Development changes are not published release claims. Existing release artifacts
 - Clean-commit source packaging produces a ZIP, an internal per-file SHA-256 manifest and an archive checksum sidecar. Existing outputs are never overwritten.
 - Verification rejects changed content, missing/unlisted files, unsafe paths, case-insensitive duplicates and incorrect expected archive hashes without extracting files.
 - CI now builds, verifies and uploads the source candidate as a workflow artifact; it does not publish a GitHub release.
-- Regression coverage increases to 88 tests. See [candidate verification and limitations](docs/RELEASE_2.2.0_RC1.md).
+- Console clearing is cosmetic and no longer crashes application startup when cursor APIs are unavailable, including redirected output.
+- Regression coverage increases to 89 tests, including real application home/exit startup. See [candidate verification and limitations](docs/RELEASE_2.2.0_RC1.md).
 
 ### Added
 

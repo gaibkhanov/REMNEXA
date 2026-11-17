@@ -73,7 +73,7 @@ Dienste- und Antivirus-Prüfungen sind Momentaufnahmen. Ein gestoppter Dienst mi
 
 ## Neu in 2.2.0
 
-Kandidat rc.1 ergänzt begrenzte Prozess-Zeitlimits mit Aufräumen, Quellsicherungen ohne Git-Metadaten/erzeugte Pakete und ein geprüftes Quell-ZIP mit SHA-256 je Datei und Archiv. 88 lokale Tests bestehen; Werkzeugversionen und Grenzen stehen im [Kandidatenbericht](docs/RELEASE_2.2.0_RC1.de.md).
+Kandidat rc.1 behebt den Start mit umgeleiteter Konsolenausgabe und ergänzt begrenzte Prozess-Zeitlimits mit Aufräumen, Quellsicherungen ohne Git-Metadaten/erzeugte Pakete sowie ein geprüftes Quell-ZIP mit SHA-256 je Datei und Archiv. 89 lokale Tests bestehen; Werkzeugversionen und Grenzen stehen im [Kandidatenbericht](docs/RELEASE_2.2.0_RC1.de.md).
 
 - HTTPS- und SHA-256-Prüfung unterstützter ClamAV-Downloads; gestufte Installation und Konfigurationswiederherstellung.
 - Zusätzliche Prüfungen verknüpfter Pfade und unterstützter Datenschutzsicherungen.

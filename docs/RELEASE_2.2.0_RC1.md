@@ -6,6 +6,8 @@
 
 ## Improvements
 
+- Console clearing safely degrades when output is redirected or cursor APIs are unavailable. An extracted-package smoke test exposed this startup crash; a real home-menu/exit regression now covers it.
+
 - A timed-out native process requests termination of its owned process tree. Cleanup waits at most five additional seconds; failure is reported instead of claiming success. Output draining also respects the timeout. This does not add a universal UI cancel button or guarantee control of detached/elevated processes.
 - The Windows argument encoder preserves empty arguments.
 - Source checkpoints exclude top-level Git metadata, generated packages and abandoned staging directories. The existing backup no-overwrite and SHA-256 checks remain.
@@ -20,9 +22,9 @@ The interface displays `2.2.0-rc.1`. Existing uninstall, startup, Antivirus, nav
 | Check | Result |
 | --- | --- |
 | Initial unchanged baseline, Pester 3.4.0 | 79 passed, 0 failed. |
-| Candidate suite, Pester 3.4.0 / PowerShell 7.6.9 | 88 passed, 0 failed, 0 skipped. |
-| Pester 5.7.1 / PowerShell 7.6.9 | 88 passed before the final version-label adjustment; the 15 affected package/self-test cases passed again afterwards. |
-| First-party syntax and analyzer error gate | 67 PowerShell files, 0 syntax errors, 0 analyzer errors. |
+| Candidate suite, Pester 3.4.0 / PowerShell 7.6.9 | 89 passed, 0 failed, 0 skipped. |
+| Candidate suite, Pester 5.7.1 / PowerShell 7.6.9 | 89 passed, 0 failed, 0 skipped. |
+| First-party syntax and analyzer error gate | 68 PowerShell files, 0 syntax errors, 0 analyzer errors. |
 
 These are local results. Remote CI and a clean Windows 10/11 installation matrix are not implied. The remaining warning baseline is documented [separately](STATIC_ANALYSIS_BASELINE.md). Each generated artifact must pass package verification and an extracted application self-test before publication.
 

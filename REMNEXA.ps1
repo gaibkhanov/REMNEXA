@@ -92,6 +92,14 @@ function T {
     return $text
 }
 
+function Clear-RemnexaScreen {
+    # Console cursor APIs are unavailable for redirected output and some hosts.
+    # Clearing is cosmetic and must never prevent navigation or application exit.
+    if ([Console]::IsOutputRedirected) { return }
+    try { Clear-Host -ErrorAction Stop }
+    catch { Write-Verbose ('Console clearing unavailable: ' + $_.Exception.Message) }
+}
+
 function Show-BrandHeader {
     param([AllowEmptyString()][string]$Section = '')
 
@@ -681,7 +689,7 @@ function Select-ProgramPaged {
     $pageSize = 18
 
     while ($true) {
-        Clear-Host
+        Clear-RemnexaScreen
         Show-BrandHeader
         Write-Host $Title -ForegroundColor White
         if ($filterText) { Write-Host (T 'FilterLabel' @($filterText)) -ForegroundColor Yellow }
@@ -1866,7 +1874,7 @@ function Invoke-PostRemovalIntegrityCheck {
 }
 
 function Invoke-SystemIntegrityScreen {
-    Clear-Host
+    Clear-RemnexaScreen
     Show-BrandHeader
     $result = Test-SystemIntegrity
     $logPath = Save-ToolLog -Action 'SystemIntegrity' -Data $result
@@ -2026,7 +2034,7 @@ function Read-MainOrExitChoice {
 }
 
 function Show-HistoryScreen {
-    Clear-Host
+    Clear-RemnexaScreen
     Show-BrandHeader
     Write-Host (T 'HistoryTitle') -ForegroundColor White
     Write-Host ''
@@ -2053,7 +2061,7 @@ function Show-HistoryScreen {
 }
 
 function Show-LanguageMenu {
-    Clear-Host
+    Clear-RemnexaScreen
     Show-BrandHeader
     Write-Host (T 'LanguageTitle') -ForegroundColor White
     Write-Host (T 'LanguageCurrent' @((Get-LanguageDisplayName -Code $script:Language))) -ForegroundColor DarkGray
@@ -2082,7 +2090,7 @@ function Show-LanguageMenu {
 }
 
 function Show-AdvancedToolsMenu {
-    Clear-Host
+    Clear-RemnexaScreen
     Show-BrandHeader
     Write-Host (T 'ToolsTitle') -ForegroundColor White
     Write-Host ''
@@ -2105,7 +2113,7 @@ function Invoke-AntivirusMenu {
     if (-not (Initialize-AntivirusModule)) { return 'menu' }
 
     :antivirusLoop while ($true) {
-        Clear-Host
+        Clear-RemnexaScreen
         Show-BrandHeader
         Write-Host (T 'AVTitle') -ForegroundColor White
         Write-Host ''
@@ -2257,7 +2265,7 @@ function Get-OrphanedUninstallEntries {
 
 function Invoke-OrphanRegistryMenu {
     if (-not (Request-ElevationForTool -Mode Registry)) { return 'menu' }
-    Clear-Host
+    Clear-RemnexaScreen
     Show-BrandHeader
     Write-Host (T 'OrphanTitle') -ForegroundColor White
     Write-Host (T 'OrphanDescription') -ForegroundColor DarkGray
@@ -2291,7 +2299,7 @@ function Invoke-OrphanRegistryMenu {
 
 function Invoke-OptionalFeatureMenu {
     if (-not (Request-ElevationForTool -Mode Features)) { return 'menu' }
-    Clear-Host
+    Clear-RemnexaScreen
     Show-BrandHeader
     Write-Host (T 'FeatureTitle') -ForegroundColor White
     try {
@@ -2416,7 +2424,7 @@ function Restore-PrivacyProfile {
 
 function Invoke-PrivacyMenu {
     if (-not (Request-ElevationForTool -Mode Privacy)) { return 'menu' }
-    Clear-Host
+    Clear-RemnexaScreen
     Show-BrandHeader
     Write-Host (T 'PrivacyTitle') -ForegroundColor White
     Write-Host (T 'PrivacyDescription') -ForegroundColor Yellow
@@ -2473,7 +2481,7 @@ function Invoke-PrivacyMenu {
 
 function Invoke-LogCleanupMenu {
     :logCleanupLoop while ($true) {
-    Clear-Host
+    Clear-RemnexaScreen
     Show-BrandHeader
     Write-Host (T 'LogsTitle') -ForegroundColor White
     Write-Host ''
@@ -2822,7 +2830,7 @@ function Restore-StartupItem {
 }
 
 function Show-StartupHistoryScreen {
-    Clear-Host
+    Clear-RemnexaScreen
     Show-BrandHeader -Section (T 'StartupTitle')
     $history = @(Get-StartupHistory)
     if ($history.Count -eq 0) {
@@ -2846,7 +2854,7 @@ function Invoke-StartupList {
     $page = 0
     $pageNotice = ''
     :startupListLoop while ($true) {
-        Clear-Host
+        Clear-RemnexaScreen
         Show-BrandHeader -Section (T 'StartupTitle')
         Write-Host (T 'StartupDescription') -ForegroundColor DarkGray
         Write-Host ''
@@ -2860,7 +2868,7 @@ function Invoke-StartupList {
 
         $pageSize = 18
         :startupPageLoop while ($true) {
-            Clear-Host
+            Clear-RemnexaScreen
             Show-BrandHeader -Section (T 'StartupTitle')
             $pageState = Get-RemnexaPageState -ItemCount $items.Count -PageSize $pageSize -PageIndex $page
             $pageCount = $pageState.PageCount
@@ -2904,7 +2912,7 @@ function Invoke-StartupList {
 
 function Invoke-StartupRestoreList {
     :startupRestoreLoop while ($true) {
-    Clear-Host
+    Clear-RemnexaScreen
     Show-BrandHeader -Section (T 'StartupTitle')
     $backups = @(Get-StartupBackups)
     if ($backups.Count -eq 0) {
@@ -2948,7 +2956,7 @@ function Invoke-StartupMenu {
     }
 
     :startupMenuLoop while ($true) {
-        Clear-Host
+        Clear-RemnexaScreen
         Show-BrandHeader -Section (T 'StartupTitle')
         Write-Host (T 'StartupDescription') -ForegroundColor DarkGray
         Write-Host ''
@@ -2992,7 +3000,7 @@ function Invoke-ActiveServicesScreen {
         $pageState = Get-RemnexaPageState -ItemCount $services.Count -PageSize $pageSize -PageIndex $page
         $pageCount = $pageState.PageCount
         $page = $pageState.PageIndex
-        Clear-Host
+        Clear-RemnexaScreen
         Show-BrandHeader -Section (T 'ServicesTitle')
         Write-Host (T 'ServicesDescription') -ForegroundColor DarkGray
         if ($filter) { Write-Host (T 'FilterLabel' @($filter)) -ForegroundColor Yellow }
@@ -3479,7 +3487,7 @@ function Main {
     :mainLoop while ($true) {
         $script:RestartRequired = $false
         $script:ExitRequested = $false
-        Clear-Host
+        Clear-RemnexaScreen
         Show-BrandHeader
 
         if ($interactiveSession -and -not $hasProvidedRequest -and $currentWorkspace -ne 'Uninstall') {

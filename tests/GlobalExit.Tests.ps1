@@ -42,7 +42,7 @@ function Read-Host {
     if ($script:Inputs.Count -eq 0) { throw 'Unexpected extra prompt.' }
     return $script:Inputs.Dequeue()
 }
-function Clear-Host { }
+function Clear-RemnexaScreen { }
 function Show-BrandHeader { }
 function Complete-OperationProgress { }
 function Write-Status { param($Message, $Level) $script:LogLines.Add($Message); Write-Host $Message }

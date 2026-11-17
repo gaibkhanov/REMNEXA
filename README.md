@@ -73,7 +73,7 @@ Service and antivirus checks are snapshots. A stopped demand-start service is no
 
 ## What's new in 2.2.0
 
-Candidate rc.1 adds bounded native-process timeout cleanup, source backups without Git metadata/generated packages, and a verified source ZIP with per-file and archive SHA-256 checks. It has 88 passing local tests; see the [candidate report](docs/RELEASE_2.2.0_RC1.md) for versions and remaining limits.
+Candidate rc.1 fixes startup with redirected console output and adds bounded native-process timeout cleanup, source backups without Git metadata/generated packages, and a verified source ZIP with per-file and archive SHA-256 checks. It has 89 passing local tests; see the [candidate report](docs/RELEASE_2.2.0_RC1.md) for versions and remaining limits.
 
 - HTTPS and SHA-256 checks for supported ClamAV downloads; staged installation and configuration recovery.
 - Additional linked-path checks and validation of supported privacy backups.

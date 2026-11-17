@@ -30,7 +30,7 @@ Describe 'REMNEXA antivirus elevation flow' {
             function Initialize-AntivirusModule { $script:InitializeCount++; return $true }
             function T { param($Key) return $Key }
             function Write-Status { param($Message, $Level) $script:Messages.Add($Message); $script:Events.Add($Message) }
-            function Clear-Host { }
+            function Clear-RemnexaScreen { }
             function Show-BrandHeader { }
             function Write-Host { param($Object, $ForegroundColor) $script:HostLines.Add([string]$Object) }
             function Read-RemnexaInput {

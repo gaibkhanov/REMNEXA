@@ -6,6 +6,8 @@
 
 ## Verbesserungen
 
+- Bildschirmleeren fällt bei umgeleiteter Ausgabe oder fehlenden Cursor-APIs sicher aus. Ein Starttest des entpackten Pakets deckte diesen Absturz auf; ein echter Hauptmenü-/Beenden-Test schützt nun dagegen.
+
 - Bei Prozess-Zeitüberschreitung wird das Beenden des gestarteten Prozessbaums angefordert. Aufräumen wartet höchstens fünf zusätzliche Sekunden; Fehler werden statt falschem Erfolg gemeldet. Auch Ausgabeabschluss hält das Zeitlimit ein. Dies ergänzt weder einen allgemeinen UI-Abbruchknopf noch garantierte Kontrolle über abgetrennte/erhöhte Prozesse.
 - Die Windows-Argumentkodierung erhält leere Argumente.
 - Quellcode-Zwischenstände schließen oberste Git-Metadaten, erzeugte Pakete und alte Zwischenordner aus. Überschreibschutz und SHA-256-Prüfung bleiben erhalten.
@@ -20,9 +22,9 @@ Die Oberfläche zeigt `2.2.0-rc.1`. Bestehende Deinstallation, Autostart-, Antiv
 | Prüfung | Ergebnis |
 | --- | --- |
 | Unveränderte Ausgangsbasis, Pester 3.4.0 | 79 bestanden, 0 fehlgeschlagen. |
-| Kandidatensuite, Pester 3.4.0 / PowerShell 7.6.9 | 88 bestanden, 0 fehlgeschlagen, 0 übersprungen. |
-| Pester 5.7.1 / PowerShell 7.6.9 | 88 bestanden vor letzter Versionskennzeichnung; die 15 betroffenen Paket-/Selbsttestfälle danach erneut bestanden. |
-| Eigene Syntax- und Analyzer-Fehlerprüfung | 67 PowerShell-Dateien, 0 Syntaxfehler, 0 Analyzer-Fehler. |
+| Kandidatensuite, Pester 3.4.0 / PowerShell 7.6.9 | 89 bestanden, 0 fehlgeschlagen, 0 übersprungen. |
+| Kandidatensuite, Pester 5.7.1 / PowerShell 7.6.9 | 89 bestanden, 0 fehlgeschlagen, 0 übersprungen. |
+| Eigene Syntax- und Analyzer-Fehlerprüfung | 68 PowerShell-Dateien, 0 Syntaxfehler, 0 Analyzer-Fehler. |
 
 Dies sind lokale Ergebnisse. Remote-CI und eine frische Windows-10/11-Installationsmatrix sind damit nicht belegt. Verbleibende Warnungen sind [getrennt dokumentiert](STATIC_ANALYSIS_BASELINE.de.md). Jedes erzeugte Paket muss vor Veröffentlichung die Paketprüfung und einen Selbsttest der entpackten Anwendung bestehen.
 

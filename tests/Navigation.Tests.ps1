@@ -33,7 +33,7 @@ Describe 'REMNEXA conditional pagination and exit options' {
                 if ($script:Inputs.Count -eq 0) { throw 'Unexpected extra prompt.' }
                 return $script:Inputs.Dequeue()
             }
-            function Clear-Host { }
+            function Clear-RemnexaScreen { }
             function Show-BrandHeader { }
             function Start-Sleep { param($Milliseconds) }
             function Get-OptionalPropertyValue { param($InputObject, $PropertyName) return '' }

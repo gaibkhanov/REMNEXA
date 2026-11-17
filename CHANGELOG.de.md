@@ -13,7 +13,8 @@ Entwicklungsänderungen sind keine veröffentlichten Releases. Dieses Dokument v
 - Paketierung eines sauberen Commits erzeugt ZIP, internes Datei-SHA-256-Manifest und Archiv-Prüfsumme. Vorhandene Ausgaben werden nie überschrieben.
 - Prüfung weist geänderte Inhalte, fehlende/nicht gelistete Dateien, unsichere Pfade, auch bei Groß-/Kleinschreibung doppelte Namen und falsche Archiv-Prüfsummen ohne Entpacken ab.
 - CI baut, prüft und lädt den Quellkandidaten als Workflow-Artefakt hoch; sie veröffentlicht kein GitHub-Release.
-- Regressionstests wachsen auf 88 Fälle. Siehe [Prüfstand und Grenzen](docs/RELEASE_2.2.0_RC1.de.md).
+- Kosmetisches Bildschirmleeren lässt den Start bei fehlenden Cursor-APIs, einschließlich umgeleiteter Ausgabe, nicht mehr abbrechen.
+- Regressionstests wachsen auf 89 Fälle einschließlich echten Starts/Beendens im Hauptmenü. Siehe [Prüfstand und Grenzen](docs/RELEASE_2.2.0_RC1.de.md).
 
 ### Ergänzt
 
