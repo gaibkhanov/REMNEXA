@@ -16,6 +16,10 @@ Get-ClamAVStatus
 Get-AVConfig
 ```
 
+## Smart update checks
+
+Candidate rc.3 checks official engine/database metadata in a silent background worker at startup, normally once per day. No packages are installed by that check. Open Antivirus for the cached status, use **U** for an immediate check and supported update choices, or **I** for details. Console scans offer confirmed pending updates and ask separately before continuing after a failed update. Offline scans remain available with an existing working database. Six-language messages, settings, cache/retry handling and verification limits are documented in the [smart-update guide](../docs/CLAMAV_SMART_UPDATES.md).
+
 ## Installation and updates
 
 Use the setup action in the application, or explicitly request installation:

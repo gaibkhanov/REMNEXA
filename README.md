@@ -8,7 +8,7 @@ A free, open-source Windows utility for application removal, startup management,
 
 **Windows 10 / 11 · PowerShell 7.5+ · MIT License · Six interface languages**
 
-> **Current candidate: 2.2.0-rc.2**, available on the [candidate branch](https://github.com/gaibkhanov/REMNEXA/tree/feature/2.2.0-progress). It is not a stable release. Read the [candidate notes and package instructions](docs/RELEASE_2.2.0_RC2.md). The default branch may contain an earlier version.
+> **Current candidate: 2.2.0-rc.3**, available on the [candidate branch](https://github.com/gaibkhanov/REMNEXA/tree/feature/2.2.0-progress). It is not a stable release. Read the [candidate notes and package instructions](docs/CLAMAV_SMART_UPDATES.md). The default branch may contain an earlier version.
 
 ## Features
 
@@ -73,7 +73,7 @@ Service and antivirus checks are snapshots. A stopped demand-start service is no
 
 ## What's new in 2.2.0
 
-Candidate rc.2 adds measured per-file Antivirus progress, visible engine loading and evaluation, elapsed time, clear completion/warning/error states and shared progress across maintenance operations. Overlapping scan roots are deduplicated; missing replies remain partial. See the [candidate report](docs/RELEASE_2.2.0_RC2.md) for validation and limits.
+Candidate rc.3 adds quiet ClamAV background checks, separate engine/database versions, bounded caching and the U update menu. Console scans offer confirmed pending updates; continuing after an update failure requires consent. The progress improvements from rc.2 remain. See [operation and verification](docs/CLAMAV_SMART_UPDATES.md).
 
 - HTTPS and SHA-256 checks for supported ClamAV downloads; staged installation and configuration recovery.
 - Additional linked-path checks and validation of supported privacy backups.
@@ -83,7 +83,7 @@ Candidate rc.2 adds measured per-file Antivirus progress, visible engine loading
 - Page navigation only when another page exists; one visible exit option per prompt.
 - Modular core components, external translations and a read-only system overview.
 
-The recorded application baseline passed **79 local Pester tests and 12 self-test checks**. This is not a complete compatibility, security or CI certification. See the [development report](docs/VERSION_2.2.0.md).
+Current validation and remaining limits are recorded in the [smart-update report](docs/CLAMAV_SMART_UPDATES.md). Earlier results remain in the historical [development report](docs/VERSION_2.2.0.md).
 
 ## Documentation
 

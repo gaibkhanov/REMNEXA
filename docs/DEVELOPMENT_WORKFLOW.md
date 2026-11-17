@@ -34,9 +34,9 @@ The self-test inventories selected system capabilities but does not uninstall ap
 
 [quality.yml](../.github/workflows/quality.yml) targets `windows-latest`, pins Pester 5.7.1 and PSScriptAnalyzer 1.24.0, runs Pester and an analyzer error gate, and requires PowerShell 7.5+.
 
-Its path filters run on PowerShell/test/workflow changes; documentation-only pushes do not automatically trigger that workflow. A manual dispatch is available. Configured CI is not proof of a successful run; check actual results before merging.
+Its path filters run on PowerShell/test/workflow/configuration/locale changes; documentation-only pushes do not automatically trigger that workflow. A manual dispatch is available. Configured CI is not proof of a successful run; check actual results before merging.
 
-The workflow also builds/verifies the source candidate and uploads its ZIP/checksum as a workflow artifact. This is not a GitHub release. Build commands and local candidate results are in the [candidate report](RELEASE_2.2.0_RC2.md).
+The workflow also builds/verifies the source candidate and uploads its ZIP/checksum as a workflow artifact. This is not a GitHub release. Build commands and local candidate results are in the [candidate report](CLAMAV_SMART_UPDATES.md).
 
 ## Review and publication
 

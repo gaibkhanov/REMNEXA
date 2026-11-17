@@ -16,6 +16,10 @@ Get-ClamAVStatus
 Get-AVConfig
 ```
 
+## Intelligente Updateprüfung
+
+Kandidat rc.3 prüft beim Start offizielle Engine-/Datenbankmetadaten in einem stillen Hintergrundprozess, normalerweise einmal täglich. Diese Prüfung installiert keine Pakete. Im Antivirus-Bereich steht der gespeicherte Zustand; **U** prüft sofort und bietet unterstützte Updates an, **I** zeigt Details. Konsolenscans bieten bestätigte ausstehende Updates an und fragen nach einem Updatefehler gesondert vor dem Weiterlaufen. Mit einer vorhandenen funktionsfähigen Datenbank bleiben Offline-Scans möglich. Nachrichten in sechs Sprachen, Einstellungen, Cache-/Wiederholungsregeln und Prüfgrenzen beschreibt die [Updateanleitung](../docs/CLAMAV_SMART_UPDATES.de.md).
+
 ## Installation und Updates
 
 Nutze die Einrichtung in der Anwendung oder fordere die Installation ausdrücklich an:

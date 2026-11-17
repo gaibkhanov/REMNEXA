@@ -8,7 +8,7 @@ Ein kostenloses Open-Source-Werkzeug für die Deinstallation von Anwendungen, Au
 
 **Windows 10 / 11 · PowerShell 7.5+ · MIT-Lizenz · Sechs Oberflächensprachen**
 
-> **Aktueller Kandidat: 2.2.0-rc.2**, verfügbar im [Kandidatenbranch](https://github.com/gaibkhanov/REMNEXA/tree/feature/2.2.0-progress). Dies ist kein stabiles Release. Beachte [Kandidatenbericht und Paketanleitung](docs/RELEASE_2.2.0_RC2.de.md). Der Standardbranch kann eine ältere Version enthalten.
+> **Aktueller Kandidat: 2.2.0-rc.3**, verfügbar im [Kandidatenbranch](https://github.com/gaibkhanov/REMNEXA/tree/feature/2.2.0-progress). Dies ist kein stabiles Release. Beachte [Kandidatenbericht und Paketanleitung](docs/CLAMAV_SMART_UPDATES.de.md). Der Standardbranch kann eine ältere Version enthalten.
 
 ## Funktionen
 
@@ -73,7 +73,7 @@ Dienste- und Antivirus-Prüfungen sind Momentaufnahmen. Ein gestoppter Dienst mi
 
 ## Neu in 2.2.0
 
-Kandidat rc.2 ergänzt messbaren Antivirus-Dateifortschritt, sichtbares Laden und Auswerten, Laufzeit sowie klare Abschluss-, Hinweis- und Fehlerzustände für Wartungsvorgänge. Überlappende Scanwurzeln werden zusammengefasst; fehlende Rückmeldungen bleiben unvollständig. Prüfstand und Grenzen stehen im [Kandidatenbericht](docs/RELEASE_2.2.0_RC2.de.md).
+Kandidat rc.3 ergänzt stille ClamAV-Hintergrundprüfungen, getrennte Engine-/Datenbankversionen, einen begrenzten Cache und die neue Updateauswahl U. Vor Konsolenscans werden bestätigte Updates angeboten; nach Fehlern wird nur mit Zustimmung weitergescannt. Die Fortschrittsanzeigen aus rc.2 bleiben erhalten. Siehe [Bedienung und Prüfstand](docs/CLAMAV_SMART_UPDATES.de.md).
 
 - HTTPS- und SHA-256-Prüfung unterstützter ClamAV-Downloads; gestufte Installation und Konfigurationswiederherstellung.
 - Zusätzliche Prüfungen verknüpfter Pfade und unterstützter Datenschutzsicherungen.
@@ -83,7 +83,7 @@ Kandidat rc.2 ergänzt messbaren Antivirus-Dateifortschritt, sichtbares Laden un
 - Seitenwechsel nur bei vorhandenen Seiten; genau eine sichtbare Beenden-Option je Eingabe.
 - Modulare Kernbausteine, externe Übersetzungen und eine rein lesende Systemübersicht.
 
-Der dokumentierte Anwendungsstand bestand **79 lokale Pester-Tests und 12 Selbsttest-Prüfungen**. Das ist keine vollständige Kompatibilitäts-, Sicherheits- oder CI-Zertifizierung. Siehe [Entwicklungsbericht](docs/VERSION_2.2.0.de.md).
+Aktuelle Prüfungen und verbleibende Grenzen stehen im [Bericht zur Updateverwaltung](docs/CLAMAV_SMART_UPDATES.de.md). Frühere Prüfergebnisse bleiben im historischen [Entwicklungsbericht](docs/VERSION_2.2.0.de.md) dokumentiert.
 
 ## Dokumentation
 

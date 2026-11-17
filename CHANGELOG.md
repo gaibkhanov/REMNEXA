@@ -6,6 +6,14 @@ Development changes are not published release claims. Existing release artifacts
 
 ## 2.2.0 — development, not released
 
+### Candidate 2.2.0-rc.3
+
+- Silent, asynchronous ClamAV engine/database metadata checks with configurable timeouts, a 24-hour default cache, bounded retries/backoff and owned-worker shutdown.
+- Separate semantic engine comparison and official database TXT/header versions; unknown, offline and stale evidence is not presented as current.
+- Antivirus U/I controls, component-specific confirmed updates and once-per-scan update decisions with explicit continuation after failures.
+- Atomic update state and exclusive metadata/update leases; missing hashes, untrusted package sources and downgrades remain blocked.
+- All six UI languages and paired English/German instructions. Existing Antivirus numbering/APIs and rc.2 progress improvements are retained. [Behavior and validation](docs/CLAMAV_SMART_UPDATES.md).
+
 ### Candidate 2.2.0-rc.2
 
 - Shared measured/indeterminate progress, current phases/items, elapsed time, input-wait state and labeled colors across processing areas.
