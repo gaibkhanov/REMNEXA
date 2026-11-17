@@ -6,6 +6,15 @@ Development changes are not published release claims. Existing release artifacts
 
 ## 2.2.0 — development, not released
 
+### Candidate 2.2.0-rc.4
+
+- Stream directory entries into a temporary file list using lazy .NET enumerators; avoid materializing every child and retaining acknowledged file paths.
+- Wake native output readers on data instead of sleeping after each asynchronous read; omit verbose scanner lines and redundant version/signature-tool launches on the scan-only status path.
+- Add Antivirus P settings (Eco/Balanced/Fast), measured resource adaptation, one scan process per configured installation and a 2 GiB available-memory preflight. These priorities are not thread-count or hard memory limits.
+- Cancel discovery/scanning with X, Esc, Ctrl+C or a cancellation token; terminate owned native processes and retain prior detections as incomplete results.
+- Report engine scan-size/recursion limits as non-malware, incomplete warnings; never quarantine limit warnings. Existing update and quarantine safeguards remain.
+- Preserve update behavior and six-language UI resources. [Benchmarks, scope and validation](docs/CLAMAV_SCAN_PERFORMANCE.md).
+
 ### Candidate 2.2.0-rc.3
 
 - Silent, asynchronous ClamAV engine/database metadata checks with configurable timeouts, a 24-hour default cache, bounded retries/backoff and owned-worker shutdown.

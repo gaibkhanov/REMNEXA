@@ -71,6 +71,8 @@ Normale Scans melden Funde. `-Quarantine` erlaubt ausdrücklich das Verschieben 
 
 ## Konfiguration
 
+Kandidat rc.4 ergänzt **P** im Antivirus-Menü für Eco/Balanced/Fast-Prozessprioritäten. Während eines Scans brechen **X**, **Esc** oder **Strg+C** den Vorgang mit unvollständiger Abdeckung ab. Je konfigurierter Installation läuft höchstens ein REMNEXA-Scan/Update. Engine-Limitwarnungen sind sichtbar und werden nie als Malware in Quarantäne verschoben. Siehe [Verhalten und Benchmark-Grenzen](../docs/CLAMAV_SCAN_PERFORMANCE.de.md).
+
 Verwende `config/antivirus.json`, `Get-AVConfig` und `Set-AVConfig`; bevorzuge unterstützte validierte Schreibvorgänge:
 
 ```powershell

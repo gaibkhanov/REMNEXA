@@ -8,7 +8,7 @@ Ein kostenloses Open-Source-Werkzeug für die Deinstallation von Anwendungen, Au
 
 **Windows 10 / 11 · PowerShell 7.5+ · MIT-Lizenz · Sechs Oberflächensprachen**
 
-> **Aktueller Kandidat: 2.2.0-rc.3**, verfügbar im [Kandidatenbranch](https://github.com/gaibkhanov/REMNEXA/tree/feature/2.2.0-progress). Dies ist kein stabiles Release. Beachte [Kandidatenbericht und Paketanleitung](docs/CLAMAV_SMART_UPDATES.de.md). Der Standardbranch kann eine ältere Version enthalten.
+> **Aktueller Kandidat: 2.2.0-rc.4**, verfügbar im [Kandidatenbranch](https://github.com/gaibkhanov/REMNEXA/tree/feature/clamav-scan-performance). Dies ist kein stabiles Release. Beachte [Kandidatenbericht und Paketanleitung](docs/CLAMAV_SCAN_PERFORMANCE.de.md). Der Standardbranch kann eine ältere Version enthalten.
 
 ## Funktionen
 
@@ -73,7 +73,7 @@ Dienste- und Antivirus-Prüfungen sind Momentaufnahmen. Ein gestoppter Dienst mi
 
 ## Neu in 2.2.0
 
-Kandidat rc.3 ergänzt stille ClamAV-Hintergrundprüfungen, getrennte Engine-/Datenbankversionen, einen begrenzten Cache und die neue Updateauswahl U. Vor Konsolenscans werden bestätigte Updates angeboten; nach Fehlern wird nur mit Zustimmung weitergescannt. Die Fortschrittsanzeigen aus rc.2 bleiben erhalten. Siehe [Bedienung und Prüfstand](docs/CLAMAV_SMART_UPDATES.de.md).
+Kandidat rc.4 ergänzt speicherbegrenzte Dateierfassung, begrenzte gleichzeitige Scans, Eco/Balanced/Fast-Prioritäten, Scanabbruch und ausdrückliche Hinweise auf Scanlimits. Im Antivirus-Menü wählt **P** die Leistungseinstellung; **X**, **Esc** oder **Strg+C** bricht einen laufenden Scan ab. Die bestätigten U/I-Updates aus rc.3 bleiben erhalten. Siehe [Messungen und Prüfgrenzen](docs/CLAMAV_SCAN_PERFORMANCE.de.md).
 
 - HTTPS- und SHA-256-Prüfung unterstützter ClamAV-Downloads; gestufte Installation und Konfigurationswiederherstellung.
 - Zusätzliche Prüfungen verknüpfter Pfade und unterstützter Datenschutzsicherungen.
@@ -83,7 +83,7 @@ Kandidat rc.3 ergänzt stille ClamAV-Hintergrundprüfungen, getrennte Engine-/Da
 - Seitenwechsel nur bei vorhandenen Seiten; genau eine sichtbare Beenden-Option je Eingabe.
 - Modulare Kernbausteine, externe Übersetzungen und eine rein lesende Systemübersicht.
 
-Aktuelle Prüfungen und verbleibende Grenzen stehen im [Bericht zur Updateverwaltung](docs/CLAMAV_SMART_UPDATES.de.md). Frühere Prüfergebnisse bleiben im historischen [Entwicklungsbericht](docs/VERSION_2.2.0.de.md) dokumentiert.
+Aktuelle Prüfungen und verbleibende Grenzen stehen im [Bericht zur Updateverwaltung](docs/CLAMAV_SCAN_PERFORMANCE.de.md). Frühere Prüfergebnisse bleiben im historischen [Entwicklungsbericht](docs/VERSION_2.2.0.de.md) dokumentiert.
 
 ## Dokumentation
 

@@ -6,6 +6,15 @@ Entwicklungsänderungen sind keine veröffentlichten Releases. Dieses Dokument v
 
 ## 2.2.0 — Entwicklung, nicht veröffentlicht
 
+### Kandidat 2.2.0-rc.4
+
+- Verzeichniseinträge über verzögert gelesene .NET-Enumeratoren in eine temporäre Dateiliste schreiben; keine vollständigen Verzeichnisinhalte und bestätigten Dateipfade im Speicher sammeln.
+- Native Ausgabe bei verfügbaren Daten lesen, unnötige Wartezeiten und ausführliche Scannerzeilen vermeiden; Versions- und Signaturwerkzeuge beim reinen Scan-Vorabcheck nicht mehrfach starten.
+- Antivirus P mit Eco/Balanced/Fast, gemessener Ressourcenanpassung, einem Scanprozess je konfigurierter Installation und mindestens 2 GiB freiem Arbeitsspeicher. Prioritäten sind keine Thread- oder festen Speicherlimits.
+- Dateierfassung/Scan per X, Esc, Strg+C oder Cancellation Token abbrechen; eigene Prozesse beenden und bereits gefundene Hinweise als unvollständige Ergebnisse erhalten.
+- Größen- und Rekursionslimits als unvollständige Hinweise statt Malware melden; solche Hinweise nie in Quarantäne verschieben. Bisherige Update- und Quarantäneschutzprüfungen bleiben erhalten.
+- Updatebedienung und sechs Oberflächensprachen erhalten. [Messungen, Umfang und Prüfstand](docs/CLAMAV_SCAN_PERFORMANCE.de.md).
+
 ### Kandidat 2.2.0-rc.3
 
 - Stille asynchrone ClamAV-Metadatenprüfung für Engine/Datenbanken mit konfigurierbaren Zeitlimits, standardmäßig 24 Stunden Cache, begrenzten Wiederholungen/Wartefristen und Beenden eigener Prüfprozesse.

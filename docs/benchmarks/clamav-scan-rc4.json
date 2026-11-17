@@ -1,0 +1,104 @@
+{
+  "FileCount": 4000,
+  "Repetitions": 2,
+  "LogicalCores": 8,
+  "DatasetSeed": 48291,
+  "DatabaseHashes": [
+    {
+      "Name": "bytecode.cvd",
+      "Sha256": "6D4AA01F219E988060FC419F495D07F27E0CDF1A2CCCC065971DA922C76F7FFB"
+    },
+    {
+      "Name": "daily.cld",
+      "Sha256": "C83DC940215AB9008BD90A7B32886CFDFB7920C667B6482B5476B8B6F11E36B6"
+    },
+    {
+      "Name": "main.cvd",
+      "Sha256": "0B2182D229F46981EC8F535382222F7C9DFDD656B250AD47988B910A8D302365"
+    }
+  ],
+  "Runs": [
+    {
+      "Seconds": 76.0482885,
+      "Files": 4000,
+      "CoverageComplete": true,
+      "FilesPerSecond": 52.59815939184483,
+      "ProcessPriority": "Normal",
+      "Phases": {
+        "ScannerSeconds": 70.5109723,
+        "FirstFileSeconds": 12.035652,
+        "StatusSeconds": 2.6295512,
+        "InventorySeconds": 2.4646992
+      },
+      "Variant": "Baseline",
+      "Iteration": 1,
+      "CpuSecondsSampled": 83.015625,
+      "CpuPercentMachineSampled": 13.382134768094147,
+      "PeakWorkingSetMiBSampled": 1116.8515625
+    },
+    {
+      "Seconds": 73.1277552,
+      "Files": 4000,
+      "CoverageComplete": true,
+      "FilesPerSecond": 54.69879376250839,
+      "ProcessPriority": "BelowNormal",
+      "Phases": {
+        "ScannerSeconds": 71.5472539,
+        "FirstFileSeconds": 13.1769059,
+        "StatusSeconds": 0,
+        "InventorySeconds": 0.3852355
+      },
+      "Variant": "Optimized",
+      "Iteration": 1,
+      "CpuSecondsSampled": 80.03125,
+      "CpuPercentMachineSampled": 13.386324508970088,
+      "PeakWorkingSetMiBSampled": 1158.22265625
+    },
+    {
+      "Seconds": 73.8378497,
+      "Files": 4000,
+      "CoverageComplete": true,
+      "FilesPerSecond": 54.17275850057697,
+      "ProcessPriority": "BelowNormal",
+      "Phases": {
+        "ScannerSeconds": 72.5498409,
+        "FirstFileSeconds": 14.0061568,
+        "StatusSeconds": 0,
+        "InventorySeconds": 0.3742958
+      },
+      "Variant": "Optimized",
+      "Iteration": 2,
+      "CpuSecondsSampled": 81.046875,
+      "CpuPercentMachineSampled": 13.434518781084083,
+      "PeakWorkingSetMiBSampled": 1159.83203125
+    },
+    {
+      "Seconds": 77.6265578,
+      "Files": 4000,
+      "CoverageComplete": true,
+      "FilesPerSecond": 51.528756566866605,
+      "ProcessPriority": "Normal",
+      "Phases": {
+        "ScannerSeconds": 70.7226876,
+        "FirstFileSeconds": 13.0416018,
+        "StatusSeconds": 2.8590516,
+        "InventorySeconds": 3.5666533
+      },
+      "Variant": "Baseline",
+      "Iteration": 2,
+      "CpuSecondsSampled": 87.09375,
+      "CpuPercentMachineSampled": 13.684418099822611,
+      "PeakWorkingSetMiBSampled": 1119.3359375
+    }
+  ],
+  "Notes": "Sequential offline scans of identical benign files; alternating run order; CPU and concurrent working set sampled every 100 ms with child discovery every 500 ms. FirstFileSeconds includes engine loading and the first file, not pure signature-load time. No HDD comparison or process disk-I/O attribution.",
+  "Environment": {
+    "WindowsBuild": "10.0.26300.0",
+    "PowerShell": "7.6.9",
+    "ClamAV": "1.5.4",
+    "LogicalCores": 8,
+    "InstalledMemoryGiB": 15.85,
+    "Storage": "SATA SSD",
+    "BaselineCommit": "c95b462a567add1bfdd918fe17ac519400684a8a"
+  }
+}

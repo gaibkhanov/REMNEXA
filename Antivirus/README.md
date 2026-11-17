@@ -71,6 +71,8 @@ Do not use `-Force` as a workaround: it skips the module's confirmation, not its
 
 ## Configuration
 
+Candidate rc.4 adds **P** in the Antivirus menu for Eco/Balanced/Fast process priorities. During a scan, **X**, **Esc** or **Ctrl+C** cancels it and reports incomplete coverage. One REMNEXA scan/update at a time is allowed per configured installation. Engine limit warnings are visible and never quarantined as malware. See [performance behavior and benchmark limits](../docs/CLAMAV_SCAN_PERFORMANCE.md).
+
 Use `config/antivirus.json`, `Get-AVConfig` and `Set-AVConfig`; prefer supported validated writes:
 
 ```powershell
