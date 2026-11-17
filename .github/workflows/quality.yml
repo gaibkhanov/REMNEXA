@@ -7,6 +7,8 @@ on:
       - '**.psm1'
       - '**.psd1'
       - 'tests/**'
+      - 'locales/**'
+      - 'config/**'
       - '.github/workflows/quality.yml'
   pull_request:
     paths:
@@ -14,6 +16,8 @@ on:
       - '**.psm1'
       - '**.psd1'
       - 'tests/**'
+      - 'locales/**'
+      - 'config/**'
       - '.github/workflows/quality.yml'
   workflow_dispatch:
 
@@ -63,12 +67,12 @@ jobs:
       - name: Build and verify source release candidate
         shell: pwsh
         run: |
-          $package = ./tools/New-RemnexaPackage.ps1 -Version '2.2.0-rc.2'
+          $package = ./tools/New-RemnexaPackage.ps1 -Version '2.2.0-rc.3'
           ./tools/Test-RemnexaPackage.ps1 -Path $package.Package -ExpectedSha256 $package.SHA256
 
       - name: Upload verified source candidate
         uses: actions/upload-artifact@v4
         with:
           name: REMNEXA-source-candidate
-          path: dist/REMNEXA-2.2.0-rc.2-source.zip*
+          path: dist/REMNEXA-2.2.0-rc.3-source.zip*
           if-no-files-found: error

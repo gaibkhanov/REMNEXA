@@ -36,6 +36,7 @@ function Set-AVConfig {
         if ($name -eq 'MaxFileSize') { Test-AVMaxFileSize ([string]$Values[$name]) }
         $config.$name = $Values[$name]
     }
+    [void](Get-AVUpdateOptions $config)
 
     if ($PSCmdlet.ShouldProcess($resolvedPath, 'Antivirus-Konfiguration speichern')) {
         $directory = Split-Path -Parent $resolvedPath

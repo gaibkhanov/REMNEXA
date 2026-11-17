@@ -51,7 +51,10 @@ function Update-ClamAVEngine {
 
         $asset = Resolve-ClamAVReleaseAsset -DownloadUri $(if ($DownloadUri) { $DownloadUri } else { [string]$config.DownloadUri })
         $asset = Assert-ClamAVReleaseAsset -Asset $asset -ExpectedSha256 $ExpectedSha256
-        if (-not $Force -and $asset.Version -and $statusBefore.Version -eq $asset.Version) {
+        if(-not $asset.Version) { throw 'Die Version des ClamAV-Updatepakets ist nicht verlaesslich bestimmbar.' }
+        $comparison=if($asset.Version){(ConvertTo-AVSemanticVersion $asset.Version).CompareTo((ConvertTo-AVSemanticVersion $statusBefore.Version))}else{0}
+        if($asset.Version -and $comparison -lt 0) { throw 'Ein ClamAV-Downgrade wird nicht ausgefuehrt.' }
+        if (-not $Force -and $asset.Version -and $comparison -eq 0) {
             Write-AVLog -Message "ClamAV-Engine ist bereits aktuell: $($statusBefore.Version)." -Level 'Success' -Event 'EngineUpdate'
             return [PSCustomObject]@{
                 Updated         = $false

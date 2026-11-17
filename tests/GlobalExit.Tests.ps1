@@ -7,7 +7,7 @@ Describe 'REMNEXA global exit at interactive prompts' {
         $errors = $null
         $script:applicationAst = [Management.Automation.Language.Parser]::ParseFile((Join-Path $projectRoot 'REMNEXA.ps1'), [ref]$tokens, [ref]$errors)
         if ($errors.Count -gt 0) { throw 'The application did not parse.' }
-        $definitions = foreach ($name in @('Read-RemnexaInput', 'Stop-RemnexaApplication', 'Save-ToolLog', 'Normalize-Text', 'Read-ExplicitConfirmation', 'Confirm-AdministratorRequest', 'Show-AdvancedToolsMenu', 'Invoke-AntivirusMenu')) {
+        $definitions = foreach ($name in @('Read-RemnexaInput', 'Stop-RemnexaApplication', 'Save-ToolLog', 'Normalize-Text', 'Read-ExplicitConfirmation', 'Confirm-AdministratorRequest', 'Show-AdvancedToolsMenu', 'Get-AVUpdateStatusText','Show-AVUpdateSummary','Invoke-AVConfirmedUpdate','Invoke-AVUpdateMenu','Invoke-AVScanWithUpdatePrompt','Invoke-AntivirusMenu')) {
             $node = $script:applicationAst.Find({ param($candidate) $candidate -is [Management.Automation.Language.FunctionDefinitionAst] -and $candidate.Name -eq $name }, $true)
             if ($null -eq $node) { throw "Missing application function: $name" }
             $node.Extent.Text
@@ -48,6 +48,7 @@ function Complete-OperationProgress { }
 function Write-Status { param($Message, $Level) $script:LogLines.Add($Message); Write-Host $Message }
 function Request-ElevationForTool { param($Mode) return $true }
 function Initialize-AntivirusModule { return $true }
+function Get-ClamAVUpdateState { [PSCustomObject]@{status='not_installed';isChecking=$false;isStale=$true} }
 function Get-ClamAVStatus { [PSCustomObject]@{ Installed = $true; Ready = $true; Version = 'fixture'; SignatureDate = ''; SignatureAgeDays = 0; Signatures = 0; SignaturesOutdated = $false; ClamScanPath = ''; FreshClamPath = ''; DatabasePath = '' } }
 function Invoke-ClamAVScan { throw 'A scan must not run in this exit test.' }
 function Get-ClamAVQuarantine { [PSCustomObject]@{ Signature = 'fixture'; QuarantinedAt = ''; OriginalPath = 'fixture'; QuarantineId = 'fixture' } }

@@ -3,6 +3,7 @@ function Find-ClamAVInstallation {
 
     if ($null -eq $Config) { $Config = Get-AVConfig }
     $configured = Expand-AVPath ([string]$Config.ClamAVPath)
+    if($configured -and (Test-Path -LiteralPath (Join-Path $configured 'clamscan.exe') -PathType Leaf)) { return [IO.Path]::GetFullPath($configured) }
     $candidates = New-Object 'System.Collections.Generic.List[string]'
     if ($configured) { $candidates.Add($configured) }
     foreach ($commandName in @('clamscan.exe', 'clamscan')) {
@@ -25,7 +26,7 @@ function Find-ClamAVInstallation {
 }
 
 function Resolve-ClamAVReleaseAsset {
-    param([AllowEmptyString()][string]$DownloadUri)
+    param([AllowEmptyString()][string]$DownloadUri,[ValidateRange(1,30)][int]$TimeoutSeconds=10)
 
     if ($DownloadUri -and $DownloadUri -match '\.zip(?:\?.*)?$') {
         $name = [IO.Path]::GetFileName(([uri]$DownloadUri).AbsolutePath)
@@ -38,7 +39,8 @@ function Resolve-ClamAVReleaseAsset {
         'x86'   { '.win.win32.zip' }
         default { '.win.x64.zip' }
     }
-    $release = Invoke-RestMethod -Uri 'https://api.github.com/repos/Cisco-Talos/clamav/releases/latest' -Headers @{ 'User-Agent' = 'REMNEXA-ClamAV' } -ErrorAction Stop
+    $release = Invoke-RestMethod -Uri 'https://api.github.com/repos/Cisco-Talos/clamav/releases/latest' -Headers @{ 'User-Agent' = 'REMNEXA-ClamAV' } -TimeoutSec $TimeoutSeconds -MaximumRedirection 0 -ErrorAction Stop
+    if(($release.PSObject.Properties['draft'] -and $release.draft) -or ($release.PSObject.Properties['prerelease'] -and $release.prerelease)) { throw 'No supported stable ClamAV release was returned.' }
     $asset = @($release.assets | Where-Object { $_.name.EndsWith($architectureToken, [StringComparison]::OrdinalIgnoreCase) }) | Select-Object -First 1
     if ($null -eq $asset) { throw "Im aktuellen offiziellen ClamAV-Release wurde kein Windows-Paket '$architectureToken' gefunden." }
     return [PSCustomObject]@{
