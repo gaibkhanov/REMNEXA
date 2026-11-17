@@ -36,7 +36,7 @@ The self-test inventories selected system capabilities but does not uninstall ap
 
 Its path filters run on PowerShell/test/workflow changes; documentation-only pushes do not automatically trigger that workflow. A manual dispatch is available. Configured CI is not proof of a successful run; check actual results before merging.
 
-The workflow also builds/verifies the source candidate and uploads its ZIP/checksum as a workflow artifact. This is not a GitHub release. Build commands and local candidate results are in the [candidate report](RELEASE_2.2.0_RC1.md).
+The workflow also builds/verifies the source candidate and uploads its ZIP/checksum as a workflow artifact. This is not a GitHub release. Build commands and local candidate results are in the [candidate report](RELEASE_2.2.0_RC2.md).
 
 ## Review and publication
 

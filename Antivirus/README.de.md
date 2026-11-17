@@ -51,7 +51,9 @@ Das eigene Prüfziel im Beispiel muss als Ordner existieren. Wähle Ziele bewuss
 
 `-IncludePUA` aktiviert die Erkennung potenziell unerwünschter Anwendungen und kann Fehlalarme erhöhen. `-MaxFileSize`, Ausschlüsse und Limits beeinflussen die Abdeckung. Gesperrte Dateien, Berechtigungen, Archivgrenzen und Zeitlimits können vollständige Prüfung verhindern.
 
-ClamAV-Exitcode 0 bedeutet keine Funde, 1 Funde und 2 einen Scanfehler. Ein Fund ist keine automatisch bestätigte Infektion; keine Funde sind kein Sicherheitsbeweis. Fortschritt beschreibt Ablaufphasen und keine exakte Zählung aller Dateien.
+ClamAV-Exitcode 0 bedeutet keine Funde, 1 Funde und 2 einen Scanfehler. Ein Fund ist keine automatisch bestätigte Infektion; keine Funde sind kein Sicherheitsbeweis.
+
+Kandidat rc.2 erfasst Dateien vor dem ClamAV-Aufruf, fasst überlappende Wurzeln zusammen und überspringt verknüpfte Pfade. Beim Scan verwendet die Prozentzahl gemeldete Dateiergebnisse im Verhältnis zur Erfassung, ergänzt um Phase, aktuellen Eintrag und Laufzeit. Laden der Engine und Erfassung erhalten keine erfundene Zeitprozentzahl. Fehlende Rückmeldungen oder übersprungene Erfassung ergeben Hinweise und unvollständige Abdeckung; Fehler sind rot, erfolgreicher Abschluss ist grün. Zähler beschreiben Dateirückmeldungen, keine vollständige Prüfung aller Archivmitglieder oder Restzeitschätzung. Ausschlüsse und ClamAV-Grenzen gelten weiterhin. Siehe [Fortschritts- und Prüfdetails](../docs/RELEASE_2.2.0_RC2.de.md).
 
 Scans nutzen lokale Engine/Signaturen und sind offline möglich. Die Scanfunktion lädt selbst keine neuen Signaturen. Einrichtung, ausdrückliche Updates und andere konfigurierte Aktualisierungsschritte können Internet benötigen; bereite die Offline-Konfiguration vor und prüfe sie. Veraltete Signaturen begrenzen den Nutzen.
 

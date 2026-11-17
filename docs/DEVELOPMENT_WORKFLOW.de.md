@@ -36,7 +36,7 @@ Der Selbsttest inventarisiert ausgewählte Systemfähigkeiten. Er deinstalliert 
 
 Pfadfilter starten den Workflow bei PowerShell-, Test- und Workflow-Änderungen; reine Dokumentations-Pushes lösen ihn nicht automatisch aus. Manueller Start ist vorgesehen. Eine konfigurierte CI ist kein Beleg eines erfolgreichen Laufs; prüfe die tatsächlichen Ergebnisse vor dem Zusammenführen.
 
-Der Workflow baut/prüft außerdem den Quellkandidaten und lädt ZIP/Prüfsumme als Workflow-Artefakt hoch. Das ist kein GitHub-Release. Build-Befehle und lokale Ergebnisse stehen im [Kandidatenbericht](RELEASE_2.2.0_RC1.de.md).
+Der Workflow baut/prüft außerdem den Quellkandidaten und lädt ZIP/Prüfsumme als Workflow-Artefakt hoch. Das ist kein GitHub-Release. Build-Befehle und lokale Ergebnisse stehen im [Kandidatenbericht](RELEASE_2.2.0_RC2.de.md).
 
 ## Prüfung und Veröffentlichung
 

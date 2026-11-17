@@ -6,6 +6,13 @@ Development changes are not published release claims. Existing release artifacts
 
 ## 2.2.0 — development, not released
 
+### Candidate 2.2.0-rc.2
+
+- Shared measured/indeterminate progress, current phases/items, elapsed time, input-wait state and labeled colors across processing areas.
+- Live native output/heartbeats with bounded result capture and owned-process cleanup on callback failures.
+- Deduplicated Antivirus inventory, per-file reply counts and explicit partial/error outcomes instead of fixed scan-stage percentages.
+- Six-language progress resources and additional regressions. See [behavior, validation and deferred work](docs/RELEASE_2.2.0_RC2.md). Publication remains postponed.
+
 ### Candidate 2.2.0-rc.1
 
 - Native-process timeouts request owned-process-tree termination with a bounded cleanup wait. Redirected output draining shares the deadline; empty arguments are preserved.

@@ -13,13 +13,21 @@ function Get-AVQuickScanTargets {
         if ($candidate -and (Test-Path -LiteralPath $candidate)) { $targets.Add([IO.Path]::GetFullPath($candidate)) }
     }
 
-    # ProgramData wird nicht pauschal gescannt: nur typische ausfuehrbare Inhalte
-    # werden in die Zieldatei aufgenommen, damit der Quick-Scan auch wirklich kurz bleibt.
+    # ProgramData remains limited to executable content. Walk explicitly so
+    # junctions are skipped and target discovery can report a live status.
     if ($env:ProgramData -and (Test-Path -LiteralPath $env:ProgramData -PathType Container)) {
-        foreach ($file in @(Get-ChildItem -LiteralPath $env:ProgramData -File -Recurse -ErrorAction SilentlyContinue | Where-Object {
-            $_.Extension -in @('.exe', '.dll', '.scr', '.com', '.msi', '.ps1', '.bat', '.cmd', '.js', '.vbs')
-        })) {
-            $targets.Add($file.FullName)
+        $pending = [Collections.Generic.Stack[string]]::new()
+        $pending.Push($env:ProgramData)
+        while ($pending.Count -gt 0) {
+            $directory = $pending.Pop()
+            if ($script:AVDiscoveryProgress) { Update-RemnexaProgress -Progress $script:AVDiscoveryProgress -CurrentItem $directory }
+            $readErrors=@()
+            foreach ($item in Get-ChildItem -LiteralPath $directory -Force -ErrorAction SilentlyContinue -ErrorVariable readErrors) {
+                if (($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) { $script:AVDiscoverySkipped++; continue }
+                if ($item.PSIsContainer) { $pending.Push($item.FullName) }
+                elseif ($item.Extension -in @('.exe', '.dll', '.scr', '.com', '.msi', '.ps1', '.bat', '.cmd', '.js', '.vbs')) { $targets.Add($item.FullName) }
+            }
+            $script:AVDiscoverySkipped += $readErrors.Count
         }
     }
     foreach ($path in $AdditionalPaths) {

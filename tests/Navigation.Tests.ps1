@@ -3,6 +3,8 @@ Describe 'REMNEXA conditional pagination and exit options' {
         $projectRoot = Split-Path -Parent $PSScriptRoot
         $script:navigationModule = New-Module -ArgumentList $projectRoot -ScriptBlock {
             param($ProjectRoot)
+            Import-Module (Join-Path $ProjectRoot 'Core\Progress.psd1') -Force
+            Set-RemnexaProgressRendering -Enabled $false
             Import-Module (Join-Path $ProjectRoot 'Core\MenuChoices.psd1') -Force
             $script:Texts = Get-Content -LiteralPath (Join-Path $ProjectRoot 'locales\en.json') -Raw -Encoding UTF8 | ConvertFrom-Json -AsHashtable
             $tokens = $null; $errors = $null

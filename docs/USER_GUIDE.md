@@ -28,6 +28,12 @@ Read the choices shown at the current prompt. A number from another screen does 
 
 The exit option applies while REMNEXA waits for input. It does not add a cancellation mechanism to a running external uninstaller, scan, repair command or Windows permission dialog. Wait for critical write operations to finish; forcing the window closed can interrupt them.
 
+## Processing status
+
+In candidate rc.2, known work shows processed/total items and their percentage. During Antivirus scanning, the counter uses ClamAV file replies after target inventory. Percentages do not estimate remaining time. Discovery, engine loading and Windows calls without a measurable total show the phase and an indeterminate bar. Native-process heartbeats update elapsed time even during silent work; a single synchronous Windows call may not refresh until it returns.
+
+Cyan means processing; yellow means waiting for your input, a warning or cancellation; green means successful completion; red means failure. Read the accompanying status text as well as the color. A partial scan retains its actual file count and a warning. A completed file count may still be followed by evaluation or explicit quarantine work. See the [candidate notes](RELEASE_2.2.0_RC2.md) for coverage and host limits.
+
 ## Remove an application
 
 1. Open the application-removal area, filter the list if needed and select the displayed application number.

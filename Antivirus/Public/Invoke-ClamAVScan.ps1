@@ -52,110 +52,119 @@ function Invoke-ClamAVScan {
         [string]$ConfigPath = $script:AVConfigPath
     )
 
-    $config = Get-AVConfig -Path $ConfigPath
-    $status = Get-ClamAVStatus -ConfigPath $ConfigPath
-    if (-not $status.Installed) {
-        throw "ClamAV nicht gefunden unter '$($status.ClamScanPath)'. Bitte Initialize-ClamAV ausfuehren oder Pfad in antivirus.json setzen."
-    }
-    if (-not $status.Ready) {
-        throw "Keine ClamAV-Signaturdatenbank unter '$($status.DatabasePath)' gefunden. Bitte Update-ClamAVSignature ausfuehren."
-    }
-    if ($status.SignaturesOutdated) {
-        Write-Warning "Die ClamAV-Signaturen sind aelter als $($config.SignatureMaxAgeDays) Tage."
-        Write-AVLog -Message 'Scan mit fehlenden oder veralteten Signaturen gestartet.' -Level 'Warning' -Event 'Scan'
-    }
-
-    $effectiveMaxFileSize = if ($MaxFileSize) { $MaxFileSize } else { [string]$config.MaxFileSize }
-    Test-AVMaxFileSize $effectiveMaxFileSize
-    $effectiveTimeout = if ($Timeout -gt 0) { $Timeout } else { [int]$config.DefaultTimeoutSeconds }
-    $effectivePUA = [bool]$IncludePUA -or [bool]$config.IncludePUA
-    $targets = @(Resolve-AVScanTargets -ScanType $ScanType -Path @($Path) -Config $config)
-    if ($targets.Count -eq 0) { throw 'Keine vorhandenen, erlaubten Scan-Ziele gefunden.' }
-
-    if (-not (Test-AVAdministrator)) {
-        if (Test-AVSystemScanRequiresElevation -Path $targets) {
-            throw 'Mindestens ein Systempfad soll gescannt werden. Bitte PowerShell als Administrator starten und den Scan erneut ausfuehren.'
-        }
-        Write-Warning 'Der Scan laeuft ohne Administratorrechte; einzelne geschuetzte Dateien koennen uebersprungen werden.'
-    }
-
+    $progress = New-RemnexaProgress -Activity (Get-RemnexaProgressText 'ProgressTaskScan') -Unit (Get-RemnexaProgressText 'ProgressUnitFiles')
+    $inventoryProgress = $null
     $targetListPath = Join-Path ([IO.Path]::GetTempPath()) ('REMNEXA-ClamAV-targets-' + [guid]::NewGuid().ToString('N') + '.txt')
     $started = [DateTimeOffset]::Now
+    $script:AVDiscoveryProgress = $progress
+    $script:AVDiscoverySkipped = 0
     try {
-        $targets | Set-Content -LiteralPath $targetListPath -Encoding UTF8 -ErrorAction Stop
-        $arguments = New-Object 'System.Collections.Generic.List[string]'
-        foreach ($argument in @(
-            '--infected',
-            '--no-summary',
-            '--stdout',
-            '--recursive',
-            ('--database=' + $status.DatabasePath),
-            ('--max-filesize=' + $effectiveMaxFileSize),
-            ('--file-list=' + $targetListPath)
-        )) { $arguments.Add($argument) }
-        if ($effectivePUA) { $arguments.Add('--detect-pua') }
-        foreach ($excludeArgument in @(Get-AVExcludeArguments -Config $config)) { $arguments.Add($excludeArgument) }
-
-        Write-AVLog -Message "ClamAV-$ScanType-Scan gestartet; Ziele: $($targets.Count)." -Event 'Scan' -Data $targets
-        Write-Progress -Activity 'ClamAV-Scan' -Status "Ziele vorbereitet: $($targets.Count)" -PercentComplete 10
-        $run = Invoke-AVNativeProcess -FilePath $status.ClamScanPath -ArgumentList $arguments.ToArray() -TimeoutSeconds $effectiveTimeout -WorkingDirectory (Split-Path -Parent $status.ClamScanPath)
-        Write-Progress -Activity 'ClamAV-Scan' -Status 'Ergebnisse werden ausgewertet' -PercentComplete 90
-
-        if ($run.ExitCode -notin @(0, 1, 2)) { throw "Unbekannter clamscan Exit-Code $($run.ExitCode)." }
-        $results = @(Get-ClamAVScanResult -InputObject @($run.StandardOutput, $run.StandardError) -ExitCode ([Math]::Min(2, $run.ExitCode)) -ScanType $ScanType)
-        if ($run.ExitCode -eq 2) {
-            $detail = ($run.StandardError + "`n" + $run.StandardOutput).Trim()
-            Write-AVLog -Message "ClamAV-Scanfehler: $detail" -Level 'Error' -Event 'Scan' -Data $results
-            throw "ClamAV konnte den Scan nicht abschliessen (Exit-Code 2): $detail"
+        Update-RemnexaProgress $progress -Status (Get-RemnexaProgressText 'ProgressTaskPrepare') -Force
+        $config = Get-AVConfig -Path $ConfigPath
+        $status = Get-ClamAVStatus -ConfigPath $ConfigPath
+        if (-not $status.Installed) { throw "ClamAV nicht gefunden unter '$($status.ClamScanPath)'." }
+        if (-not $status.Ready) { throw "Keine ClamAV-Signaturdatenbank unter '$($status.DatabasePath)' gefunden." }
+        if ($status.SignaturesOutdated) {
+            Add-RemnexaProgressNotice -Level Warning
+            Write-Warning "Die ClamAV-Signaturen sind aelter als $($config.SignatureMaxAgeDays) Tage."
         }
-        if ($run.ExitCode -eq 1 -and @($results | Where-Object { $_.Status -eq 'Infected' }).Count -eq 0) {
-            $detail = ($run.StandardError + "`n" + $run.StandardOutput).Trim()
-            throw "ClamAV meldete einen Fund (Exit-Code 1), aber die Ausgabe konnte nicht sicher zugeordnet werden: $detail"
+        $effectiveMaxFileSize = if ($MaxFileSize) { $MaxFileSize } else { [string]$config.MaxFileSize }
+        Test-AVMaxFileSize $effectiveMaxFileSize
+        $effectiveTimeout = if ($Timeout -gt 0) { $Timeout } else { [int]$config.DefaultTimeoutSeconds }
+        $effectivePUA = [bool]$IncludePUA -or [bool]$config.IncludePUA
+        Update-RemnexaProgress $progress -Status (Get-RemnexaProgressText 'ProgressTaskDiscovery') -Force
+        $targets = @(Resolve-AVScanTargets -ScanType $ScanType -Path @($Path) -Config $config)
+        if ($targets.Count -eq 0) { throw 'Keine vorhandenen, erlaubten Scan-Ziele gefunden.' }
+        if (-not (Test-AVAdministrator)) {
+            if (Test-AVSystemScanRequiresElevation -Path $targets) { throw 'Mindestens ein Systempfad soll gescannt werden. Bitte PowerShell als Administrator starten und den Scan erneut ausfuehren.' }
+            Write-Warning 'Der Scan laeuft ohne Administratorrechte; geschuetzte Dateien koennen uebersprungen werden.'
         }
 
-        if ($Quarantine -and $results.Count -gt 0) {
-            $quarantinePath = Expand-AVPath ([string]$config.QuarantinePath)
-            foreach ($result in @($results | Where-Object { $_.Status -eq 'Infected' })) {
-                if (-not (Test-Path -LiteralPath $result.Path -PathType Leaf)) {
-                    $result.Message = $result.Message + ' | Nicht als einzelne Datei in Quarantaene verschiebbar.'
-                    continue
+        $inventoryProgress = New-RemnexaProgress -Activity (Get-RemnexaProgressText 'ProgressTaskDiscovery') -Unit (Get-RemnexaProgressText 'ProgressUnitFiles')
+        $inventory = New-AVScanFileList -Targets $targets -Config $config -ListPath $targetListPath -Progress $inventoryProgress
+        $inventory.Skipped += $script:AVDiscoverySkipped
+        Complete-RemnexaProgress $inventoryProgress -Outcome $(if ($inventory.Skipped) { 'Warning' } else { 'Completed' })
+        $inventoryProgress = $null
+        Update-RemnexaProgress $progress -Total $inventory.Files -Status (Get-RemnexaProgressText 'ProgressTaskLoadEngine') -CurrentItem '' -Force
+
+        $metrics = [PSCustomObject]@{ Reported=[Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase); Errors=0; Unexpected=0 }
+        $run = [PSCustomObject]@{ ExitCode=0; StandardOutput=''; StandardError='' }
+        if ($inventory.Files -gt 0) {
+            $arguments = [Collections.Generic.List[string]]::new()
+            foreach ($argument in @('--verbose','--no-summary','--stdout','--follow-dir-symlinks=0','--follow-file-symlinks=0',('--database=' + $status.DatabasePath),('--max-filesize=' + $effectiveMaxFileSize),('--file-list=' + $targetListPath))) { $arguments.Add($argument) }
+            if ($effectivePUA) { $arguments.Add('--detect-pua') }
+            foreach ($excludeArgument in @(Get-AVExcludeArguments -Config $config)) { $arguments.Add($excludeArgument) }
+            $updateProgressCommand = Get-Command Update-RemnexaProgress
+            $progressTextCommand = Get-Command Get-RemnexaProgressText
+            $onOutput = {
+                param($Line, $Stream)
+                if ($Line.StartsWith('Scanning ', [StringComparison]::Ordinal)) {
+                    & $updateProgressCommand $progress -Status (& $progressTextCommand 'ProgressTaskScanFiles') -CurrentItem $Line.Substring(9)
                 }
-                $manifest = Move-ToClamAVQuarantine -Path $result.Path -Signature $result.Signature -QuarantinePath $quarantinePath
-                $result.Quarantined = $true
-                $result.QuarantineId = $manifest.QuarantineId
-                $result.Status = 'Quarantined'
-            }
+                elseif ($Line -match '^(?<File>.+):\s+(?<Result>OK|Empty file|.+\s+FOUND|.+\s+ERROR)\s*$') {
+                    $file = [string]$Matches.File
+                    $message = [string]$Matches.Result
+                    if ($metrics.Reported.Add($file)) {
+                        if ($message -match '\sERROR$') { $metrics.Errors++ }
+                        if ($metrics.Reported.Count -gt $inventory.Files) { $metrics.Unexpected++ }
+                        & $updateProgressCommand $progress -Completed ([Math]::Min($metrics.Reported.Count, $inventory.Files)) -CurrentItem $file -Status (& $progressTextCommand 'ProgressTaskScanFiles')
+                    }
+                }
+            }.GetNewClosure()
+            $heartbeat = { param($Event) & $updateProgressCommand $progress }.GetNewClosure()
+            $filter = { param($Line, $Stream) return ($Stream -eq 'Stderr' -or $Line -match '\s(?:FOUND|ERROR)\s*$') }
+            Write-AVLog -Message "ClamAV-$ScanType-Scan gestartet; Dateien: $($inventory.Files)." -Event 'Scan'
+            $run = Invoke-AVNativeProcess -FilePath $status.ClamScanPath -ArgumentList $arguments.ToArray() -TimeoutSeconds $effectiveTimeout -WorkingDirectory (Split-Path -Parent $status.ClamScanPath) -OnOutput $onOutput -OnHeartbeat $heartbeat -CaptureFilter $filter
         }
-
-        $completed = [DateTimeOffset]::Now
+        Update-RemnexaProgress $progress -Status (Get-RemnexaProgressText 'ProgressTaskEvaluate') -CurrentItem '' -Force
+        if ($run.ExitCode -notin @(0,1,2)) { throw "Unbekannter clamscan Exit-Code $($run.ExitCode)." }
+        $results = @(Get-ClamAVScanResult -InputObject @($run.StandardOutput,$run.StandardError) -ExitCode $run.ExitCode -ScanType $ScanType)
+        if ($run.ExitCode -eq 2) { throw ("ClamAV konnte den Scan nicht abschliessen (Exit-Code 2): " + $run.StandardError + ' ' + $run.StandardOutput) }
+        if ($run.ExitCode -eq 1 -and @($results | Where-Object Status -eq 'Infected').Count -eq 0) { throw 'ClamAV meldete einen Fund, aber die Ausgabe konnte nicht sicher zugeordnet werden.' }
+        if ($Quarantine) {
+            $infected = @($results | Where-Object Status -eq 'Infected')
+            $quarantineProgress = New-RemnexaProgress -Activity (Get-RemnexaProgressText 'ProgressTaskQuarantine') -Total $infected.Count -Unit (Get-RemnexaProgressText 'ProgressUnitFiles')
+            try {
+                $done = 0
+                foreach ($result in $infected) {
+                    if (-not (Test-Path -LiteralPath $result.Path -PathType Leaf)) {
+                        $result.Message += ' | Nicht als einzelne Datei in Quarantaene verschiebbar.'
+                        Add-RemnexaProgressNotice -Level Warning
+                    }
+                    else {
+                        $manifest = Move-ToClamAVQuarantine -Path $result.Path -Signature $result.Signature -QuarantinePath (Expand-AVPath ([string]$config.QuarantinePath))
+                        $result.Quarantined=$true; $result.QuarantineId=$manifest.QuarantineId; $result.Status='Quarantined'
+                    }
+                    $done++
+                    Update-RemnexaProgress $quarantineProgress -Completed $done -CurrentItem $result.Path
+                }
+                Complete-RemnexaProgress $quarantineProgress
+            }
+            catch { Complete-RemnexaProgress $quarantineProgress -Outcome Failed; throw }
+        }
+        $unconfirmed = [Math]::Max(0, $inventory.Files - $metrics.Reported.Count)
+        $findings = @($results | Where-Object Severity -in @('Malware','PotentiallyUnwanted')).Count
+        $partial = $unconfirmed -gt 0 -or $inventory.Skipped -gt 0 -or $metrics.Errors -gt 0 -or $metrics.Unexpected -gt 0 -or $inventory.Files -eq 0
+        $coverage = (Get-RemnexaProgressText 'ProgressScanCoverage') -f $metrics.Reported.Count,$metrics.Errors,$unconfirmed,$inventory.Skipped
         if ($results.Count -eq 0) {
-            $results = @([PSCustomObject]@{
-                Path          = ($targets -join '; ')
-                Signature     = $null
-                Severity      = 'None'
-                Status        = 'Clean'
-                ExitCode      = 0
-                ScanType      = $ScanType
-                Quarantined   = $false
-                QuarantineId  = $null
-                Message       = "Keine Funde in $($targets.Count) Scan-Ziel(en)."
-            })
+            $results = @([PSCustomObject]@{ Path=($targets -join '; '); Signature=$null; Severity=$(if($partial){'Warning'}else{'None'}); Status=$(if($partial){'Partial'}else{'Clean'}); ExitCode=0; ScanType=$ScanType; Quarantined=$false; QuarantineId=$null; Message=$coverage })
         }
         foreach ($result in $results) {
-            $result | Add-Member -NotePropertyName StartedAt -NotePropertyValue $started -Force
-            $result | Add-Member -NotePropertyName CompletedAt -NotePropertyValue $completed -Force
-            $result | Add-Member -NotePropertyName DurationSeconds -NotePropertyValue ([math]::Round(($completed - $started).TotalSeconds, 2)) -Force
+            foreach ($entry in @{ StartedAt=$started; CompletedAt=[DateTimeOffset]::Now; DurationSeconds=[Math]::Round(([DateTimeOffset]::Now-$started).TotalSeconds,2); FilesTotal=$inventory.Files; FilesReported=$metrics.Reported.Count; FilesUnconfirmed=$unconfirmed; InventorySkipped=$inventory.Skipped; CoverageComplete=(-not $partial) }.GetEnumerator()) { $result | Add-Member -NotePropertyName $entry.Key -NotePropertyValue $entry.Value -Force }
         }
-        $findings = @($results | Where-Object { $_.Severity -in @('Malware', 'PotentiallyUnwanted') }).Count
-        Write-AVLog -Message "ClamAV-$ScanType-Scan abgeschlossen; Funde: $findings." -Level $(if ($findings -gt 0) { 'Warning' } else { 'Success' }) -Event 'Scan' -Data $results
+        Update-RemnexaProgress $progress -Completed ([Math]::Min($metrics.Reported.Count, $inventory.Files)) -Status $coverage -CurrentItem '' -Force
+        Complete-RemnexaProgress $progress -Outcome $(if($partial -or $findings){'Warning'}else{'Completed'})
+        Write-AVLog -Message "ClamAV-$ScanType-Scan beendet; Funde: $findings. $coverage" -Level $(if($partial -or $findings){'Warning'}else{'Success'}) -Event 'Scan' -Data $results
         return $results
     }
     catch {
-        Write-AVLog -Message $_.Exception.Message -Level 'Error' -Event 'Scan'
+        if ($inventoryProgress -and $inventoryProgress.Outcome -eq 'Running') { Complete-RemnexaProgress $inventoryProgress -Outcome Failed }
+        if ($progress.Outcome -eq 'Running') { Complete-RemnexaProgress $progress -Outcome Failed -Status $_.Exception.Message }
+        Write-AVLog -Message $_.Exception.Message -Level Error -Event Scan
         throw
     }
     finally {
-        Write-Progress -Activity 'ClamAV-Scan' -Completed
+        $script:AVDiscoveryProgress = $null
         if (Test-Path -LiteralPath $targetListPath) { Remove-Item -LiteralPath $targetListPath -Force -ErrorAction SilentlyContinue }
     }
 }

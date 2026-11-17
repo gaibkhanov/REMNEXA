@@ -6,6 +6,13 @@ Entwicklungsänderungen sind keine veröffentlichten Releases. Dieses Dokument v
 
 ## 2.2.0 — Entwicklung, nicht veröffentlicht
 
+### Kandidat 2.2.0-rc.2
+
+- Gemeinsamer messbarer/unbestimmter Fortschritt, aktuelle Phasen/Einträge, Laufzeit, Eingabewarten und beschriftete Farben in den Verarbeitungsbereichen.
+- Laufende Prozessausgabe und Lebenszeichen mit begrenzter Ergebniserfassung und Aufräumen eigener Prozesse bei Callback-Fehlern.
+- Zusammengefasste Antivirus-Erfassung, Dateirückmeldungszähler und ausdrückliche Teil-/Fehlerergebnisse statt fester Scanphasen-Prozente.
+- Fortschrittstexte in sechs Sprachen und zusätzliche Regressionstests. Siehe [Verhalten, Prüfung und offene Arbeit](docs/RELEASE_2.2.0_RC2.de.md). Die Veröffentlichung bleibt zurückgestellt.
+
 ### Kandidat 2.2.0-rc.1
 
 - Prozess-Zeitlimits fordern das Beenden des gestarteten Prozessbaums an und warten begrenzt auf Aufräumen. Ausgabeabschluss teilt das Zeitlimit; leere Argumente bleiben erhalten.

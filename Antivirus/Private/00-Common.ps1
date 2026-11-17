@@ -34,6 +34,8 @@ function Write-AVLog {
         [AllowNull()][object]$Data
     )
 
+    if ($Level -eq 'Warning') { Add-RemnexaProgressNotice -Level Warning }
+    if ($Level -eq 'Error') { Add-RemnexaProgressNotice -Level Error }
     $line = '[{0:yyyy-MM-dd HH:mm:ss}] [{1}] [Antivirus/{2}] {3}' -f (Get-Date), $Level, $Event, $Message
     $hostLogger = Get-Command -Name Write-LogEntry -CommandType Function -ErrorAction SilentlyContinue | Select-Object -First 1
     if ($null -ne $hostLogger) {

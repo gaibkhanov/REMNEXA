@@ -5,7 +5,7 @@ param(
 
     [Parameter()]
     [ValidatePattern('^\d+\.\d+\.\d+(?:-[A-Za-z0-9.-]+)?$')]
-    [string]$Version = '2.2.0-rc.1'
+    [string]$Version = '2.2.0-rc.2'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -68,11 +68,14 @@ if ($drive.AvailableFreeSpace -lt ($totalBytes + 20MB)) {
 New-Item -ItemType Directory -Path $stagePath | Out-Null
 $manifestRows = New-Object 'System.Collections.Generic.List[object]'
 $index = 0
+Import-Module (Join-Path $PSScriptRoot '..\Core\Progress.psd1') -ErrorAction Stop
+$backupProgress = New-RemnexaProgress -Activity (Get-RemnexaProgressText 'ProgressTaskBackup') -Total $files.Count -Unit (Get-RemnexaProgressText 'ProgressUnitFiles')
 
 try {
     foreach ($file in $files) {
         $index++
         $relativePath = $file.FullName.Substring($sourcePrefix.Length)
+        Update-RemnexaProgress $backupProgress -CurrentItem $relativePath
         $destinationFile = Join-Path $stagePath $relativePath
         $destinationDirectory = Split-Path -Parent $destinationFile
         if (-not (Test-Path -LiteralPath $destinationDirectory -PathType Container)) {
@@ -92,9 +95,7 @@ try {
             SHA256 = $sourceHash
         })
 
-        if (($index % 50) -eq 0) {
-            Write-Progress -Activity "REMNEXA $backupName backup" -Status "$index of $($files.Count) files verified" -PercentComplete (($index / [Math]::Max(1, $files.Count)) * 100)
-        }
+        Update-RemnexaProgress $backupProgress -Completed $index -CurrentItem $relativePath
     }
 
     $manifestPath = Join-Path $stagePath 'BACKUP-MANIFEST.csv'
@@ -116,7 +117,7 @@ try {
     }
 
     Move-Item -LiteralPath $stagePath -Destination $backupPath
-    Write-Progress -Activity "REMNEXA $backupName backup" -Completed
+    Complete-RemnexaProgress $backupProgress
     [PSCustomObject]@{
         BackupPath       = $backupPath
         FilesVerified    = $manifestRows.Count
@@ -126,6 +127,6 @@ try {
     }
 }
 catch {
-    Write-Progress -Activity "REMNEXA $backupName backup" -Completed
+    Complete-RemnexaProgress $backupProgress -Outcome Failed
     throw ("Backup stopped. Existing files were not overwritten. Inspectable staging copy: {0}. Cause: {1}" -f $stagePath, $_.Exception.Message)
 }

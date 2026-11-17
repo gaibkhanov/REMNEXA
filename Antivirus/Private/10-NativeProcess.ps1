@@ -12,8 +12,23 @@ function Invoke-AVNativeProcess {
         [Parameter(Mandatory = $true)][string]$FilePath,
         [AllowEmptyCollection()][string[]]$ArgumentList = @(),
         [ValidateRange(1, 86400)][int]$TimeoutSeconds = 3600,
-        [AllowEmptyString()][string]$WorkingDirectory = ''
+        [AllowEmptyString()][string]$WorkingDirectory = '',
+        [scriptblock]$OnOutput,
+        [scriptblock]$OnHeartbeat,
+        [scriptblock]$CaptureFilter
     )
 
-    return Invoke-RemnexaNativeProcess -FilePath $FilePath -ArgumentList $ArgumentList -TimeoutSeconds $TimeoutSeconds -WorkingDirectory $WorkingDirectory
+    if (-not $OnHeartbeat) {
+        $activeProgress = Get-RemnexaActiveProgress
+        if ($activeProgress) {
+            $updater = Get-Command Update-RemnexaProgress
+            $OnHeartbeat = { param($Event) & $updater $activeProgress }.GetNewClosure()
+            # freshclam exposes useful update stages. Version/signature tools
+            # can print long technical metadata that does not belong in the UI.
+            if (-not $OnOutput -and [IO.Path]::GetFileName($FilePath) -ieq 'freshclam.exe') {
+                $OnOutput = { param($Line,$Stream) & $updater $activeProgress -CurrentItem $Line }.GetNewClosure()
+            }
+        }
+    }
+    return Invoke-RemnexaNativeProcess -FilePath $FilePath -ArgumentList $ArgumentList -TimeoutSeconds $TimeoutSeconds -WorkingDirectory $WorkingDirectory -OnOutput $OnOutput -OnHeartbeat $OnHeartbeat -CaptureFilter $CaptureFilter
 }

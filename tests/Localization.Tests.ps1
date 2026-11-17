@@ -8,7 +8,7 @@ Describe 'REMNEXA localization resources' {
         Import-Module -Name $modulePath -Force -ErrorAction Stop
         try {
             $texts = Import-RemnexaLocalization -Root $localeRoot -LanguageCodes $languages -FallbackLanguage 'de'
-            if ($texts.Count -ne 282) { throw "Expected 282 localized keys, found $($texts.Count)." }
+            if ($texts.Count -ne 318) { throw "Expected 318 localized keys, found $($texts.Count)." }
             foreach ($key in $texts.Keys) {
                 $values = @($texts[$key])
                 if ($values.Count -ne $languages.Count) { throw "Translation '$key' has an incorrect language count." }

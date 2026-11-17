@@ -3,6 +3,9 @@ $ErrorActionPreference = 'Stop'
 
 $script:AVModuleRoot = $PSScriptRoot
 $script:AVConfigPath = Join-Path (Split-Path -Parent $PSScriptRoot) 'config\antivirus.json'
+Import-Module (Join-Path $PSScriptRoot '..\Core\Progress.psd1') -ErrorAction Stop
+$script:AVDiscoveryProgress = $null
+$script:AVDiscoverySkipped = 0
 
 foreach ($folder in @('Private', 'Public')) {
     $folderPath = Join-Path $PSScriptRoot $folder

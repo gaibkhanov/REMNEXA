@@ -35,7 +35,11 @@ function Invoke-RemnexaNativeProcess {
         [Parameter(Mandatory = $true)][string]$FilePath,
         [AllowEmptyCollection()][string[]]$ArgumentList = @(),
         [ValidateRange(1, 86400)][int]$TimeoutSeconds = 3600,
-        [AllowEmptyString()][string]$WorkingDirectory = ''
+        [AllowEmptyString()][string]$WorkingDirectory = '',
+        [scriptblock]$OnOutput,
+        [scriptblock]$OnHeartbeat,
+        [scriptblock]$CaptureFilter,
+        [ValidateRange(1024, 67108864)][int]$MaxCapturedCharacters = 16777216
     )
 
     if (-not (Test-Path -LiteralPath $FilePath -PathType Leaf)) {
@@ -58,6 +62,10 @@ function Invoke-RemnexaNativeProcess {
     else {
         # Windows PowerShell 5.1 does not expose ProcessStartInfo.ArgumentList.
         $startInfo.Arguments = (@($ArgumentList | ForEach-Object { ConvertTo-RemnexaNativeArgument ([string]$_) }) -join ' ')
+    }
+
+    if ($OnOutput -or $OnHeartbeat -or $CaptureFilter) {
+        return Invoke-RemnexaObservedProcess -StartInfo $startInfo -TimeoutSeconds $TimeoutSeconds -OnOutput $OnOutput -OnHeartbeat $OnHeartbeat -CaptureFilter $CaptureFilter -MaxCapturedCharacters $MaxCapturedCharacters -Arguments $ArgumentList
     }
 
     $process = New-Object Diagnostics.Process
@@ -102,3 +110,58 @@ function Invoke-RemnexaNativeProcess {
 }
 
 Export-ModuleMember -Function ConvertTo-RemnexaNativeArgument, Invoke-RemnexaNativeProcess
+
+function Invoke-RemnexaObservedProcess {
+    param([Diagnostics.ProcessStartInfo]$StartInfo, [int]$TimeoutSeconds, [scriptblock]$OnOutput, [scriptblock]$OnHeartbeat, [scriptblock]$CaptureFilter, [int]$MaxCapturedCharacters, [string[]]$Arguments)
+    $process = [Diagnostics.Process]::new()
+    $process.StartInfo = $StartInfo
+    $started = $false
+    $watch = [Diagnostics.Stopwatch]::StartNew()
+    $output = @{ Stdout=[Text.StringBuilder]::new(); Stderr=[Text.StringBuilder]::new() }
+    $captured = 0
+    $lastHeartbeat = [long]-1000
+    try {
+        $started = $process.Start()
+        if (-not $started) { throw 'The native process could not start.' }
+        $readers = @{ Stdout=$process.StandardOutput; Stderr=$process.StandardError }
+        $pending = @{ Stdout=$readers.Stdout.ReadLineAsync(); Stderr=$readers.Stderr.ReadLineAsync() }
+        while ($pending.Count -gt 0 -or -not $process.HasExited) {
+            if ($watch.Elapsed.TotalSeconds -ge $TimeoutSeconds) { throw "Process '$($StartInfo.FileName)' exceeded the $TimeoutSeconds second timeout." }
+            foreach ($streamName in @($pending.Keys)) {
+                # Bound each batch so stderr, heartbeats and the deadline cannot
+                # be starved by a process continuously producing stdout.
+                $batch = 0
+                while ($pending.ContainsKey($streamName) -and $pending[$streamName].IsCompleted -and $batch -lt 100) {
+                    $line = $pending[$streamName].GetAwaiter().GetResult()
+                    if ($null -eq $line) { $pending.Remove($streamName); break }
+                    if ($OnOutput) { & $OnOutput $line $streamName | Out-Null }
+                    $capture = if ($CaptureFilter) { [bool](& $CaptureFilter $line $streamName) } else { $true }
+                    if ($capture) {
+                        $captured += $line.Length + [Environment]::NewLine.Length
+                        if ($captured -gt $MaxCapturedCharacters) { throw 'Native output exceeded the capture limit; the operation was stopped rather than discarding results.' }
+                        [void]$output[$streamName].AppendLine($line)
+                    }
+                    $pending[$streamName] = $readers[$streamName].ReadLineAsync()
+                    $batch++
+                }
+            }
+            if ($OnHeartbeat -and ($watch.ElapsedMilliseconds - $lastHeartbeat) -ge 1000) {
+                & $OnHeartbeat ([PSCustomObject]@{ ElapsedSeconds=$watch.Elapsed.TotalSeconds; ProcessId=$process.Id }) | Out-Null
+                $lastHeartbeat = $watch.ElapsedMilliseconds
+            }
+            $ready = @($pending.Values | Where-Object IsCompleted).Count -gt 0
+            if (-not $ready -and ($pending.Count -gt 0 -or -not $process.HasExited)) { [Threading.Thread]::Sleep(50) }
+        }
+        return [PSCustomObject]@{ FilePath=$StartInfo.FileName; Arguments=@($Arguments); ExitCode=[int]$process.ExitCode; StandardOutput=$output.Stdout.ToString(); StandardError=$output.Stderr.ToString(); TimedOut=$false }
+    }
+    finally {
+        if ($started -and -not $process.HasExited) {
+            try {
+                $process.Kill($true)
+                if (-not $process.WaitForExit(5000)) { throw 'The owned process did not exit within the cleanup window.' }
+            }
+            catch { Write-Warning ('Native process cleanup could not be confirmed: ' + $_.Exception.Message) }
+        }
+        $process.Dispose()
+    }
+}

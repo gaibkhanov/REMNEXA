@@ -28,6 +28,12 @@ Beachte die Auswahlmöglichkeiten der aktuellen Eingabe. Eine Nummer aus einem a
 
 Beenden gilt, solange REMNEXA auf Eingaben wartet. Es ergänzt keinen Abbruchmechanismus für laufende fremde Deinstallationsprogramme, Scans, Reparaturbefehle oder Windows-Rechteabfragen. Warte bei kritischen Schreibvorgängen auf deren Abschluss; erzwungenes Schließen kann sie unterbrechen.
 
+## Verarbeitungsstatus
+
+In Kandidat rc.2 zeigt messbare Arbeit bearbeitete/gesamte Einträge und deren Prozentzahl. Beim Antivirus-Scan zählt dies nach der Zielerfassung die ClamAV-Dateirückmeldungen. Prozentwerte schätzen keine Restzeit. Erfassung, Laden der Engine und Windows-Aufrufe ohne messbare Gesamtmenge zeigen Phase und unbestimmten Balken. Prozess-Rückmeldungen aktualisieren die Laufzeit auch bei stiller Verarbeitung; ein einzelner synchroner Windows-Aufruf kann erst nach seiner Rückkehr aktualisieren.
+
+Türkis bedeutet Verarbeitung; Gelb bedeutet Eingabe erwartet, Hinweis oder Abbruch; Grün bedeutet erfolgreicher Abschluss; Rot bedeutet Fehler. Beachte neben der Farbe den Statustext. Ein Teilscan behält den tatsächlichen Dateizähler und einen Hinweis. Auf einen vollständigen Dateizähler können Auswertung oder ausdrücklich gewählte Quarantäne folgen. Die [Kandidatennotizen](RELEASE_2.2.0_RC2.de.md) beschreiben Abdeckungs- und Host-Grenzen.
+
 ## Anwendung entfernen
 
 1. Öffne den Deinstallationsbereich, filtere bei Bedarf und wähle die angezeigte Programmnummer.

@@ -8,7 +8,7 @@ A free, open-source Windows utility for application removal, startup management,
 
 **Windows 10 / 11 · PowerShell 7.5+ · MIT License · Six interface languages**
 
-> **Current candidate: 2.2.0-rc.1**, available on the [candidate branch](https://github.com/gaibkhanov/REMNEXA/tree/feature/2.2.0-release-candidate). It is not a stable release. Read the [candidate notes and package instructions](docs/RELEASE_2.2.0_RC1.md). The default branch may contain an earlier version.
+> **Current candidate: 2.2.0-rc.2**, available on the [candidate branch](https://github.com/gaibkhanov/REMNEXA/tree/feature/2.2.0-progress). It is not a stable release. Read the [candidate notes and package instructions](docs/RELEASE_2.2.0_RC2.md). The default branch may contain an earlier version.
 
 ## Features
 
@@ -45,7 +45,7 @@ Requirements: Windows 10 or 11, PowerShell **7.5 or newer**, and administrator a
 Download the candidate branch ZIP or use Git:
 
 ```powershell
-git clone --branch feature/2.2.0-release-candidate https://github.com/gaibkhanov/REMNEXA.git
+git clone --branch feature/2.2.0-progress https://github.com/gaibkhanov/REMNEXA.git
 Set-Location REMNEXA
 .\REMNEXA.cmd
 ```
@@ -73,7 +73,7 @@ Service and antivirus checks are snapshots. A stopped demand-start service is no
 
 ## What's new in 2.2.0
 
-Candidate rc.1 fixes startup with redirected console output and adds bounded native-process timeout cleanup, source backups without Git metadata/generated packages, and a verified source ZIP with per-file and archive SHA-256 checks. It has 89 passing local tests; see the [candidate report](docs/RELEASE_2.2.0_RC1.md) for versions and remaining limits.
+Candidate rc.2 adds measured per-file Antivirus progress, visible engine loading and evaluation, elapsed time, clear completion/warning/error states and shared progress across maintenance operations. Overlapping scan roots are deduplicated; missing replies remain partial. See the [candidate report](docs/RELEASE_2.2.0_RC2.md) for validation and limits.
 
 - HTTPS and SHA-256 checks for supported ClamAV downloads; staged installation and configuration recovery.
 - Additional linked-path checks and validation of supported privacy backups.

@@ -51,7 +51,9 @@ The custom example requires an existing directory. Choose targets deliberately.
 
 `-IncludePUA` enables potentially unwanted application detection, which can raise false positives. `-MaxFileSize` and configured exclusions/limits affect coverage. Locked files, permissions, archive limits and timeouts can prevent complete inspection.
 
-ClamAV exit code 0 means no detections, 1 means detections and 2 means a scan error. A detection is not automatically a confirmed infection; no detections are not proof of safety. Progress indicates workflow stages, not an exact count of every file.
+ClamAV exit code 0 means no detections, 1 means detections and 2 means a scan error. A detection is not automatically a confirmed infection; no detections are not proof of safety.
+
+Candidate rc.2 inventories files before invoking ClamAV, deduplicates overlapping roots and skips linked paths. During scanning, the percentage uses reported file results versus the inventory, alongside the current phase, item and elapsed time. Engine loading and inventory have no invented time percentage. Missing replies or enumeration skips produce a warning and incomplete coverage; errors are red and successful completion is green. Counts describe file replies, not deep inspection of all archive members or a remaining-time estimate. Configured exclusions and ClamAV limits still apply. Read the [progress and verification details](../docs/RELEASE_2.2.0_RC2.md).
 
 Scanning uses local engine/signatures and can run offline. The scan function itself does not fetch fresh signatures. Setup, explicit updates and other configured workflow update actions can require network access; prepare and verify the offline configuration beforehand. Old signatures reduce usefulness.
 

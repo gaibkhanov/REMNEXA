@@ -3,6 +3,8 @@ Describe 'REMNEXA protected leftovers and optional completion checks' {
         $projectRoot = Split-Path -Parent $PSScriptRoot
         $script:completionModule = New-Module -ArgumentList $projectRoot -ScriptBlock {
             param($ProjectRoot)
+            Import-Module (Join-Path $ProjectRoot 'Core\Progress.psd1') -Force
+            Set-RemnexaProgressRendering -Enabled $false
             Import-Module (Join-Path $ProjectRoot 'Core\PathSafety.psd1') -Force
             Import-Module (Join-Path $ProjectRoot 'Core\SecurityAssessment.psd1') -Force
             $tokens = $null; $errors = $null

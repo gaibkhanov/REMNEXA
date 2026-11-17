@@ -8,7 +8,7 @@ Ein kostenloses Open-Source-Werkzeug für die Deinstallation von Anwendungen, Au
 
 **Windows 10 / 11 · PowerShell 7.5+ · MIT-Lizenz · Sechs Oberflächensprachen**
 
-> **Aktueller Kandidat: 2.2.0-rc.1**, verfügbar im [Kandidatenbranch](https://github.com/gaibkhanov/REMNEXA/tree/feature/2.2.0-release-candidate). Dies ist kein stabiles Release. Beachte [Kandidatenbericht und Paketanleitung](docs/RELEASE_2.2.0_RC1.de.md). Der Standardbranch kann eine ältere Version enthalten.
+> **Aktueller Kandidat: 2.2.0-rc.2**, verfügbar im [Kandidatenbranch](https://github.com/gaibkhanov/REMNEXA/tree/feature/2.2.0-progress). Dies ist kein stabiles Release. Beachte [Kandidatenbericht und Paketanleitung](docs/RELEASE_2.2.0_RC2.de.md). Der Standardbranch kann eine ältere Version enthalten.
 
 ## Funktionen
 
@@ -45,7 +45,7 @@ Voraussetzungen: Windows 10 oder 11, PowerShell **ab Version 7.5** sowie Adminis
 Lade das ZIP des Kandidatenbranches herunter oder verwende Git:
 
 ```powershell
-git clone --branch feature/2.2.0-release-candidate https://github.com/gaibkhanov/REMNEXA.git
+git clone --branch feature/2.2.0-progress https://github.com/gaibkhanov/REMNEXA.git
 Set-Location REMNEXA
 .\REMNEXA.cmd
 ```
@@ -73,7 +73,7 @@ Dienste- und Antivirus-Prüfungen sind Momentaufnahmen. Ein gestoppter Dienst mi
 
 ## Neu in 2.2.0
 
-Kandidat rc.1 behebt den Start mit umgeleiteter Konsolenausgabe und ergänzt begrenzte Prozess-Zeitlimits mit Aufräumen, Quellsicherungen ohne Git-Metadaten/erzeugte Pakete sowie ein geprüftes Quell-ZIP mit SHA-256 je Datei und Archiv. 89 lokale Tests bestehen; Werkzeugversionen und Grenzen stehen im [Kandidatenbericht](docs/RELEASE_2.2.0_RC1.de.md).
+Kandidat rc.2 ergänzt messbaren Antivirus-Dateifortschritt, sichtbares Laden und Auswerten, Laufzeit sowie klare Abschluss-, Hinweis- und Fehlerzustände für Wartungsvorgänge. Überlappende Scanwurzeln werden zusammengefasst; fehlende Rückmeldungen bleiben unvollständig. Prüfstand und Grenzen stehen im [Kandidatenbericht](docs/RELEASE_2.2.0_RC2.de.md).
 
 - HTTPS- und SHA-256-Prüfung unterstützter ClamAV-Downloads; gestufte Installation und Konfigurationswiederherstellung.
 - Zusätzliche Prüfungen verknüpfter Pfade und unterstützter Datenschutzsicherungen.

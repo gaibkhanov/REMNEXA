@@ -93,10 +93,21 @@ function Get-RemnexaSystemSnapshot {
     if ([Environment]::OSVersion.Platform -ne [PlatformID]::Win32NT) {
         throw 'REMNEXA system snapshots are supported only on Windows.'
     }
-    $operatingSystem = Get-CimInstance -ClassName Win32_OperatingSystem -ErrorAction Stop
-    $processors = @(Get-CimInstance -ClassName Win32_Processor -ErrorAction Stop)
-    $logicalDisks = @(Get-CimInstance -ClassName Win32_LogicalDisk -Filter 'DriveType = 3' -ErrorAction Stop)
-    return ConvertFrom-RemnexaCimSnapshot -OperatingSystem $operatingSystem -Processors $processors -LogicalDisks $logicalDisks
+    Import-Module (Join-Path $PSScriptRoot 'Progress.psd1') -ErrorAction Stop
+    $progress = New-RemnexaProgress -Activity (Get-RemnexaProgressText 'ProgressTaskSystem') -Total 4 -Unit (Get-RemnexaProgressText 'ProgressUnitItems')
+    try {
+        $operatingSystem = Get-CimInstance -ClassName Win32_OperatingSystem -ErrorAction Stop
+        Update-RemnexaProgress $progress -Completed 1 -CurrentItem 'Windows'
+        $processors = @(Get-CimInstance -ClassName Win32_Processor -ErrorAction Stop)
+        Update-RemnexaProgress $progress -Completed 2 -CurrentItem 'CPU / RAM'
+        $logicalDisks = @(Get-CimInstance -ClassName Win32_LogicalDisk -Filter 'DriveType = 3' -ErrorAction Stop)
+        Update-RemnexaProgress $progress -Completed 3 -CurrentItem ''
+        $result = ConvertFrom-RemnexaCimSnapshot -OperatingSystem $operatingSystem -Processors $processors -LogicalDisks $logicalDisks
+        Update-RemnexaProgress $progress -Completed 4
+        Complete-RemnexaProgress $progress
+        return $result
+    }
+    catch { Complete-RemnexaProgress $progress -Outcome Failed; throw }
 }
 
 Export-ModuleMember -Function ConvertFrom-RemnexaCimSnapshot, Get-RemnexaSystemSnapshot

@@ -41,119 +41,124 @@ function Update-ClamAVEngine {
         [switch]$Force,
         [switch]$UpdateSignatures
     )
-
-    $config = Get-AVConfig -Path $ConfigPath
-    $statusBefore = Get-ClamAVStatus -ConfigPath $ConfigPath
-    if (-not $statusBefore.Installed) {
-        throw "ClamAV ist noch nicht installiert. Bitte zuerst Initialize-ClamAV ausfuehren."
-    }
-
-    $asset = Resolve-ClamAVReleaseAsset -DownloadUri $(if ($DownloadUri) { $DownloadUri } else { [string]$config.DownloadUri })
-    $asset = Assert-ClamAVReleaseAsset -Asset $asset -ExpectedSha256 $ExpectedSha256
-    if (-not $Force -and $asset.Version -and $statusBefore.Version -eq $asset.Version) {
-        Write-AVLog -Message "ClamAV-Engine ist bereits aktuell: $($statusBefore.Version)." -Level 'Success' -Event 'EngineUpdate'
-        return [PSCustomObject]@{
-            Updated         = $false
-            UpdateStatus    = 'Current'
-            PreviousVersion = $statusBefore.Version
-            CurrentVersion  = $statusBefore.Version
-            LatestVersion   = $asset.Version
-            ClamScanPath    = $statusBefore.ClamScanPath
-            DatabasePath    = $statusBefore.DatabasePath
-        }
-    }
-
-    $target = [IO.Path]::GetFullPath((Split-Path -Parent $statusBefore.ClamScanPath)).TrimEnd('\')
-    $driveRoot = [IO.Path]::GetPathRoot($target).TrimEnd('\')
-    if ($target.Equals($driveRoot, [StringComparison]::OrdinalIgnoreCase)) {
-        throw "Unsicherer ClamAV-Zielpfad '$target'. Das Laufwerksstammverzeichnis darf nicht aktualisiert werden."
-    }
-    if (-not $PSCmdlet.ShouldProcess($target, "ClamAV-Engine auf Version $($asset.Version) aktualisieren")) {
-        return
-    }
-
-    $parent = Split-Path -Parent $target
-    $leaf = Split-Path -Leaf $target
-    $operationId = [guid]::NewGuid().ToString('N')
-    $stagingRoot = Join-Path $parent ('.' + $leaf + '.update.' + $operationId)
-    $backupRoot = Join-Path $parent ('.' + $leaf + '.backup.' + (Get-Date -Format 'yyyyMMdd-HHmmss'))
-    $temporaryRoot = Join-Path ([IO.Path]::GetTempPath()) ('REMNEXA-ClamAV-Update-' + $operationId)
-    $archivePath = Join-Path $temporaryRoot 'clamav.zip'
-    $extractPath = Join-Path $temporaryRoot 'extract'
-    $targetMoved = $false
+    $remnexaWorkProgress = New-RemnexaProgress -Activity (Get-RemnexaProgressText 'ProgressTaskInstall')
     try {
-        New-Item -ItemType Directory -Path $extractPath -Force -ErrorAction Stop | Out-Null
-        Write-AVLog -Message "ClamAV-Engine-Update gestartet: $($statusBefore.Version) -> $($asset.Version)." -Event 'EngineUpdate'
-        Write-Progress -Activity 'ClamAV-Engine-Update' -Status 'Offizielles Paket wird heruntergeladen' -PercentComplete 10
-        Invoke-WebRequest -Uri $asset.Uri -OutFile $archivePath -UseBasicParsing -ErrorAction Stop
-        [void](Assert-ClamAVArchiveDigest -Digest ([string]$asset.Digest) -ArchivePath $archivePath)
+        $config = Get-AVConfig -Path $ConfigPath
+        $statusBefore = Get-ClamAVStatus -ConfigPath $ConfigPath
+        if (-not $statusBefore.Installed) {
+            throw "ClamAV ist noch nicht installiert. Bitte zuerst Initialize-ClamAV ausfuehren."
+        }
 
-        Write-Progress -Activity 'ClamAV-Engine-Update' -Status 'Paket wird vorbereitet' -PercentComplete 35
-        Expand-Archive -LiteralPath $archivePath -DestinationPath $extractPath -Force -ErrorAction Stop
-        $newClamScan = Get-ChildItem -LiteralPath $extractPath -Filter 'clamscan.exe' -File -Recurse -ErrorAction Stop | Select-Object -First 1
-        if ($null -eq $newClamScan) { throw 'Das Update-Paket enthaelt keine clamscan.exe.' }
-        $newSourceRoot = Split-Path -Parent $newClamScan.FullName
-        New-Item -ItemType Directory -Path $stagingRoot -Force -ErrorAction Stop | Out-Null
-        Copy-Item -Path (Join-Path $newSourceRoot '*') -Destination $stagingRoot -Recurse -Force -ErrorAction Stop
-
-        $databasePath = Expand-AVPath ([string]$config.DatabasePath)
-        if (Test-Path -LiteralPath $databasePath -PathType Container) {
-            if ($databasePath.Equals($target, [StringComparison]::OrdinalIgnoreCase) -or (Test-AVPathIsWithin -Path $databasePath -Parent $target)) {
-                $databaseRelative = $databasePath.Substring($target.Length).TrimStart('\')
-                $stagingDatabase = Join-Path $stagingRoot $databaseRelative
-                New-Item -ItemType Directory -Path $stagingDatabase -Force -ErrorAction Stop | Out-Null
-                Copy-Item -Path (Join-Path $databasePath '*') -Destination $stagingDatabase -Recurse -Force -ErrorAction Stop
+        $asset = Resolve-ClamAVReleaseAsset -DownloadUri $(if ($DownloadUri) { $DownloadUri } else { [string]$config.DownloadUri })
+        $asset = Assert-ClamAVReleaseAsset -Asset $asset -ExpectedSha256 $ExpectedSha256
+        if (-not $Force -and $asset.Version -and $statusBefore.Version -eq $asset.Version) {
+            Write-AVLog -Message "ClamAV-Engine ist bereits aktuell: $($statusBefore.Version)." -Level 'Success' -Event 'EngineUpdate'
+            return [PSCustomObject]@{
+                Updated         = $false
+                UpdateStatus    = 'Current'
+                PreviousVersion = $statusBefore.Version
+                CurrentVersion  = $statusBefore.Version
+                LatestVersion   = $asset.Version
+                ClamScanPath    = $statusBefore.ClamScanPath
+                DatabasePath    = $statusBefore.DatabasePath
             }
         }
-        [void](New-FreshClamConfiguration -ClamAVPath $stagingRoot -DatabasePath $databasePath)
 
-        Write-Progress -Activity 'ClamAV-Engine-Update' -Status 'Engine wird sicher ersetzt' -PercentComplete 70
-        Move-Item -LiteralPath $target -Destination $backupRoot -ErrorAction Stop
-        $targetMoved = $true
-        Move-Item -LiteralPath $stagingRoot -Destination $target -ErrorAction Stop
-
-        $statusAfter = Get-ClamAVStatus -ConfigPath $ConfigPath
-        if (-not $statusAfter.Installed -or [string]::IsNullOrWhiteSpace([string]$statusAfter.Version)) {
-            throw 'Die aktualisierte ClamAV-Engine konnte nach dem Austausch nicht gestartet werden.'
+        $target = [IO.Path]::GetFullPath((Split-Path -Parent $statusBefore.ClamScanPath)).TrimEnd('\')
+        $driveRoot = [IO.Path]::GetPathRoot($target).TrimEnd('\')
+        if ($target.Equals($driveRoot, [StringComparison]::OrdinalIgnoreCase)) {
+            throw "Unsicherer ClamAV-Zielpfad '$target'. Das Laufwerksstammverzeichnis darf nicht aktualisiert werden."
         }
-        if ($asset.Version -and $statusAfter.Version -ne $asset.Version) {
-            throw "Versionspruefung fehlgeschlagen: erwartet $($asset.Version), erkannt $($statusAfter.Version)."
+        if (-not $PSCmdlet.ShouldProcess($target, "ClamAV-Engine auf Version $($asset.Version) aktualisieren")) {
+            Complete-RemnexaProgress $remnexaWorkProgress -Outcome Cancelled
+            return
         }
 
-        if ($UpdateSignatures) { $statusAfter = Update-ClamAVSignature -ConfigPath $ConfigPath }
-        if (Test-Path -LiteralPath $backupRoot -PathType Container) {
-            Remove-Item -LiteralPath $backupRoot -Recurse -Force -ErrorAction Stop
-        }
+        $parent = Split-Path -Parent $target
+        $leaf = Split-Path -Leaf $target
+        $operationId = [guid]::NewGuid().ToString('N')
+        $stagingRoot = Join-Path $parent ('.' + $leaf + '.update.' + $operationId)
+        $backupRoot = Join-Path $parent ('.' + $leaf + '.backup.' + (Get-Date -Format 'yyyyMMdd-HHmmss'))
+        $temporaryRoot = Join-Path ([IO.Path]::GetTempPath()) ('REMNEXA-ClamAV-Update-' + $operationId)
+        $archivePath = Join-Path $temporaryRoot 'clamav.zip'
+        $extractPath = Join-Path $temporaryRoot 'extract'
         $targetMoved = $false
-        Write-Progress -Activity 'ClamAV-Engine-Update' -Status 'Aktualisierung abgeschlossen' -PercentComplete 100
-        Write-AVLog -Message "ClamAV-Engine aktualisiert: $($statusBefore.Version) -> $($statusAfter.Version)." -Level 'Success' -Event 'EngineUpdate'
-        return [PSCustomObject]@{
-            Updated         = $true
-            UpdateStatus    = 'Updated'
-            PreviousVersion = $statusBefore.Version
-            CurrentVersion  = $statusAfter.Version
-            LatestVersion   = $asset.Version
-            ClamScanPath    = $statusAfter.ClamScanPath
-            DatabasePath    = $statusAfter.DatabasePath
+        try {
+            New-Item -ItemType Directory -Path $extractPath -Force -ErrorAction Stop | Out-Null
+            Write-AVLog -Message "ClamAV-Engine-Update gestartet: $($statusBefore.Version) -> $($asset.Version)." -Event 'EngineUpdate'
+            Update-RemnexaProgress $remnexaWorkProgress -Status (Get-RemnexaProgressText 'ProgressTaskDownload') -Force
+            Invoke-WebRequest -Uri $asset.Uri -OutFile $archivePath -UseBasicParsing -ErrorAction Stop
+            [void](Assert-ClamAVArchiveDigest -Digest ([string]$asset.Digest) -ArchivePath $archivePath)
+
+            Update-RemnexaProgress $remnexaWorkProgress -Status (Get-RemnexaProgressText 'ProgressTaskExtract') -Force
+            Expand-Archive -LiteralPath $archivePath -DestinationPath $extractPath -Force -ErrorAction Stop
+            $newClamScan = Get-ChildItem -LiteralPath $extractPath -Filter 'clamscan.exe' -File -Recurse -ErrorAction Stop | Select-Object -First 1
+            if ($null -eq $newClamScan) { throw 'Das Update-Paket enthaelt keine clamscan.exe.' }
+            $newSourceRoot = Split-Path -Parent $newClamScan.FullName
+            New-Item -ItemType Directory -Path $stagingRoot -Force -ErrorAction Stop | Out-Null
+            Copy-Item -Path (Join-Path $newSourceRoot '*') -Destination $stagingRoot -Recurse -Force -ErrorAction Stop
+
+            $databasePath = Expand-AVPath ([string]$config.DatabasePath)
+            if (Test-Path -LiteralPath $databasePath -PathType Container) {
+                if ($databasePath.Equals($target, [StringComparison]::OrdinalIgnoreCase) -or (Test-AVPathIsWithin -Path $databasePath -Parent $target)) {
+                    $databaseRelative = $databasePath.Substring($target.Length).TrimStart('\')
+                    $stagingDatabase = Join-Path $stagingRoot $databaseRelative
+                    New-Item -ItemType Directory -Path $stagingDatabase -Force -ErrorAction Stop | Out-Null
+                    Copy-Item -Path (Join-Path $databasePath '*') -Destination $stagingDatabase -Recurse -Force -ErrorAction Stop
+                }
+            }
+            [void](New-FreshClamConfiguration -ClamAVPath $stagingRoot -DatabasePath $databasePath)
+
+            Update-RemnexaProgress $remnexaWorkProgress -Status (Get-RemnexaProgressText 'ProgressTaskInstall') -Force
+            Move-Item -LiteralPath $target -Destination $backupRoot -ErrorAction Stop
+            $targetMoved = $true
+            Move-Item -LiteralPath $stagingRoot -Destination $target -ErrorAction Stop
+
+            $statusAfter = Get-ClamAVStatus -ConfigPath $ConfigPath
+            if (-not $statusAfter.Installed -or [string]::IsNullOrWhiteSpace([string]$statusAfter.Version)) {
+                throw 'Die aktualisierte ClamAV-Engine konnte nach dem Austausch nicht gestartet werden.'
+            }
+            if ($asset.Version -and $statusAfter.Version -ne $asset.Version) {
+                throw "Versionspruefung fehlgeschlagen: erwartet $($asset.Version), erkannt $($statusAfter.Version)."
+            }
+
+            if ($UpdateSignatures) { $statusAfter = Update-ClamAVSignature -ConfigPath $ConfigPath }
+            if (Test-Path -LiteralPath $backupRoot -PathType Container) {
+                Remove-Item -LiteralPath $backupRoot -Recurse -Force -ErrorAction Stop
+            }
+            $targetMoved = $false
+            Update-RemnexaProgress $remnexaWorkProgress -Status (Get-RemnexaProgressText 'ProgressTaskFinalize') -Force
+            Write-AVLog -Message "ClamAV-Engine aktualisiert: $($statusBefore.Version) -> $($statusAfter.Version)." -Level 'Success' -Event 'EngineUpdate'
+            return [PSCustomObject]@{
+                Updated         = $true
+                UpdateStatus    = 'Updated'
+                PreviousVersion = $statusBefore.Version
+                CurrentVersion  = $statusAfter.Version
+                LatestVersion   = $asset.Version
+                ClamScanPath    = $statusAfter.ClamScanPath
+                DatabasePath    = $statusAfter.DatabasePath
+            }
+        }
+        catch {
+            if ($targetMoved -and (Test-Path -LiteralPath $backupRoot -PathType Container)) {
+                try {
+                    if (Test-Path -LiteralPath $target -PathType Container) { Remove-Item -LiteralPath $target -Recurse -Force -ErrorAction Stop }
+                    Move-Item -LiteralPath $backupRoot -Destination $target -ErrorAction Stop
+                    $targetMoved = $false
+                }
+                catch {
+                    Write-Warning "Automatische Wiederherstellung fehlgeschlagen. Sicherung: '$backupRoot'."
+                }
+            }
+            Write-AVLog -Message $_.Exception.Message -Level 'Error' -Event 'EngineUpdate'
+            throw
+        }
+        finally {
+
+            if (Test-Path -LiteralPath $temporaryRoot) { Remove-Item -LiteralPath $temporaryRoot -Recurse -Force -ErrorAction SilentlyContinue }
+            if (Test-Path -LiteralPath $stagingRoot) { Remove-Item -LiteralPath $stagingRoot -Recurse -Force -ErrorAction SilentlyContinue }
         }
     }
-    catch {
-        if ($targetMoved -and (Test-Path -LiteralPath $backupRoot -PathType Container)) {
-            try {
-                if (Test-Path -LiteralPath $target -PathType Container) { Remove-Item -LiteralPath $target -Recurse -Force -ErrorAction Stop }
-                Move-Item -LiteralPath $backupRoot -Destination $target -ErrorAction Stop
-                $targetMoved = $false
-            }
-            catch {
-                Write-Warning "Automatische Wiederherstellung fehlgeschlagen. Sicherung: '$backupRoot'."
-            }
-        }
-        Write-AVLog -Message $_.Exception.Message -Level 'Error' -Event 'EngineUpdate'
-        throw
-    }
-    finally {
-        Write-Progress -Activity 'ClamAV-Engine-Update' -Completed
-        if (Test-Path -LiteralPath $temporaryRoot) { Remove-Item -LiteralPath $temporaryRoot -Recurse -Force -ErrorAction SilentlyContinue }
-        if (Test-Path -LiteralPath $stagingRoot) { Remove-Item -LiteralPath $stagingRoot -Recurse -Force -ErrorAction SilentlyContinue }
-    }
+    catch { Complete-RemnexaProgress $remnexaWorkProgress -Outcome Failed; throw }
+    finally { if ($remnexaWorkProgress.Outcome -eq 'Running') { Complete-RemnexaProgress $remnexaWorkProgress } }
 }

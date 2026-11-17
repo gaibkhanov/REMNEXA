@@ -36,10 +36,13 @@ Import-Module -Name (Join-Path $PSScriptRoot 'Core\Logging.psd1') -Force -ErrorA
 Import-Module -Name (Join-Path $PSScriptRoot 'Core\Permissions.psd1') -Force -ErrorAction Stop
 Import-Module -Name (Join-Path $PSScriptRoot 'Core\OperationResults.psd1') -Force -ErrorAction Stop
 Import-Module -Name (Join-Path $PSScriptRoot 'Core\SystemSnapshot.psd1') -Force -ErrorAction Stop
+Import-Module -Name (Join-Path $PSScriptRoot 'Core\Progress.psd1') -ErrorAction Stop
+Import-Module -Name (Join-Path $PSScriptRoot 'Core\NativeProcess.psd1') -ErrorAction Stop
 Import-Module -Name (Join-Path $PSScriptRoot 'Core\SecurityAssessment.psd1') -Force -ErrorAction Stop
 
 $script:BrandName = 'REMNEXA'
-$script:CleanerVersion = '2.2.0-rc.1'
+$script:CleanerVersion = '2.2.0-rc.2'
+$script:OperationProgress = $null
 $script:RestartRequired = $false
 $script:ExitRequested = $false
 $script:LastRunLogPath = ''
@@ -143,6 +146,7 @@ function Initialize-DataMigration {
 function Initialize-AppSettings {
     Initialize-DataMigration
     $script:Language = Get-RemnexaLanguage -Path $script:SettingsPath -SupportedLanguages $script:LanguageCodes -FallbackLanguage 'de'
+    Set-RemnexaProgressLanguage -LanguageCode $script:Language
     Import-HistoryFromExistingLogs
 }
 
@@ -155,7 +159,9 @@ function Read-RemnexaInput {
     # The caller still handles its existing zero choice. Keep x/exit as quiet
     # compatibility aliases, but advertise just one exit option per prompt.
     if (-not $ExitOptionAlreadyShown) { Write-Host ('  [X] ' + (T 'ExitApplication')) -ForegroundColor DarkGray }
+    if (Get-Command Suspend-RemnexaProgress -ErrorAction SilentlyContinue) { Suspend-RemnexaProgress }
     $answer = Read-Host -Prompt $Prompt
+    if (Get-Command Resume-RemnexaProgress -ErrorAction SilentlyContinue) { Resume-RemnexaProgress }
     if ($null -eq $answer) { return '' }
     if ($answer.Trim() -ieq 'x' -or $answer.Trim() -ieq 'exit') {
         Stop-RemnexaApplication
@@ -167,6 +173,9 @@ function Stop-RemnexaApplication {
     $script:ExitRequested = $true
     try {
         Complete-OperationProgress
+        if (Get-Command Get-RemnexaActiveProgress -ErrorAction SilentlyContinue) {
+            while ($activeProgress = Get-RemnexaActiveProgress) { Complete-RemnexaProgress $activeProgress -Outcome Cancelled }
+        }
         Write-Status (T 'ProgramEnded') 'Success'
         if ($script:LogLines.Count -gt 0) {
             $exitLogPath = Save-ToolLog -Action ('SessionExit-' + [Guid]::NewGuid().ToString('N')) -Data ([PSCustomObject]@{
@@ -189,6 +198,7 @@ function Stop-RemnexaApplication {
 
 function Save-AppSettings {
     Save-RemnexaLanguage -Path $script:SettingsPath -Language $script:Language -SupportedLanguages $script:LanguageCodes
+    Set-RemnexaProgressLanguage -LanguageCode $script:Language
 }
 
 function Get-LanguageDisplayName {
@@ -213,6 +223,7 @@ function Write-Status {
         [ValidateSet('Info', 'Success', 'Warning', 'Error')][string]$Level = 'Info'
     )
 
+    if ($Level -in @('Warning','Error')) { Add-RemnexaProgressNotice -Level $Level }
     $color = switch ($Level) {
         'Success' { 'Green' }
         'Warning' { 'Yellow' }
@@ -317,12 +328,16 @@ function Set-OperationProgress {
         [Parameter(Mandatory = $true)][string]$Status
     )
 
-    Write-Progress -Activity $script:BrandName -Status (('{0}% - {1}' -f $Percent, $Status)) -PercentComplete $Percent
-    Write-Host ('[{0,3}%] {1}' -f $Percent, $Status) -ForegroundColor DarkCyan
+    # Legacy milestone values select phases; they are not measured percentages.
+    if (-not $script:OperationProgress -or $script:OperationProgress.Outcome -ne 'Running') {
+        $script:OperationProgress = New-RemnexaProgress -Activity $script:BrandName
+    }
+    Update-RemnexaProgress $script:OperationProgress -Status $Status -CurrentItem '' -Force
+    if ($Percent -eq 100) { Complete-RemnexaProgress $script:OperationProgress }
 }
 
 function Complete-OperationProgress {
-    Write-Progress -Activity $script:BrandName -Completed
+    if ($script:OperationProgress -and $script:OperationProgress.Outcome -eq 'Running') { Complete-RemnexaProgress $script:OperationProgress -Outcome Cancelled }
 }
 
 function Confirm-AdministratorRequest {
@@ -552,88 +567,93 @@ function Format-ByteSize {
 }
 
 function Get-InstalledPrograms {
-    $items = New-Object System.Collections.Generic.List[object]
-    $registryRoots = @(
-        'HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*',
-        'HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*',
-        'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*'
-    )
-
-    foreach ($entry in @(Get-ItemProperty -Path $registryRoots -ErrorAction SilentlyContinue)) {
-        $entryDisplayName = [string](Get-OptionalPropertyValue -InputObject $entry -PropertyName 'DisplayName')
-        if ([string]::IsNullOrWhiteSpace($entryDisplayName)) { continue }
-
-        $uninstallString = [string](Get-OptionalPropertyValue -InputObject $entry -PropertyName 'UninstallString')
-        $quietUninstallString = [string](Get-OptionalPropertyValue -InputObject $entry -PropertyName 'QuietUninstallString')
-        $systemComponent = [string](Get-OptionalPropertyValue -InputObject $entry -PropertyName 'SystemComponent')
-        $releaseType = [string](Get-OptionalPropertyValue -InputObject $entry -PropertyName 'ReleaseType')
-        $parentKeyName = [string](Get-OptionalPropertyValue -InputObject $entry -PropertyName 'ParentKeyName')
-        $publisher = [string](Get-OptionalPropertyValue -InputObject $entry -PropertyName 'Publisher')
-        $protectionMatch = Get-ProtectedComponentMatch -Program ([PSCustomObject]@{ DisplayName = $entryDisplayName; Publisher = $publisher }) -SearchName $entryDisplayName
-        $looksSystemLike = (
-            $systemComponent -eq '1' -or
-            -not [string]::IsNullOrWhiteSpace($parentKeyName) -or
-            $releaseType -match 'Update|Hotfix|Security|Rollup' -or
-            $entryDisplayName -match '^(Update für|Update for|Security Update|Sicherheitsupdate|Hotfix|KB\d+)' -or
-            $entryDisplayName -match '^Microsoft Visual C\+\+' -or
-            $entryDisplayName -match '^Microsoft \.NET' -or
-            $entryDisplayName -match 'Windows Desktop Runtime|WebView2.*(Runtime|Laufzeit)|Software Development Kit|\bSDK\b' -or
-            ($publisher -match '^Microsoft' -and $entryDisplayName -match 'Runtime|Laufzeit|Framework|Redistributable|Health Tools') -or
-            $entryDisplayName -match '\b(Driver|Treiberpaket)\b'
+    $remnexaWorkProgress = New-RemnexaProgress -Activity (Get-RemnexaProgressText 'ProgressTaskInventory') -Unit (Get-RemnexaProgressText 'ProgressUnitItems')
+    try {
+        $items = New-Object System.Collections.Generic.List[object]
+        $registryRoots = @(
+            'HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*',
+            'HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*',
+            'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*'
         )
 
-        $items.Add([PSCustomObject]@{
-            Type                 = 'Registry'
-            SourceLabel          = 'Desktop'
-            DisplayName          = $entryDisplayName
-            DisplayVersion       = [string](Get-OptionalPropertyValue -InputObject $entry -PropertyName 'DisplayVersion')
-            Publisher            = $publisher
-            InstallLocation      = [string](Get-OptionalPropertyValue -InputObject $entry -PropertyName 'InstallLocation')
-            InstallSource        = [string](Get-OptionalPropertyValue -InputObject $entry -PropertyName 'InstallSource')
-            UninstallString      = $uninstallString
-            QuietUninstallString = $quietUninstallString
-            RegistryPath         = [string](Get-OptionalPropertyValue -InputObject $entry -PropertyName 'PSPath')
-            ProductCode          = [string](Get-OptionalPropertyValue -InputObject $entry -PropertyName 'PSChildName')
-            PackageFullName      = ''
-            PackageName          = ''
-            IsSystemLike         = [bool]($looksSystemLike -or $null -ne $protectionMatch)
-            ProtectionCategory   = $(if ($null -ne $protectionMatch) { [string]$protectionMatch.Category } else { '' })
-            CanUninstall         = -not ([string]::IsNullOrWhiteSpace($uninstallString) -and [string]::IsNullOrWhiteSpace($quietUninstallString))
-        })
-    }
+        foreach ($entry in @(Get-ItemProperty -Path $registryRoots -ErrorAction SilentlyContinue)) {
+            $entryDisplayName = [string](Get-OptionalPropertyValue -InputObject $entry -PropertyName 'DisplayName')
+            if ([string]::IsNullOrWhiteSpace($entryDisplayName)) { continue }
 
-    try {
-        foreach ($package in @(Get-AppxPackage -ErrorAction SilentlyContinue)) {
-            $display = if ($package.Name) { [string]$package.Name } else { [string]$package.PackageFullName }
-            $isFramework = [bool](Get-OptionalPropertyValue -InputObject $package -PropertyName 'IsFramework')
-            $isResourcePackage = [bool](Get-OptionalPropertyValue -InputObject $package -PropertyName 'IsResourcePackage')
-            $nonRemovable = [bool](Get-OptionalPropertyValue -InputObject $package -PropertyName 'NonRemovable')
-            $protectionMatch = Get-ProtectedComponentMatch -Program $package -SearchName $display
+            $uninstallString = [string](Get-OptionalPropertyValue -InputObject $entry -PropertyName 'UninstallString')
+            $quietUninstallString = [string](Get-OptionalPropertyValue -InputObject $entry -PropertyName 'QuietUninstallString')
+            $systemComponent = [string](Get-OptionalPropertyValue -InputObject $entry -PropertyName 'SystemComponent')
+            $releaseType = [string](Get-OptionalPropertyValue -InputObject $entry -PropertyName 'ReleaseType')
+            $parentKeyName = [string](Get-OptionalPropertyValue -InputObject $entry -PropertyName 'ParentKeyName')
+            $publisher = [string](Get-OptionalPropertyValue -InputObject $entry -PropertyName 'Publisher')
+            $protectionMatch = Get-ProtectedComponentMatch -Program ([PSCustomObject]@{ DisplayName = $entryDisplayName; Publisher = $publisher }) -SearchName $entryDisplayName
+            $looksSystemLike = (
+                $systemComponent -eq '1' -or
+                -not [string]::IsNullOrWhiteSpace($parentKeyName) -or
+                $releaseType -match 'Update|Hotfix|Security|Rollup' -or
+                $entryDisplayName -match '^(Update für|Update for|Security Update|Sicherheitsupdate|Hotfix|KB\d+)' -or
+                $entryDisplayName -match '^Microsoft Visual C\+\+' -or
+                $entryDisplayName -match '^Microsoft \.NET' -or
+                $entryDisplayName -match 'Windows Desktop Runtime|WebView2.*(Runtime|Laufzeit)|Software Development Kit|\bSDK\b' -or
+                ($publisher -match '^Microsoft' -and $entryDisplayName -match 'Runtime|Laufzeit|Framework|Redistributable|Health Tools') -or
+                $entryDisplayName -match '\b(Driver|Treiberpaket)\b'
+            )
+
             $items.Add([PSCustomObject]@{
-                Type                 = 'Appx'
-                SourceLabel          = 'Store'
-                DisplayName          = $display
-                DisplayVersion       = [string]$package.Version
-                Publisher            = [string]$package.Publisher
-                InstallLocation      = [string]$package.InstallLocation
-                InstallSource        = ''
-                UninstallString      = ''
-                QuietUninstallString = ''
-                RegistryPath         = ''
-                ProductCode          = ''
-                PackageFullName      = [string]$package.PackageFullName
-                PackageName          = [string]$package.Name
-                IsSystemLike         = [bool]($isFramework -or $isResourcePackage -or $nonRemovable -or $null -ne $protectionMatch)
+                Type                 = 'Registry'
+                SourceLabel          = 'Desktop'
+                DisplayName          = $entryDisplayName
+                DisplayVersion       = [string](Get-OptionalPropertyValue -InputObject $entry -PropertyName 'DisplayVersion')
+                Publisher            = $publisher
+                InstallLocation      = [string](Get-OptionalPropertyValue -InputObject $entry -PropertyName 'InstallLocation')
+                InstallSource        = [string](Get-OptionalPropertyValue -InputObject $entry -PropertyName 'InstallSource')
+                UninstallString      = $uninstallString
+                QuietUninstallString = $quietUninstallString
+                RegistryPath         = [string](Get-OptionalPropertyValue -InputObject $entry -PropertyName 'PSPath')
+                ProductCode          = [string](Get-OptionalPropertyValue -InputObject $entry -PropertyName 'PSChildName')
+                PackageFullName      = ''
+                PackageName          = ''
+                IsSystemLike         = [bool]($looksSystemLike -or $null -ne $protectionMatch)
                 ProtectionCategory   = $(if ($null -ne $protectionMatch) { [string]$protectionMatch.Category } else { '' })
-                CanUninstall         = -not $nonRemovable
+                CanUninstall         = -not ([string]::IsNullOrWhiteSpace($uninstallString) -and [string]::IsNullOrWhiteSpace($quietUninstallString))
             })
         }
-    }
-    catch {
-        Write-Status (T 'StoreReadError' @($_.Exception.Message)) 'Warning'
-    }
 
-    return @($items | Sort-Object DisplayName, DisplayVersion, Type, RegistryPath -Unique)
+        try {
+            foreach ($package in @(Get-AppxPackage -ErrorAction SilentlyContinue)) {
+                $display = if ($package.Name) { [string]$package.Name } else { [string]$package.PackageFullName }
+                $isFramework = [bool](Get-OptionalPropertyValue -InputObject $package -PropertyName 'IsFramework')
+                $isResourcePackage = [bool](Get-OptionalPropertyValue -InputObject $package -PropertyName 'IsResourcePackage')
+                $nonRemovable = [bool](Get-OptionalPropertyValue -InputObject $package -PropertyName 'NonRemovable')
+                $protectionMatch = Get-ProtectedComponentMatch -Program $package -SearchName $display
+                $items.Add([PSCustomObject]@{
+                    Type                 = 'Appx'
+                    SourceLabel          = 'Store'
+                    DisplayName          = $display
+                    DisplayVersion       = [string]$package.Version
+                    Publisher            = [string]$package.Publisher
+                    InstallLocation      = [string]$package.InstallLocation
+                    InstallSource        = ''
+                    UninstallString      = ''
+                    QuietUninstallString = ''
+                    RegistryPath         = ''
+                    ProductCode          = ''
+                    PackageFullName      = [string]$package.PackageFullName
+                    PackageName          = [string]$package.Name
+                    IsSystemLike         = [bool]($isFramework -or $isResourcePackage -or $nonRemovable -or $null -ne $protectionMatch)
+                    ProtectionCategory   = $(if ($null -ne $protectionMatch) { [string]$protectionMatch.Category } else { '' })
+                    CanUninstall         = -not $nonRemovable
+                })
+            }
+        }
+        catch {
+            Write-Status (T 'StoreReadError' @($_.Exception.Message)) 'Warning'
+        }
+
+        return @($items | Sort-Object DisplayName, DisplayVersion, Type, RegistryPath -Unique)
+    }
+    catch { Complete-RemnexaProgress $remnexaWorkProgress -Outcome Failed; throw }
+    finally { if ($remnexaWorkProgress.Outcome -eq 'Running') { Complete-RemnexaProgress $remnexaWorkProgress } }
 }
 
 function Find-ProgramCandidates {
@@ -1216,34 +1236,39 @@ function Find-MatchingChildren {
         [int]$MaxDepth = 2,
         [bool]$Personal = $false
     )
+    $remnexaWorkProgress = New-RemnexaProgress -Activity (Get-RemnexaProgressText 'ProgressTaskTraceSearch') -Unit (Get-RemnexaProgressText 'ProgressUnitItems')
+    try {
+        if (-not (Test-Path -LiteralPath $Root)) { return }
+        $queue = New-Object System.Collections.Queue
+        $queue.Enqueue([PSCustomObject]@{ Path = $Root; Depth = 0 })
 
-    if (-not (Test-Path -LiteralPath $Root)) { return }
-    $queue = New-Object System.Collections.Queue
-    $queue.Enqueue([PSCustomObject]@{ Path = $Root; Depth = 0 })
-
-    while ($queue.Count -gt 0) {
-        $current = $queue.Dequeue()
-        foreach ($child in @(Get-ChildItem -LiteralPath $current.Path -Force -ErrorAction SilentlyContinue)) {
-            $isOwnData = $false
-            foreach ($ownDataRoot in @($script:DataRoot, $script:LegacyDataRoot)) {
-                if ($child.FullName.StartsWith($ownDataRoot + '\', [StringComparison]::OrdinalIgnoreCase) -or
-                    $child.FullName.Equals($ownDataRoot, [StringComparison]::OrdinalIgnoreCase)) {
-                    $isOwnData = $true
-                    break
+        while ($queue.Count -gt 0) {
+            $current = $queue.Dequeue()
+            Update-RemnexaProgress $remnexaWorkProgress -Completed ($remnexaWorkProgress.Completed + 1) -CurrentItem $current.Path
+            foreach ($child in @(Get-ChildItem -LiteralPath $current.Path -Force -ErrorAction SilentlyContinue)) {
+                $isOwnData = $false
+                foreach ($ownDataRoot in @($script:DataRoot, $script:LegacyDataRoot)) {
+                    if ($child.FullName.StartsWith($ownDataRoot + '\', [StringComparison]::OrdinalIgnoreCase) -or
+                        $child.FullName.Equals($ownDataRoot, [StringComparison]::OrdinalIgnoreCase)) {
+                        $isOwnData = $true
+                        break
+                    }
                 }
-            }
-            if ($isOwnData) {
-                continue
-            }
-            if (Test-NameMatch -Value $child.Name -Aliases $Aliases) {
-                Add-FileTraceIfSafe -Path $child.FullName -Reason 'Name passt zum ausgewählten Programm' -Personal $Personal
-                continue
-            }
-            if ($child.PSIsContainer -and $current.Depth -lt $MaxDepth -and (($child.Attributes -band [IO.FileAttributes]::ReparsePoint) -eq 0)) {
-                $queue.Enqueue([PSCustomObject]@{ Path = $child.FullName; Depth = $current.Depth + 1 })
+                if ($isOwnData) {
+                    continue
+                }
+                if (Test-NameMatch -Value $child.Name -Aliases $Aliases) {
+                    Add-FileTraceIfSafe -Path $child.FullName -Reason 'Name passt zum ausgewählten Programm' -Personal $Personal
+                    continue
+                }
+                if ($child.PSIsContainer -and $current.Depth -lt $MaxDepth -and (($child.Attributes -band [IO.FileAttributes]::ReparsePoint) -eq 0)) {
+                    $queue.Enqueue([PSCustomObject]@{ Path = $child.FullName; Depth = $current.Depth + 1 })
+                }
             }
         }
     }
+    catch { Complete-RemnexaProgress $remnexaWorkProgress -Outcome Failed; throw }
+    finally { if ($remnexaWorkProgress.Outcome -eq 'Running') { Complete-RemnexaProgress $remnexaWorkProgress } }
 }
 
 function Test-ProtectedRegistryKey {
@@ -1282,64 +1307,73 @@ function Find-RegistryTraces {
         [AllowEmptyString()][string]$DeepRegistryTerm,
         [AllowNull()][object]$Program
     )
+    $remnexaWorkProgress = New-RemnexaProgress -Activity (Get-RemnexaProgressText 'ProgressTaskRegistry') -Unit (Get-RemnexaProgressText 'ProgressUnitItems')
+    try {
+        if ($null -ne $Program -and $Program.RegistryPath) {
+            $nativePath = $Program.RegistryPath -replace '^Microsoft\.PowerShell\.Core\\Registry::', ''
+            Add-Trace -Kind 'RegistryKey' -Target $nativePath -Reason 'Deinstallationseintrag des ausgewählten Programms'
+        }
 
-    if ($null -ne $Program -and $Program.RegistryPath) {
-        $nativePath = $Program.RegistryPath -replace '^Microsoft\.PowerShell\.Core\\Registry::', ''
-        Add-Trace -Kind 'RegistryKey' -Target $nativePath -Reason 'Deinstallationseintrag des ausgewählten Programms'
-    }
-
-    # Maschinenweite Programmschlüssel werden bis zu zwei Ebenen tief anhand
-    # ihres Namens geprüft. Das vermeidet eine sehr langsame Volltextsuche durch
-    # sämtliche Windows- und Installer-Datenbanken.
-    foreach ($root in @(
-        'Registry::HKEY_LOCAL_MACHINE\Software',
-        'Registry::HKEY_LOCAL_MACHINE\Software\WOW6432Node',
-        'Registry::HKEY_CURRENT_USER\Software'
-    )) {
-        if (-not (Test-Path -LiteralPath $root)) { continue }
-        $queue = New-Object System.Collections.Queue
-        $queue.Enqueue([PSCustomObject]@{ Path = $root; Depth = 0 })
-        while ($queue.Count -gt 0) {
-            $current = $queue.Dequeue()
-            foreach ($child in @(Get-ChildItem -LiteralPath $current.Path -ErrorAction SilentlyContinue)) {
-                $nativePath = $child.Name
-                if ((Test-NameMatch -Value $child.PSChildName -Aliases $Aliases) -and -not (Test-ProtectedRegistryKey -RegistryPath $nativePath)) {
-                    Add-Trace -Kind 'RegistryKey' -Target $nativePath -Reason 'Programmspezifischer Registrierungsschlüssel'
-                    continue
+        # Maschinenweite Programmschlüssel werden bis zu zwei Ebenen tief anhand
+        # ihres Namens geprüft. Das vermeidet eine sehr langsame Volltextsuche durch
+        # sämtliche Windows- und Installer-Datenbanken.
+        foreach ($root in @(
+            'Registry::HKEY_LOCAL_MACHINE\Software',
+            'Registry::HKEY_LOCAL_MACHINE\Software\WOW6432Node',
+            'Registry::HKEY_CURRENT_USER\Software'
+        )) {
+            if (-not (Test-Path -LiteralPath $root)) { continue }
+            $queue = New-Object System.Collections.Queue
+            $queue.Enqueue([PSCustomObject]@{ Path = $root; Depth = 0 })
+            while ($queue.Count -gt 0) {
+                $current = $queue.Dequeue()
+                Update-RemnexaProgress $remnexaWorkProgress -Completed ($remnexaWorkProgress.Completed + 1) -CurrentItem $current.Path
+                foreach ($child in @(Get-ChildItem -LiteralPath $current.Path -ErrorAction SilentlyContinue)) {
+                    $nativePath = $child.Name
+                    if ((Test-NameMatch -Value $child.PSChildName -Aliases $Aliases) -and -not (Test-ProtectedRegistryKey -RegistryPath $nativePath)) {
+                        Add-Trace -Kind 'RegistryKey' -Target $nativePath -Reason 'Programmspezifischer Registrierungsschlüssel'
+                        continue
+                    }
+                    if ($current.Depth -lt 1 -and -not (Test-ProtectedRegistryKey -RegistryPath $nativePath)) {
+                        $queue.Enqueue([PSCustomObject]@{ Path = $child.PSPath; Depth = $current.Depth + 1 })
+                    }
                 }
-                if ($current.Depth -lt 1 -and -not (Test-ProtectedRegistryKey -RegistryPath $nativePath)) {
-                    $queue.Enqueue([PSCustomObject]@{ Path = $child.PSPath; Depth = $current.Depth + 1 })
+            }
+        }
+
+        # Eine einzige Volltextsuche im Benutzerbereich erfasst auch Verlaufseinträge
+        # wie MuiCache, AppCompat, Start-Kacheln und CloudStore.
+        if ([string]::IsNullOrWhiteSpace($DeepRegistryTerm)) { return }
+
+        $term = $DeepRegistryTerm
+        $progressUpdater = Get-Command Update-RemnexaProgress
+        $pulse = { param($Event) & $progressUpdater $remnexaWorkProgress -CurrentItem 'HKCU\Software' }.GetNewClosure()
+        $registryRun = Invoke-RemnexaNativeProcess -FilePath (Join-Path $env:WINDIR 'System32\reg.exe') -ArgumentList @('query','HKCU\Software','/f',$term,'/s') -TimeoutSeconds 600 -OnHeartbeat $pulse
+        if ($registryRun.ExitCode -notin @(0,1)) { throw 'Die Registry-Suche konnte nicht abgeschlossen werden.' }
+        $output = @($registryRun.StandardOutput -split '\r?\n')
+        $currentKey = ''
+        foreach ($line in $output) {
+            if ($line -match '^HKEY_') {
+                $currentKey = $line.Trim()
+                $leaf = ($currentKey -split '\\')[-1]
+                if ((Test-NameMatch -Value $leaf -Aliases $Aliases) -and -not (Test-ProtectedRegistryKey -RegistryPath $currentKey)) {
+                    Add-Trace -Kind 'RegistryKey' -Target $currentKey -Reason ('Registrierungsschlüssel enthält ' + $term)
+                }
+                continue
+            }
+
+            if (-not $currentKey -or (Test-ProtectedRegistryKey -RegistryPath $currentKey)) { continue }
+            if ($line -match '^\s{4}(.+?)\s{2,}(REG_[A-Z0-9_]+)\s{2,}(.*)$') {
+                $valueName = $matches[1].Trim()
+                $data = $matches[3]
+                if ((Test-NameMatch -Value $valueName -Aliases $Aliases) -or (Test-NameMatch -Value $data -Aliases $Aliases)) {
+                    Add-Trace -Kind 'RegistryValue' -Target $currentKey -ValueName $valueName -Reason ('Registrierungswert enthält ' + $term)
                 }
             }
         }
     }
-
-    # Eine einzige Volltextsuche im Benutzerbereich erfasst auch Verlaufseinträge
-    # wie MuiCache, AppCompat, Start-Kacheln und CloudStore.
-    if ([string]::IsNullOrWhiteSpace($DeepRegistryTerm)) { return }
-
-    $term = $DeepRegistryTerm
-    $output = @(& reg.exe query 'HKCU\Software' /f $term /s 2>$null)
-    $currentKey = ''
-    foreach ($line in $output) {
-        if ($line -match '^HKEY_') {
-            $currentKey = $line.Trim()
-            $leaf = ($currentKey -split '\\')[-1]
-            if ((Test-NameMatch -Value $leaf -Aliases $Aliases) -and -not (Test-ProtectedRegistryKey -RegistryPath $currentKey)) {
-                Add-Trace -Kind 'RegistryKey' -Target $currentKey -Reason ('Registrierungsschlüssel enthält ' + $term)
-            }
-            continue
-        }
-
-        if (-not $currentKey -or (Test-ProtectedRegistryKey -RegistryPath $currentKey)) { continue }
-        if ($line -match '^\s{4}(.+?)\s{2,}(REG_[A-Z0-9_]+)\s{2,}(.*)$') {
-            $valueName = $matches[1].Trim()
-            $data = $matches[3]
-            if ((Test-NameMatch -Value $valueName -Aliases $Aliases) -or (Test-NameMatch -Value $data -Aliases $Aliases)) {
-                Add-Trace -Kind 'RegistryValue' -Target $currentKey -ValueName $valueName -Reason ('Registrierungswert enthält ' + $term)
-            }
-        }
-    }
+    catch { Complete-RemnexaProgress $remnexaWorkProgress -Outcome Failed; throw }
+    finally { if ($remnexaWorkProgress.Outcome -eq 'Running') { Complete-RemnexaProgress $remnexaWorkProgress } }
 }
 
 function Find-ServiceAndTaskTraces {
@@ -1347,45 +1381,49 @@ function Find-ServiceAndTaskTraces {
         [Parameter(Mandatory = $true)][string[]]$Aliases,
         [Parameter(Mandatory = $true)][AllowEmptyCollection()][string[]]$InstallPaths
     )
-
+    $remnexaWorkProgress = New-RemnexaProgress -Activity (Get-RemnexaProgressText 'ProgressTaskServices') -Unit (Get-RemnexaProgressText 'ProgressUnitItems')
     try {
-        foreach ($service in @(Get-CimInstance Win32_Service -ErrorAction SilentlyContinue)) {
-            $combined = ([string]$service.Name) + ' ' + ([string]$service.DisplayName) + ' ' + ([string]$service.PathName)
-            $pathMatch = $false
-            foreach ($path in $InstallPaths) {
-                if ($path -and $combined.IndexOf($path, [StringComparison]::OrdinalIgnoreCase) -ge 0) { $pathMatch = $true; break }
-            }
-            if ($pathMatch -or (Test-NameMatch -Value $combined -Aliases $Aliases)) {
-                Add-Trace -Kind 'Service' -Target ([string]$service.Name) -Reason ([string]$service.DisplayName)
+        try {
+            foreach ($service in @(Get-CimInstance Win32_Service -ErrorAction SilentlyContinue)) {
+                $combined = ([string]$service.Name) + ' ' + ([string]$service.DisplayName) + ' ' + ([string]$service.PathName)
+                $pathMatch = $false
+                foreach ($path in $InstallPaths) {
+                    if ($path -and $combined.IndexOf($path, [StringComparison]::OrdinalIgnoreCase) -ge 0) { $pathMatch = $true; break }
+                }
+                if ($pathMatch -or (Test-NameMatch -Value $combined -Aliases $Aliases)) {
+                    Add-Trace -Kind 'Service' -Target ([string]$service.Name) -Reason ([string]$service.DisplayName)
+                }
             }
         }
-    }
-    catch {
-        Write-Status (T 'ServicesReadError' @($_.Exception.Message)) 'Warning'
-    }
+        catch {
+            Write-Status (T 'ServicesReadError' @($_.Exception.Message)) 'Warning'
+        }
 
-    try {
-        foreach ($task in @(Get-ScheduledTask -ErrorAction SilentlyContinue)) {
-            $actionTextParts = New-Object System.Collections.Generic.List[string]
-            foreach ($action in @((Get-OptionalPropertyValue -InputObject $task -PropertyName 'Actions'))) {
-                $execute = [string](Get-OptionalPropertyValue -InputObject $action -PropertyName 'Execute')
-                $arguments = [string](Get-OptionalPropertyValue -InputObject $action -PropertyName 'Arguments')
-                if ($execute -or $arguments) { $actionTextParts.Add($execute + ' ' + $arguments) }
-            }
-            $actionText = $actionTextParts -join ' '
-            $combined = ([string]$task.TaskName) + ' ' + ([string]$task.TaskPath) + ' ' + $actionText
-            $pathMatch = $false
-            foreach ($path in $InstallPaths) {
-                if ($path -and $combined.IndexOf($path, [StringComparison]::OrdinalIgnoreCase) -ge 0) { $pathMatch = $true; break }
-            }
-            if ($pathMatch -or (Test-NameMatch -Value $combined -Aliases $Aliases)) {
-                Add-Trace -Kind 'Task' -Target (([string]$task.TaskPath) + ([string]$task.TaskName)) -Reason 'Geplante Aufgabe'
+        try {
+            foreach ($task in @(Get-ScheduledTask -ErrorAction SilentlyContinue)) {
+                $actionTextParts = New-Object System.Collections.Generic.List[string]
+                foreach ($action in @((Get-OptionalPropertyValue -InputObject $task -PropertyName 'Actions'))) {
+                    $execute = [string](Get-OptionalPropertyValue -InputObject $action -PropertyName 'Execute')
+                    $arguments = [string](Get-OptionalPropertyValue -InputObject $action -PropertyName 'Arguments')
+                    if ($execute -or $arguments) { $actionTextParts.Add($execute + ' ' + $arguments) }
+                }
+                $actionText = $actionTextParts -join ' '
+                $combined = ([string]$task.TaskName) + ' ' + ([string]$task.TaskPath) + ' ' + $actionText
+                $pathMatch = $false
+                foreach ($path in $InstallPaths) {
+                    if ($path -and $combined.IndexOf($path, [StringComparison]::OrdinalIgnoreCase) -ge 0) { $pathMatch = $true; break }
+                }
+                if ($pathMatch -or (Test-NameMatch -Value $combined -Aliases $Aliases)) {
+                    Add-Trace -Kind 'Task' -Target (([string]$task.TaskPath) + ([string]$task.TaskName)) -Reason 'Geplante Aufgabe'
+                }
             }
         }
+        catch {
+            Write-Status (T 'TasksReadError' @($_.Exception.Message)) 'Warning'
+        }
     }
-    catch {
-        Write-Status (T 'TasksReadError' @($_.Exception.Message)) 'Warning'
-    }
+    catch { Complete-RemnexaProgress $remnexaWorkProgress -Outcome Failed; throw }
+    finally { if ($remnexaWorkProgress.Outcome -eq 'Running') { Complete-RemnexaProgress $remnexaWorkProgress } }
 }
 
 function Find-AllTraces {
@@ -1394,51 +1432,55 @@ function Find-AllTraces {
         [AllowNull()][object]$Program,
         [bool]$WithUserFiles = $false
     )
-
-    $script:TraceIndex = @{}
-    foreach ($path in $Identity.InstallPaths) {
-        Add-FileTraceIfSafe -Path $path -Reason 'Installationspfad des ausgewählten Programms'
-    }
-
-    $systemRoots = @(
-        @{ Path = $env:ProgramFiles; Depth = 2 },
-        @{ Path = ${env:ProgramFiles(x86)}; Depth = 2 },
-        @{ Path = $env:ProgramData; Depth = 2 },
-        @{ Path = $env:LOCALAPPDATA; Depth = 2 },
-        @{ Path = $env:APPDATA; Depth = 2 },
-        @{ Path = $env:TEMP; Depth = 1 },
-        @{ Path = (Join-Path $env:APPDATA 'Microsoft\Windows\Start Menu\Programs'); Depth = 4 },
-        @{ Path = (Join-Path $env:ProgramData 'Microsoft\Windows\Start Menu\Programs'); Depth = 4 }
-    )
-
-    foreach ($root in $systemRoots) {
-        if ($root.Path) {
-            Find-MatchingChildren -Root $root.Path -Aliases $Identity.Aliases -MaxDepth $root.Depth
-        }
-    }
-
+    $remnexaWorkProgress = New-RemnexaProgress -Activity (Get-RemnexaProgressText 'ProgressTaskTraceSearch') -Unit (Get-RemnexaProgressText 'ProgressUnitItems')
     try {
-        $systemDriveRoot = [IO.Path]::GetPathRoot($env:WINDIR)
-        Find-MatchingChildren -Root $systemDriveRoot -Aliases $Identity.Aliases -MaxDepth 0
-    }
-    catch { }
-
-    $prefetch = Join-Path $env:WINDIR 'Prefetch'
-    Find-MatchingChildren -Root $prefetch -Aliases $Identity.Aliases -MaxDepth 0
-
-    if ($WithUserFiles) {
-        foreach ($personalRoot in @(
-            (Join-Path $env:USERPROFILE 'Desktop'),
-            (Join-Path $env:USERPROFILE 'Documents'),
-            (Join-Path $env:USERPROFILE 'Downloads')
-        )) {
-            Find-MatchingChildren -Root $personalRoot -Aliases $Identity.Aliases -MaxDepth 4 -Personal $true
+        $script:TraceIndex = @{}
+        foreach ($path in $Identity.InstallPaths) {
+            Add-FileTraceIfSafe -Path $path -Reason 'Installationspfad des ausgewählten Programms'
         }
-    }
 
-    Find-RegistryTraces -Aliases $Identity.Aliases -DeepRegistryTerm $Identity.DeepRegistryTerm -Program $Program
-    Find-ServiceAndTaskTraces -Aliases $Identity.Aliases -InstallPaths $Identity.InstallPaths
-    return @($script:TraceIndex.Values | Sort-Object Kind, Target, ValueName)
+        $systemRoots = @(
+            @{ Path = $env:ProgramFiles; Depth = 2 },
+            @{ Path = ${env:ProgramFiles(x86)}; Depth = 2 },
+            @{ Path = $env:ProgramData; Depth = 2 },
+            @{ Path = $env:LOCALAPPDATA; Depth = 2 },
+            @{ Path = $env:APPDATA; Depth = 2 },
+            @{ Path = $env:TEMP; Depth = 1 },
+            @{ Path = (Join-Path $env:APPDATA 'Microsoft\Windows\Start Menu\Programs'); Depth = 4 },
+            @{ Path = (Join-Path $env:ProgramData 'Microsoft\Windows\Start Menu\Programs'); Depth = 4 }
+        )
+
+        foreach ($root in $systemRoots) {
+            if ($root.Path) {
+                Find-MatchingChildren -Root $root.Path -Aliases $Identity.Aliases -MaxDepth $root.Depth
+            }
+        }
+
+        try {
+            $systemDriveRoot = [IO.Path]::GetPathRoot($env:WINDIR)
+            Find-MatchingChildren -Root $systemDriveRoot -Aliases $Identity.Aliases -MaxDepth 0
+        }
+        catch { }
+
+        $prefetch = Join-Path $env:WINDIR 'Prefetch'
+        Find-MatchingChildren -Root $prefetch -Aliases $Identity.Aliases -MaxDepth 0
+
+        if ($WithUserFiles) {
+            foreach ($personalRoot in @(
+                (Join-Path $env:USERPROFILE 'Desktop'),
+                (Join-Path $env:USERPROFILE 'Documents'),
+                (Join-Path $env:USERPROFILE 'Downloads')
+            )) {
+                Find-MatchingChildren -Root $personalRoot -Aliases $Identity.Aliases -MaxDepth 4 -Personal $true
+            }
+        }
+
+        Find-RegistryTraces -Aliases $Identity.Aliases -DeepRegistryTerm $Identity.DeepRegistryTerm -Program $Program
+        Find-ServiceAndTaskTraces -Aliases $Identity.Aliases -InstallPaths $Identity.InstallPaths
+        return @($script:TraceIndex.Values | Sort-Object Kind, Target, ValueName)
+    }
+    catch { Complete-RemnexaProgress $remnexaWorkProgress -Outcome Failed; throw }
+    finally { if ($remnexaWorkProgress.Outcome -eq 'Running') { Complete-RemnexaProgress $remnexaWorkProgress } }
 }
 
 function Show-TraceSummary {
@@ -1489,33 +1531,37 @@ function Read-TraceDeletionConfirmation {
 
 function New-RestorePointIfPossible {
     param([Parameter(Mandatory = $true)][string]$ProgramName)
-
-    if ($NoRestorePoint) {
-        Write-Status (T 'RestoreSkipped') 'Warning'
-        return $true
-    }
+    $remnexaWorkProgress = New-RemnexaProgress -Activity (Get-RemnexaProgressText 'ProgressTaskBackup') -Unit (Get-RemnexaProgressText 'ProgressUnitItems')
     try {
-        $description = 'REMNEXA-' + [Guid]::NewGuid().ToString('N') + ': ' + $ProgramName
-        Checkpoint-Computer -Description $description -RestorePointType MODIFY_SETTINGS -ErrorAction Stop -WarningAction SilentlyContinue
-        $created = @(Get-ComputerRestorePoint -ErrorAction Stop | Where-Object { $_.Description -eq $description })
-        if ($created.Count -eq 0) { throw (T 'RestorePointUnverified') }
-        Write-Status (T 'RestorePointDone') 'Success'
-        return $true
-    }
-    catch {
-        Write-Status (T 'RestorePointFailed') 'Error'
-        Write-Status $_.Exception.Message 'Warning'
-        Write-Status (T 'RestoreBlocked') 'Error'
-        if (-not $script:InteractiveSession) { return $false }
-        Write-Host ('  [1] ' + (T 'RestoreAbort'))
-        Write-Host ('  [2] ' + (T 'RestoreContinue')) -ForegroundColor Red
-        while ($true) {
-            $answer = (Read-RemnexaInput (T 'SelectPrompt')).Trim()
-            if ($answer -eq '1') { return $false }
-            if ($answer -eq '2') { return $true }
-            Write-Status (T 'InvalidRestore') 'Warning'
+        if ($NoRestorePoint) {
+            Write-Status (T 'RestoreSkipped') 'Warning'
+            return $true
+        }
+        try {
+            $description = 'REMNEXA-' + [Guid]::NewGuid().ToString('N') + ': ' + $ProgramName
+            Checkpoint-Computer -Description $description -RestorePointType MODIFY_SETTINGS -ErrorAction Stop -WarningAction SilentlyContinue
+            $created = @(Get-ComputerRestorePoint -ErrorAction Stop | Where-Object { $_.Description -eq $description })
+            if ($created.Count -eq 0) { throw (T 'RestorePointUnverified') }
+            Write-Status (T 'RestorePointDone') 'Success'
+            return $true
+        }
+        catch {
+            Write-Status (T 'RestorePointFailed') 'Error'
+            Write-Status $_.Exception.Message 'Warning'
+            Write-Status (T 'RestoreBlocked') 'Error'
+            if (-not $script:InteractiveSession) { return $false }
+            Write-Host ('  [1] ' + (T 'RestoreAbort'))
+            Write-Host ('  [2] ' + (T 'RestoreContinue')) -ForegroundColor Red
+            while ($true) {
+                $answer = (Read-RemnexaInput (T 'SelectPrompt')).Trim()
+                if ($answer -eq '1') { return $false }
+                if ($answer -eq '2') { return $true }
+                Write-Status (T 'InvalidRestore') 'Warning'
+            }
         }
     }
+    catch { Complete-RemnexaProgress $remnexaWorkProgress -Outcome Failed; throw }
+    finally { if ($remnexaWorkProgress.Outcome -eq 'Running') { Complete-RemnexaProgress $remnexaWorkProgress } }
 }
 
 function Invoke-SelectedUninstall {
@@ -1523,63 +1569,70 @@ function Invoke-SelectedUninstall {
         [Parameter(Mandatory = $true)][object]$Program,
         [bool]$RemoveProvisioned = $false
     )
-
-    if ($Program.Type -eq 'Appx') {
-        $script:ProvisionedRemovedCount = 0
-        Write-Status (T 'StoreRemoving' @($Program.DisplayName))
-        Remove-AppxPackage -Package $Program.PackageFullName -ErrorAction Stop
-        if ($RemoveProvisioned) {
-            $packageName = [string]$Program.PackageName
-            $provisioned = @(Get-AppxProvisionedPackage -Online -ErrorAction Stop | Where-Object {
-                $_.DisplayName -eq $packageName -or $_.PackageName -like ($packageName + '_*')
-            })
-            foreach ($package in $provisioned) {
-                Remove-AppxProvisionedPackage -Online -PackageName $package.PackageName -ErrorAction Stop | Out-Null
-                $script:ProvisionedRemovedCount++
+    $remnexaWorkProgress = New-RemnexaProgress -Activity (Get-RemnexaProgressText 'ProgressTaskUninstall') -Unit (Get-RemnexaProgressText 'ProgressUnitItems')
+    try {
+        if ($Program.Type -eq 'Appx') {
+            $script:ProvisionedRemovedCount = 0
+            Write-Status (T 'StoreRemoving' @($Program.DisplayName))
+            Remove-AppxPackage -Package $Program.PackageFullName -ErrorAction Stop
+            if ($RemoveProvisioned) {
+                $packageName = [string]$Program.PackageName
+                $provisioned = @(Get-AppxProvisionedPackage -Online -ErrorAction Stop | Where-Object {
+                    $_.DisplayName -eq $packageName -or $_.PackageName -like ($packageName + '_*')
+                })
+                foreach ($package in $provisioned) {
+                    Remove-AppxProvisionedPackage -Online -PackageName $package.PackageName -ErrorAction Stop | Out-Null
+                    $script:ProvisionedRemovedCount++
+                }
+                Write-Status (T 'AppxProvisionedDone' @($script:ProvisionedRemovedCount)) 'Success'
             }
-            Write-Status (T 'AppxProvisionedDone' @($script:ProvisionedRemovedCount)) 'Success'
+            return
         }
-        return
-    }
 
-    $commandLine = if ($Program.QuietUninstallString) { $Program.QuietUninstallString } else { $Program.UninstallString }
-    if ([string]::IsNullOrWhiteSpace($commandLine)) {
-        throw 'Das Programm besitzt kein verwendbares Deinstallationskommando.'
-    }
+        $commandLine = if ($Program.QuietUninstallString) { $Program.QuietUninstallString } else { $Program.UninstallString }
+        if ([string]::IsNullOrWhiteSpace($commandLine)) {
+            throw 'Das Programm besitzt kein verwendbares Deinstallationskommando.'
+        }
 
-    $guid = ''
-    foreach ($candidate in @($Program.ProductCode, $commandLine)) {
-        if ([string]$candidate -match '\{[0-9A-Fa-f-]{36}\}') { $guid = $matches[0]; break }
-    }
+        $guid = ''
+        foreach ($candidate in @($Program.ProductCode, $commandLine)) {
+            if ([string]$candidate -match '\{[0-9A-Fa-f-]{36}\}') { $guid = $matches[0]; break }
+        }
 
-    if ($guid) {
-        $file = Join-Path $env:WINDIR 'System32\msiexec.exe'
-        $arguments = '/x ' + $guid + ' /qn /norestart'
-    }
-    else {
-        $split = Split-CommandLine -CommandLine $commandLine
-        $file = $split[0]
-        $arguments = $split[1]
-    }
-
-    if (-not (Test-Path -LiteralPath $file)) {
-        $resolvedCommand = Get-Command -Name $file -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
-        if ($resolvedCommand) {
-            $file = $resolvedCommand.Source
+        if ($guid) {
+            $file = Join-Path $env:WINDIR 'System32\msiexec.exe'
+            $arguments = '/x ' + $guid + ' /qn /norestart'
         }
         else {
-            throw ('Deinstallationsprogramm nicht gefunden: ' + $file)
+            $split = Split-CommandLine -CommandLine $commandLine
+            $file = $split[0]
+            $arguments = $split[1]
         }
-    }
 
-    Write-Status (T 'UninstallRunning' @($Program.DisplayName))
-    $process = Start-Process -FilePath $file -ArgumentList $arguments -Wait -PassThru
-    $accepted = @(0, 1605, 1614, 1641, 3010)
-    if ($accepted -notcontains $process.ExitCode) {
-        throw ('Die Deinstallation meldete Exitcode ' + $process.ExitCode + '.')
+        if (-not (Test-Path -LiteralPath $file)) {
+            $resolvedCommand = Get-Command -Name $file -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
+            if ($resolvedCommand) {
+                $file = $resolvedCommand.Source
+            }
+            else {
+                throw ('Deinstallationsprogramm nicht gefunden: ' + $file)
+            }
+        }
+
+        Write-Status (T 'UninstallRunning' @($Program.DisplayName))
+        Update-RemnexaProgress $remnexaWorkProgress -CurrentItem $Program.DisplayName -Force
+        # Preserve Start-Process -Wait's Windows descendant-wait behavior.
+        # The vendor installer owns this blocking phase; do not guess a percent.
+        $process = Start-Process -FilePath $file -ArgumentList $arguments -Wait -PassThru
+        $accepted = @(0, 1605, 1614, 1641, 3010)
+        if ($accepted -notcontains $process.ExitCode) {
+            throw ('Die Deinstallation meldete Exitcode ' + $process.ExitCode + '.')
+        }
+        if ($process.ExitCode -in @(1641, 3010)) { $script:RestartRequired = $true }
+        Write-Status (T 'UninstallDone') 'Success'
     }
-    if ($process.ExitCode -in @(1641, 3010)) { $script:RestartRequired = $true }
-    Write-Status (T 'UninstallDone') 'Success'
+    catch { Complete-RemnexaProgress $remnexaWorkProgress -Outcome Failed; throw }
+    finally { if ($remnexaWorkProgress.Outcome -eq 'Running') { Complete-RemnexaProgress $remnexaWorkProgress } }
 }
 
 function Remove-RegistryTrace {
@@ -1607,80 +1660,91 @@ function Remove-RegistryTrace {
 
 function Remove-Traces {
     param([Parameter(Mandatory = $true)][AllowEmptyCollection()][object[]]$Traces)
+    $remnexaWorkProgress = New-RemnexaProgress -Activity (Get-RemnexaProgressText 'ProgressTaskCleanup') -Unit (Get-RemnexaProgressText 'ProgressUnitItems')
+    try {
+        $removed = 0
+        $failed = New-Object System.Collections.Generic.List[string]
+        $skipped = New-Object System.Collections.Generic.List[object]
 
-    $removed = 0
-    $failed = New-Object System.Collections.Generic.List[string]
-    $skipped = New-Object System.Collections.Generic.List[object]
-
-    # Only successful key deletions cover child values. A denied parent must not
-    # silently suppress a later attempt to remove an individually writable value.
-    $removedKeys = New-Object System.Collections.Generic.List[string]
-    $coveredCount = 0
-    $ordered = @($Traces | Sort-Object @{
-        Expression = {
-            switch ($_.Kind) {
-                'Service' { 0 }
-                'Task' { 1 }
-                'RegistryKey' { 2 }
-                'RegistryValue' { 3 }
-                'File' { 4 }
-                'Directory' { 5 }
-                default { 9 }
+        # Only successful key deletions cover child values. A denied parent must not
+        # silently suppress a later attempt to remove an individually writable value.
+        $removedKeys = New-Object System.Collections.Generic.List[string]
+        $coveredCount = 0
+        $ordered = @($Traces | Sort-Object @{
+            Expression = {
+                switch ($_.Kind) {
+                    'Service' { 0 }
+                    'Task' { 1 }
+                    'RegistryKey' { 2 }
+                    'RegistryValue' { 3 }
+                    'File' { 4 }
+                    'Directory' { 5 }
+                    default { 9 }
+                }
             }
-        }
-    })
+        })
 
-    foreach ($trace in $ordered) {
-        try {
-            if ($trace.Kind -in @('File', 'Directory') -and (Test-RemnexaWindowsManagedPath -Path $trace.Target)) {
-                $skipped.Add([PSCustomObject]@{ Kind = $trace.Kind; Target = $trace.Target; Reason = 'WindowsManaged' })
-                continue
-            }
-            if ($trace.Kind -in @('RegistryKey', 'RegistryValue')) {
-                $covered = @($removedKeys | Where-Object { $trace.Target.StartsWith($_ + '\', [StringComparison]::OrdinalIgnoreCase) -or $trace.Target.Equals($_, [StringComparison]::OrdinalIgnoreCase) }).Count -gt 0
-                if ($covered) { $coveredCount++; continue }
-            }
+        $processedTraces = 0
+        Update-RemnexaProgress $remnexaWorkProgress -Total $ordered.Count
+        foreach ($trace in $ordered) {
+            try {
+                if ($trace.Kind -in @('File', 'Directory') -and (Test-RemnexaWindowsManagedPath -Path $trace.Target)) {
+                    $skipped.Add([PSCustomObject]@{ Kind = $trace.Kind; Target = $trace.Target; Reason = 'WindowsManaged' })
+                    continue
+                }
+                if ($trace.Kind -in @('RegistryKey', 'RegistryValue')) {
+                    $covered = @($removedKeys | Where-Object { $trace.Target.StartsWith($_ + '\', [StringComparison]::OrdinalIgnoreCase) -or $trace.Target.Equals($_, [StringComparison]::OrdinalIgnoreCase) }).Count -gt 0
+                    if ($covered) { $coveredCount++; continue }
+                }
 
-            switch ($trace.Kind) {
-                'File' {
-                    if (Test-Path -LiteralPath $trace.Target) {
-                        if (Test-ProtectedFilePath -Path $trace.Target) { throw 'Dateipfad ist geschuetzt, verlinkt oder nicht vollstaendig pruefbar.' }
-                        Remove-Item -LiteralPath $trace.Target -Force -ErrorAction Stop
+                switch ($trace.Kind) {
+                    'File' {
+                        if (Test-Path -LiteralPath $trace.Target) {
+                            if (Test-ProtectedFilePath -Path $trace.Target) { throw 'Dateipfad ist geschuetzt, verlinkt oder nicht vollstaendig pruefbar.' }
+                            Remove-Item -LiteralPath $trace.Target -Force -ErrorAction Stop
+                        }
+                    }
+                    'Directory' {
+                        if (Test-Path -LiteralPath $trace.Target) {
+                            if (Test-ProtectedFilePath -Path $trace.Target) { throw 'Ordnerpfad ist geschuetzt, verlinkt oder nicht vollstaendig pruefbar.' }
+                            Remove-Item -LiteralPath $trace.Target -Recurse -Force -ErrorAction Stop
+                        }
+                    }
+                    'RegistryKey' { Remove-RegistryTrace -Trace $trace; $removedKeys.Add($trace.Target.TrimEnd('\')) }
+                    'RegistryValue' { Remove-RegistryTrace -Trace $trace }
+                    'Service' {
+                        $service = Get-Service -Name $trace.Target -ErrorAction SilentlyContinue
+                        if ($service) {
+                            if ($service.Status -ne 'Stopped') { Stop-Service -Name $trace.Target -Force -ErrorAction SilentlyContinue }
+                            & sc.exe delete $trace.Target | Out-Null
+                            if ($LASTEXITCODE -ne 0) { throw ('Dienst konnte nicht gelöscht werden: ' + $trace.Target) }
+                        }
+                    }
+                    'Task' {
+                        $lastSlash = $trace.Target.LastIndexOf('\')
+                        $taskPath = if ($lastSlash -ge 0) { $trace.Target.Substring(0, $lastSlash + 1) } else { '\' }
+                        $taskName = if ($lastSlash -ge 0) { $trace.Target.Substring($lastSlash + 1) } else { $trace.Target }
+                        Unregister-ScheduledTask -TaskPath $taskPath -TaskName $taskName -Confirm:$false -ErrorAction SilentlyContinue
                     }
                 }
-                'Directory' {
-                    if (Test-Path -LiteralPath $trace.Target) {
-                        if (Test-ProtectedFilePath -Path $trace.Target) { throw 'Ordnerpfad ist geschuetzt, verlinkt oder nicht vollstaendig pruefbar.' }
-                        Remove-Item -LiteralPath $trace.Target -Recurse -Force -ErrorAction Stop
-                    }
-                }
-                'RegistryKey' { Remove-RegistryTrace -Trace $trace; $removedKeys.Add($trace.Target.TrimEnd('\')) }
-                'RegistryValue' { Remove-RegistryTrace -Trace $trace }
-                'Service' {
-                    $service = Get-Service -Name $trace.Target -ErrorAction SilentlyContinue
-                    if ($service) {
-                        if ($service.Status -ne 'Stopped') { Stop-Service -Name $trace.Target -Force -ErrorAction SilentlyContinue }
-                        & sc.exe delete $trace.Target | Out-Null
-                        if ($LASTEXITCODE -ne 0) { throw ('Dienst konnte nicht gelöscht werden: ' + $trace.Target) }
-                    }
-                }
-                'Task' {
-                    $lastSlash = $trace.Target.LastIndexOf('\')
-                    $taskPath = if ($lastSlash -ge 0) { $trace.Target.Substring(0, $lastSlash + 1) } else { '\' }
-                    $taskName = if ($lastSlash -ge 0) { $trace.Target.Substring($lastSlash + 1) } else { $trace.Target }
-                    Unregister-ScheduledTask -TaskPath $taskPath -TaskName $taskName -Confirm:$false -ErrorAction SilentlyContinue
-                }
+                $removed++
             }
-            $removed++
+            catch {
+                $failureText = $trace.Target
+                if ($_.Exception -is [UnauthorizedAccessException] -or $_.FullyQualifiedErrorId -match 'UnauthorizedAccess|PermissionDenied') { $failureText = T 'TraceAccessDenied' @($trace.Target) }
+                $failed.Add($failureText + ' :: ' + $_.Exception.Message)
+            }
+            finally {
+                $processedTraces++
+                Update-RemnexaProgress $remnexaWorkProgress -Completed $processedTraces -CurrentItem $trace.Target
+            }
         }
-        catch {
-            $failureText = $trace.Target
-            if ($_.Exception -is [UnauthorizedAccessException] -or $_.FullyQualifiedErrorId -match 'UnauthorizedAccess|PermissionDenied') { $failureText = T 'TraceAccessDenied' @($trace.Target) }
-            $failed.Add($failureText + ' :: ' + $_.Exception.Message)
-        }
+        if ($failed.Count -gt 0 -or $skipped.Count -gt 0) { Add-RemnexaProgressNotice -Level Warning }
+
+        return [PSCustomObject]@{ Removed = $removed; Failed = $failed.ToArray(); Skipped = $skipped.ToArray(); CoveredByParent = $coveredCount }
     }
-
-    return [PSCustomObject]@{ Removed = $removed; Failed = $failed.ToArray(); Skipped = $skipped.ToArray(); CoveredByParent = $coveredCount }
+    catch { Complete-RemnexaProgress $remnexaWorkProgress -Outcome Failed; throw }
+    finally { if ($remnexaWorkProgress.Outcome -eq 'Running') { Complete-RemnexaProgress $remnexaWorkProgress } }
 }
 
 function Save-RunLog {
@@ -1747,93 +1811,98 @@ function Save-ToolLog {
 }
 
 function Test-SystemIntegrity {
-    $checks = New-Object System.Collections.Generic.List[object]
-    $warnings = New-Object System.Collections.Generic.List[string]
-    $serviceRules = @(
-        [PSCustomObject]@{ Name = 'wuauserv'; Display = 'Windows Update' },
-        [PSCustomObject]@{ Name = 'BITS'; Display = 'Background Intelligent Transfer Service' },
-        [PSCustomObject]@{ Name = 'SecurityHealthService'; Display = 'Windows Security Health' },
-        [PSCustomObject]@{ Name = 'InstallService'; Display = 'Microsoft Store Install Service' }
-    )
+    $remnexaWorkProgress = New-RemnexaProgress -Activity (Get-RemnexaProgressText 'ProgressTaskStatus') -Unit (Get-RemnexaProgressText 'ProgressUnitItems')
+    try {
+        $checks = New-Object System.Collections.Generic.List[object]
+        $warnings = New-Object System.Collections.Generic.List[string]
+        $serviceRules = @(
+            [PSCustomObject]@{ Name = 'wuauserv'; Display = 'Windows Update' },
+            [PSCustomObject]@{ Name = 'BITS'; Display = 'Background Intelligent Transfer Service' },
+            [PSCustomObject]@{ Name = 'SecurityHealthService'; Display = 'Windows Security Health' },
+            [PSCustomObject]@{ Name = 'InstallService'; Display = 'Microsoft Store Install Service' }
+        )
 
-    Write-Host ''
-    Write-Host (T 'IntegrityTitle') -ForegroundColor White
-    foreach ($rule in $serviceRules) {
-        $state = 'Unknown'
-        $startMode = 'Unknown'
-        $severity = 'Info'
-        $detail = ''
+        Write-Host ''
+        Write-Host (T 'IntegrityTitle') -ForegroundColor White
+        foreach ($rule in $serviceRules) {
+            $state = 'Unknown'
+            $startMode = 'Unknown'
+            $severity = 'Info'
+            $detail = ''
+            try {
+                $service = Get-CimInstance -ClassName Win32_Service -Filter ("Name='" + $rule.Name + "'") -ErrorAction Stop
+                if ($null -eq $service) { throw 'Service was not returned.' }
+                $state = [string]$service.State
+                $startMode = [string]$service.StartMode
+                if ($startMode -eq 'Disabled') { $messageKey = 'ServiceDisabled'; $severity = 'Warning' }
+                elseif ($state -eq 'Running') { $messageKey = 'ServiceRunning' }
+                elseif ($state -eq 'Stopped' -and $startMode -eq 'Manual') { $messageKey = 'ServiceOnDemand' }
+                else { $messageKey = 'ServiceStopped' }
+            }
+            catch { $messageKey = 'ServiceUnavailable'; $severity = 'Warning'; $detail = $_.Exception.Message }
+            $message = T $messageKey @($rule.Display)
+            $healthy = $severity -ne 'Warning'
+            $check = [PSCustomObject]@{
+                Type      = 'Service'
+                Name      = $rule.Name
+                Display   = $rule.Display
+                State     = $state
+                StartMode = $startMode
+                Healthy   = [bool]$healthy
+                Severity  = $severity
+                Message   = $message
+                ErrorDetail = $detail
+            }
+            $checks.Add($check)
+            Write-Host ('  ' + (T 'IntegrityLine' @($rule.Display, $state, $startMode))) -ForegroundColor $(if ($healthy) { 'Green' } else { 'Yellow' })
+            Write-Host ('    ' + $message) -ForegroundColor $(if ($healthy) { 'DarkGray' } else { 'Yellow' })
+            if (-not $healthy) { $warnings.Add($message) }
+        }
+
+        $defender = $null
+        $defenderAvailable = $false
+        $securityCenterAvailable = $false
+        $registeredProducts = @()
+        $providerErrors = New-Object System.Collections.Generic.List[string]
         try {
-            $service = Get-CimInstance -ClassName Win32_Service -Filter ("Name='" + $rule.Name + "'") -ErrorAction Stop
-            if ($null -eq $service) { throw 'Service was not returned.' }
-            $state = [string]$service.State
-            $startMode = [string]$service.StartMode
-            if ($startMode -eq 'Disabled') { $messageKey = 'ServiceDisabled'; $severity = 'Warning' }
-            elseif ($state -eq 'Running') { $messageKey = 'ServiceRunning' }
-            elseif ($state -eq 'Stopped' -and $startMode -eq 'Manual') { $messageKey = 'ServiceOnDemand' }
-            else { $messageKey = 'ServiceStopped' }
+            $defender = Get-MpComputerStatus -ErrorAction Stop
+            $defenderAvailable = $null -ne $defender
         }
-        catch { $messageKey = 'ServiceUnavailable'; $severity = 'Warning'; $detail = $_.Exception.Message }
-        $message = T $messageKey @($rule.Display)
-        $healthy = $severity -ne 'Warning'
-        $check = [PSCustomObject]@{
-            Type      = 'Service'
-            Name      = $rule.Name
-            Display   = $rule.Display
-            State     = $state
-            StartMode = $startMode
-            Healthy   = [bool]$healthy
-            Severity  = $severity
-            Message   = $message
-            ErrorDetail = $detail
+        catch { $providerErrors.Add('Get-MpComputerStatus: ' + $_.Exception.Message) }
+        try {
+            $registeredProducts = @(Get-CimInstance -Namespace 'root/SecurityCenter2' -ClassName AntivirusProduct -ErrorAction Stop |
+                Select-Object displayName, productState, timestamp)
+            $securityCenterAvailable = $true
         }
-        $checks.Add($check)
-        Write-Host ('  ' + (T 'IntegrityLine' @($rule.Display, $state, $startMode))) -ForegroundColor $(if ($healthy) { 'Green' } else { 'Yellow' })
-        Write-Host ('    ' + $message) -ForegroundColor $(if ($healthy) { 'DarkGray' } else { 'Yellow' })
-        if (-not $healthy) { $warnings.Add($message) }
-    }
+        catch { $providerErrors.Add('SecurityCenter2: ' + $_.Exception.Message) }
+        $assessment = Get-RemnexaAntivirusAssessment -Defender $defender -DefenderAvailable $defenderAvailable -RegisteredProducts $registeredProducts -SecurityCenterAvailable $securityCenterAvailable
+        $securityMessage = T $assessment.MessageKey @(($assessment.ProductNames -join ', '))
+        $checks.Add([PSCustomObject]@{
+            Type = 'AntivirusStatus'; Name = 'Antivirus'; Display = 'Antivirus'; State = $assessment.MessageKey;
+            StartMode = ''; Healthy = ($assessment.Severity -ne 'Warning'); Severity = $assessment.Severity; Message = $securityMessage
+        })
+        Write-Host ('  ' + $securityMessage) -ForegroundColor $(if ($assessment.Severity -eq 'Warning') { 'Yellow' } else { 'DarkGray' })
+        if ($assessment.Severity -eq 'Warning') { $warnings.Add($securityMessage) }
 
-    $defender = $null
-    $defenderAvailable = $false
-    $securityCenterAvailable = $false
-    $registeredProducts = @()
-    $providerErrors = New-Object System.Collections.Generic.List[string]
-    try {
-        $defender = Get-MpComputerStatus -ErrorAction Stop
-        $defenderAvailable = $null -ne $defender
+        $result = [PSCustomObject]@{
+            Timestamp = [DateTimeOffset]::Now.ToString('o')
+            Passed    = ($warnings.Count -eq 0)
+            Warnings  = $warnings.ToArray()
+            Checks    = $checks.ToArray()
+            AntivirusAssessment = $assessment
+            RegisteredAntivirusProducts = @($registeredProducts)
+            ProviderErrors = $providerErrors.ToArray()
+        }
+        if ($result.Passed) {
+            Write-Status (T 'IntegrityHealthy') 'Success'
+        }
+        else {
+            Write-Status (T 'IntegrityWarnings' @($warnings.Count)) 'Warning'
+        }
+        return $result
     }
-    catch { $providerErrors.Add('Get-MpComputerStatus: ' + $_.Exception.Message) }
-    try {
-        $registeredProducts = @(Get-CimInstance -Namespace 'root/SecurityCenter2' -ClassName AntivirusProduct -ErrorAction Stop |
-            Select-Object displayName, productState, timestamp)
-        $securityCenterAvailable = $true
-    }
-    catch { $providerErrors.Add('SecurityCenter2: ' + $_.Exception.Message) }
-    $assessment = Get-RemnexaAntivirusAssessment -Defender $defender -DefenderAvailable $defenderAvailable -RegisteredProducts $registeredProducts -SecurityCenterAvailable $securityCenterAvailable
-    $securityMessage = T $assessment.MessageKey @(($assessment.ProductNames -join ', '))
-    $checks.Add([PSCustomObject]@{
-        Type = 'AntivirusStatus'; Name = 'Antivirus'; Display = 'Antivirus'; State = $assessment.MessageKey;
-        StartMode = ''; Healthy = ($assessment.Severity -ne 'Warning'); Severity = $assessment.Severity; Message = $securityMessage
-    })
-    Write-Host ('  ' + $securityMessage) -ForegroundColor $(if ($assessment.Severity -eq 'Warning') { 'Yellow' } else { 'DarkGray' })
-    if ($assessment.Severity -eq 'Warning') { $warnings.Add($securityMessage) }
-
-    $result = [PSCustomObject]@{
-        Timestamp = [DateTimeOffset]::Now.ToString('o')
-        Passed    = ($warnings.Count -eq 0)
-        Warnings  = $warnings.ToArray()
-        Checks    = $checks.ToArray()
-        AntivirusAssessment = $assessment
-        RegisteredAntivirusProducts = @($registeredProducts)
-        ProviderErrors = $providerErrors.ToArray()
-    }
-    if ($result.Passed) {
-        Write-Status (T 'IntegrityHealthy') 'Success'
-    }
-    else {
-        Write-Status (T 'IntegrityWarnings' @($warnings.Count)) 'Warning'
-    }
-    return $result
+    catch { Complete-RemnexaProgress $remnexaWorkProgress -Outcome Failed; throw }
+    finally { if ($remnexaWorkProgress.Outcome -eq 'Running') { Complete-RemnexaProgress $remnexaWorkProgress } }
 }
 
 function Read-IntegrityCheckChoice {
@@ -1931,59 +2000,64 @@ function Add-RemovalHistory {
 }
 
 function Import-HistoryFromExistingLogs {
-    if (-not (Test-Path -LiteralPath $script:LogRoot)) { return }
-
+    $remnexaWorkProgress = New-RemnexaProgress -Activity (Get-RemnexaProgressText 'ProgressTaskInventory') -Unit (Get-RemnexaProgressText 'ProgressUnitItems')
     try {
-        $knownLogs = @{}
-        foreach ($entry in @(Get-RemovalHistory)) {
-            $knownPath = [string](Get-OptionalPropertyValue -InputObject $entry -PropertyName 'LogPath')
-            if (-not [string]::IsNullOrWhiteSpace($knownPath)) { $knownLogs[$knownPath] = $true }
-        }
+        if (-not (Test-Path -LiteralPath $script:LogRoot)) { return }
 
-        $importedEntries = New-Object System.Collections.Generic.List[object]
-        foreach ($file in @(Get-ChildItem -LiteralPath $script:LogRoot -Filter '*.json' -File -ErrorAction SilentlyContinue)) {
-            if ($knownLogs.ContainsKey($file.FullName)) { continue }
-            try {
-                $manifest = Get-Content -LiteralPath $file.FullName -Raw -Encoding UTF8 | ConvertFrom-Json -DateKind String
-                $wasDryRun = [bool](Get-OptionalPropertyValue -InputObject $manifest -PropertyName 'DryRun')
-                $result = Get-OptionalPropertyValue -InputObject $manifest -PropertyName 'Result'
-                if ($wasDryRun -or $null -eq $result -or $result -eq '') { continue }
-
-                $programName = [string](Get-OptionalPropertyValue -InputObject $manifest -PropertyName 'SearchName')
-                if ([string]::IsNullOrWhiteSpace($programName)) { continue }
-                if ($programName -like 'CodexCleanerFixture*') { continue }
-                $timestamp = [string](Get-OptionalPropertyValue -InputObject $manifest -PropertyName 'Timestamp')
-                if ([string]::IsNullOrWhiteSpace($timestamp)) { $timestamp = $file.LastWriteTime.ToString('o') }
-                $removed = [int](Get-OptionalPropertyValue -InputObject $result -PropertyName 'Removed')
-                $failed = @((Get-OptionalPropertyValue -InputObject $result -PropertyName 'Failed')).Count
-                $selected = Get-OptionalPropertyValue -InputObject $manifest -PropertyName 'Selected'
-
-                $importedEntries.Add([PSCustomObject]@{
-                    Id              = [Guid]::NewGuid().ToString('N')
-                    Timestamp       = $timestamp
-                    ProgramName     = $programName
-                    Mode            = $(if ($null -eq $selected -or $selected -eq '') { 'ResidualOnly' } else { 'Uninstall' })
-                    RemovedTraces   = $removed
-                    FailedTraces    = $failed
-                    RemainingTraces = 0
-                    FreedBytes       = [int64](Get-OptionalPropertyValue -InputObject $result -PropertyName 'FreedBytes')
-                    RestartRequired = $false
-                    Status          = $(if ($failed -eq 0) { 'Complete' } else { 'Warnings' })
-                    LogPath         = $file.FullName
-                })
+        try {
+            $knownLogs = @{}
+            foreach ($entry in @(Get-RemovalHistory)) {
+                $knownPath = [string](Get-OptionalPropertyValue -InputObject $entry -PropertyName 'LogPath')
+                if (-not [string]::IsNullOrWhiteSpace($knownPath)) { $knownLogs[$knownPath] = $true }
             }
-            catch { }
-        }
 
-        if ($importedEntries.Count -gt 0) {
-            New-Item -ItemType Directory -Path $script:DataRoot -Force | Out-Null
-            foreach ($entry in $importedEntries) {
-                ($entry | ConvertTo-Json -Compress -Depth 4) |
-                    Add-Content -LiteralPath $script:HistoryPath -Encoding UTF8
+            $importedEntries = New-Object System.Collections.Generic.List[object]
+            foreach ($file in @(Get-ChildItem -LiteralPath $script:LogRoot -Filter '*.json' -File -ErrorAction SilentlyContinue)) {
+                if ($knownLogs.ContainsKey($file.FullName)) { continue }
+                try {
+                    $manifest = Get-Content -LiteralPath $file.FullName -Raw -Encoding UTF8 | ConvertFrom-Json -DateKind String
+                    $wasDryRun = [bool](Get-OptionalPropertyValue -InputObject $manifest -PropertyName 'DryRun')
+                    $result = Get-OptionalPropertyValue -InputObject $manifest -PropertyName 'Result'
+                    if ($wasDryRun -or $null -eq $result -or $result -eq '') { continue }
+
+                    $programName = [string](Get-OptionalPropertyValue -InputObject $manifest -PropertyName 'SearchName')
+                    if ([string]::IsNullOrWhiteSpace($programName)) { continue }
+                    if ($programName -like 'CodexCleanerFixture*') { continue }
+                    $timestamp = [string](Get-OptionalPropertyValue -InputObject $manifest -PropertyName 'Timestamp')
+                    if ([string]::IsNullOrWhiteSpace($timestamp)) { $timestamp = $file.LastWriteTime.ToString('o') }
+                    $removed = [int](Get-OptionalPropertyValue -InputObject $result -PropertyName 'Removed')
+                    $failed = @((Get-OptionalPropertyValue -InputObject $result -PropertyName 'Failed')).Count
+                    $selected = Get-OptionalPropertyValue -InputObject $manifest -PropertyName 'Selected'
+
+                    $importedEntries.Add([PSCustomObject]@{
+                        Id              = [Guid]::NewGuid().ToString('N')
+                        Timestamp       = $timestamp
+                        ProgramName     = $programName
+                        Mode            = $(if ($null -eq $selected -or $selected -eq '') { 'ResidualOnly' } else { 'Uninstall' })
+                        RemovedTraces   = $removed
+                        FailedTraces    = $failed
+                        RemainingTraces = 0
+                        FreedBytes       = [int64](Get-OptionalPropertyValue -InputObject $result -PropertyName 'FreedBytes')
+                        RestartRequired = $false
+                        Status          = $(if ($failed -eq 0) { 'Complete' } else { 'Warnings' })
+                        LogPath         = $file.FullName
+                    })
+                }
+                catch { }
+            }
+
+            if ($importedEntries.Count -gt 0) {
+                New-Item -ItemType Directory -Path $script:DataRoot -Force | Out-Null
+                foreach ($entry in $importedEntries) {
+                    ($entry | ConvertTo-Json -Compress -Depth 4) |
+                        Add-Content -LiteralPath $script:HistoryPath -Encoding UTF8
+                }
             }
         }
+        catch { }
     }
-    catch { }
+    catch { Complete-RemnexaProgress $remnexaWorkProgress -Outcome Failed; throw }
+    finally { if ($remnexaWorkProgress.Outcome -eq 'Running') { Complete-RemnexaProgress $remnexaWorkProgress } }
 }
 
 function Get-HistoryStatusText {
@@ -2222,45 +2296,50 @@ function Read-ExplicitConfirmation {
 }
 
 function Get-OrphanedUninstallEntries {
-    $entries = New-Object System.Collections.Generic.List[object]
-    $roots = @(
-        'HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*',
-        'HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*',
-        'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*'
-    )
-    foreach ($entry in @(Get-ItemProperty -Path $roots -ErrorAction SilentlyContinue)) {
-        $displayName = [string](Get-OptionalPropertyValue -InputObject $entry -PropertyName 'DisplayName')
-        if ([string]::IsNullOrWhiteSpace($displayName)) { continue }
-        if ([string](Get-OptionalPropertyValue -InputObject $entry -PropertyName 'SystemComponent') -eq '1') { continue }
+    $remnexaWorkProgress = New-RemnexaProgress -Activity (Get-RemnexaProgressText 'ProgressTaskRegistry') -Unit (Get-RemnexaProgressText 'ProgressUnitItems')
+    try {
+        $entries = New-Object System.Collections.Generic.List[object]
+        $roots = @(
+            'HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*',
+            'HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*',
+            'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*'
+        )
+        foreach ($entry in @(Get-ItemProperty -Path $roots -ErrorAction SilentlyContinue)) {
+            $displayName = [string](Get-OptionalPropertyValue -InputObject $entry -PropertyName 'DisplayName')
+            if ([string]::IsNullOrWhiteSpace($displayName)) { continue }
+            if ([string](Get-OptionalPropertyValue -InputObject $entry -PropertyName 'SystemComponent') -eq '1') { continue }
 
-        $uninstall = [string](Get-OptionalPropertyValue -InputObject $entry -PropertyName 'UninstallString')
-        $installLocation = [Environment]::ExpandEnvironmentVariables([string](Get-OptionalPropertyValue -InputObject $entry -PropertyName 'InstallLocation'))
-        if ([string]::IsNullOrWhiteSpace($uninstall) -and [string]::IsNullOrWhiteSpace($installLocation)) { continue }
+            $uninstall = [string](Get-OptionalPropertyValue -InputObject $entry -PropertyName 'UninstallString')
+            $installLocation = [Environment]::ExpandEnvironmentVariables([string](Get-OptionalPropertyValue -InputObject $entry -PropertyName 'InstallLocation'))
+            if ([string]::IsNullOrWhiteSpace($uninstall) -and [string]::IsNullOrWhiteSpace($installLocation)) { continue }
 
-        $validLocation = (-not [string]::IsNullOrWhiteSpace($installLocation)) -and (Test-Path -LiteralPath $installLocation)
-        $validUninstaller = $false
-        $uninstallExecutable = Get-ExecutableFromCommandLine -CommandLine $uninstall
-        if (-not [string]::IsNullOrWhiteSpace($uninstallExecutable)) {
-            $validUninstaller = Test-Path -LiteralPath $uninstallExecutable
-            if (-not $validUninstaller) {
-                $validUninstaller = $null -ne (Get-Command -Name $uninstallExecutable -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1)
+            $validLocation = (-not [string]::IsNullOrWhiteSpace($installLocation)) -and (Test-Path -LiteralPath $installLocation)
+            $validUninstaller = $false
+            $uninstallExecutable = Get-ExecutableFromCommandLine -CommandLine $uninstall
+            if (-not [string]::IsNullOrWhiteSpace($uninstallExecutable)) {
+                $validUninstaller = Test-Path -LiteralPath $uninstallExecutable
+                if (-not $validUninstaller) {
+                    $validUninstaller = $null -ne (Get-Command -Name $uninstallExecutable -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1)
+                }
             }
-        }
-        if ($uninstall -match '(?i)msiexec(\.exe)?\s+[/\\][xXiI]\s*\{[0-9A-F-]{36}\}') { $validUninstaller = $true }
-        if ($validLocation -or $validUninstaller) { continue }
+            if ($uninstall -match '(?i)msiexec(\.exe)?\s+[/\\][xXiI]\s*\{[0-9A-F-]{36}\}') { $validUninstaller = $true }
+            if ($validLocation -or $validUninstaller) { continue }
 
-        $candidate = [PSCustomObject]@{
-            Type = 'OrphanRegistry'; SourceLabel = 'Registry'; DisplayName = $displayName
-            DisplayVersion = [string](Get-OptionalPropertyValue -InputObject $entry -PropertyName 'DisplayVersion')
-            Publisher = [string](Get-OptionalPropertyValue -InputObject $entry -PropertyName 'Publisher')
-            InstallLocation = $installLocation; InstallSource = ''; UninstallString = $uninstall
-            QuietUninstallString = ''; RegistryPath = [string](Get-OptionalPropertyValue -InputObject $entry -PropertyName 'PSPath')
-            ProductCode = [string](Get-OptionalPropertyValue -InputObject $entry -PropertyName 'PSChildName')
-            PackageFullName = ''; PackageName = ''; IsSystemLike = $false; CanUninstall = $true
+            $candidate = [PSCustomObject]@{
+                Type = 'OrphanRegistry'; SourceLabel = 'Registry'; DisplayName = $displayName
+                DisplayVersion = [string](Get-OptionalPropertyValue -InputObject $entry -PropertyName 'DisplayVersion')
+                Publisher = [string](Get-OptionalPropertyValue -InputObject $entry -PropertyName 'Publisher')
+                InstallLocation = $installLocation; InstallSource = ''; UninstallString = $uninstall
+                QuietUninstallString = ''; RegistryPath = [string](Get-OptionalPropertyValue -InputObject $entry -PropertyName 'PSPath')
+                ProductCode = [string](Get-OptionalPropertyValue -InputObject $entry -PropertyName 'PSChildName')
+                PackageFullName = ''; PackageName = ''; IsSystemLike = $false; CanUninstall = $true
+            }
+            if ($null -eq (Get-ProtectedComponentMatch -Program $candidate -SearchName $displayName)) { $entries.Add($candidate) }
         }
-        if ($null -eq (Get-ProtectedComponentMatch -Program $candidate -SearchName $displayName)) { $entries.Add($candidate) }
+        return @($entries | Sort-Object DisplayName, RegistryPath -Unique)
     }
-    return @($entries | Sort-Object DisplayName, RegistryPath -Unique)
+    catch { Complete-RemnexaProgress $remnexaWorkProgress -Outcome Failed; throw }
+    finally { if ($remnexaWorkProgress.Outcome -eq 'Running') { Complete-RemnexaProgress $remnexaWorkProgress } }
 }
 
 function Invoke-OrphanRegistryMenu {
@@ -2302,6 +2381,7 @@ function Invoke-OptionalFeatureMenu {
     Clear-RemnexaScreen
     Show-BrandHeader
     Write-Host (T 'FeatureTitle') -ForegroundColor White
+    $featureProgress = New-RemnexaProgress -Activity (Get-RemnexaProgressText 'ProgressTaskFeatures')
     try {
         $features = @(Get-WindowsOptionalFeature -Online -ErrorAction Stop | Where-Object State -eq 'Enabled' | ForEach-Object {
             [PSCustomObject]@{
@@ -2311,8 +2391,10 @@ function Invoke-OptionalFeatureMenu {
                 PackageFullName = ''; PackageName = ''; IsSystemLike = $false; CanUninstall = $true
             }
         })
+        Complete-RemnexaProgress $featureProgress
     }
     catch {
+        Complete-RemnexaProgress $featureProgress -Outcome Failed
         Write-Status (T 'ErrorPrefix' @($_.Exception.Message)) 'Error'
         $features = @()
     }
@@ -2330,15 +2412,20 @@ function Invoke-OptionalFeatureMenu {
     $confirmation = Read-ExplicitConfirmation -WarningText $warning -ActionText $warning
     if ($confirmation -ne 'start') { return $confirmation }
     if (-not (New-RestorePointIfPossible -ProgramName $selected.DisplayName)) { return 'menu' }
+    $featureChangeProgress = New-RemnexaProgress -Activity (Get-RemnexaProgressText 'ProgressTaskFeatures')
     try {
         $result = Disable-WindowsOptionalFeature -Online -FeatureName $selected.DisplayName -NoRestart -ErrorAction Stop
+        Complete-RemnexaProgress $featureChangeProgress
         if ([bool]$result.RestartNeeded) { $script:RestartRequired = $true }
         Write-Status (T 'FeatureDisabled' @($selected.DisplayName)) 'Success'
         $logPath = Save-ToolLog -Action 'DisableWindowsFeature' -Data ([PSCustomObject]@{ Feature = $selected.DisplayName; RestartNeeded = [bool]$result.RestartNeeded })
         if ($logPath) { Write-Host (T 'LogLabel' @($logPath)) -ForegroundColor DarkGray }
         if ($script:RestartRequired) { Write-Status (T 'RestartNotice') 'Warning' }
     }
-    catch { Write-Status (T 'ErrorPrefix' @($_.Exception.Message)) 'Error' }
+    catch {
+        if ($featureChangeProgress.Outcome -eq 'Running') { Complete-RemnexaProgress $featureChangeProgress -Outcome Failed }
+        Write-Status (T 'ErrorPrefix' @($_.Exception.Message)) 'Error'
+    }
     Write-Host ('  [1] ' + (T 'BackPreviousMenu'))
     Write-Host ('  [0] ' + (T 'Main0'))
     return (Read-MainOrExitChoice)
@@ -2363,63 +2450,89 @@ function Get-PrivacyRegistryChanges {
 }
 
 function Save-PrivacyBackupIfNeeded {
-    if (Test-Path -LiteralPath $script:PrivacyBackupPath) { return }
-    $snapshots = New-Object System.Collections.Generic.List[object]
-    foreach ($change in @(Get-PrivacyRegistryChanges)) {
-        $key = Get-Item -LiteralPath $change.Path -ErrorAction SilentlyContinue
-        $valueObject = if ($key) { Get-ItemProperty -LiteralPath $change.Path -Name $change.Name -ErrorAction SilentlyContinue } else { $null }
-        $property = if ($null -ne $valueObject) { $valueObject.PSObject.Properties[$change.Name] } else { $null }
-        $existed = $null -ne $property
-        $kind = if ($existed) { [string]$key.GetValueKind($change.Name) } else { [string]$change.Type }
-        $snapshots.Add([PSCustomObject]@{
-            Path = $change.Path; Name = $change.Name; Existed = $existed
-            Value = $(if ($existed) { $property.Value } else { $null }); Type = $kind
-        })
+    $remnexaWorkProgress = New-RemnexaProgress -Activity (Get-RemnexaProgressText 'ProgressTaskBackup') -Unit (Get-RemnexaProgressText 'ProgressUnitItems')
+    try {
+        if (Test-Path -LiteralPath $script:PrivacyBackupPath) { return }
+        $snapshots = New-Object System.Collections.Generic.List[object]
+        foreach ($change in @(Get-PrivacyRegistryChanges)) {
+            $key = Get-Item -LiteralPath $change.Path -ErrorAction SilentlyContinue
+            $valueObject = if ($key) { Get-ItemProperty -LiteralPath $change.Path -Name $change.Name -ErrorAction SilentlyContinue } else { $null }
+            $property = if ($null -ne $valueObject) { $valueObject.PSObject.Properties[$change.Name] } else { $null }
+            $existed = $null -ne $property
+            $kind = if ($existed) { [string]$key.GetValueKind($change.Name) } else { [string]$change.Type }
+            $snapshots.Add([PSCustomObject]@{
+                Path = $change.Path; Name = $change.Name; Existed = $existed
+                Value = $(if ($existed) { $property.Value } else { $null }); Type = $kind
+            })
+        }
+        $diagTrack = Get-CimInstance Win32_Service -Filter "Name='DiagTrack'" -ErrorAction SilentlyContinue
+        $backup = [PSCustomObject]@{
+            Timestamp = [DateTimeOffset]::Now.ToString('o')
+            Registry = $snapshots.ToArray()
+            DiagTrack = $(if ($diagTrack) { [PSCustomObject]@{ Exists = $true; StartMode = [string]$diagTrack.StartMode; State = [string]$diagTrack.State } } else { [PSCustomObject]@{ Exists = $false; StartMode = ''; State = '' } })
+        }
+        New-Item -ItemType Directory -Path $script:DataRoot -Force | Out-Null
+        $backup | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $script:PrivacyBackupPath -Encoding UTF8
     }
-    $diagTrack = Get-CimInstance Win32_Service -Filter "Name='DiagTrack'" -ErrorAction SilentlyContinue
-    $backup = [PSCustomObject]@{
-        Timestamp = [DateTimeOffset]::Now.ToString('o')
-        Registry = $snapshots.ToArray()
-        DiagTrack = $(if ($diagTrack) { [PSCustomObject]@{ Exists = $true; StartMode = [string]$diagTrack.StartMode; State = [string]$diagTrack.State } } else { [PSCustomObject]@{ Exists = $false; StartMode = ''; State = '' } })
-    }
-    New-Item -ItemType Directory -Path $script:DataRoot -Force | Out-Null
-    $backup | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $script:PrivacyBackupPath -Encoding UTF8
+    catch { Complete-RemnexaProgress $remnexaWorkProgress -Outcome Failed; throw }
+    finally { if ($remnexaWorkProgress.Outcome -eq 'Running') { Complete-RemnexaProgress $remnexaWorkProgress } }
 }
 
 function Set-PrivacyProfile {
-    Save-PrivacyBackupIfNeeded
-    foreach ($change in @(Get-PrivacyRegistryChanges)) {
-        New-Item -Path $change.Path -Force | Out-Null
-        New-ItemProperty -LiteralPath $change.Path -Name $change.Name -Value $change.Value -PropertyType $change.Type -Force | Out-Null
+    $remnexaWorkProgress = New-RemnexaProgress -Activity (Get-RemnexaProgressText 'ProgressTaskPrivacy') -Unit (Get-RemnexaProgressText 'ProgressUnitItems')
+    try {
+        Save-PrivacyBackupIfNeeded
+        $privacyChanges = @(Get-PrivacyRegistryChanges)
+        $privacyProcessed = 0
+        Update-RemnexaProgress $remnexaWorkProgress -Total ($privacyChanges.Count + 1)
+        foreach ($change in $privacyChanges) {
+            New-Item -Path $change.Path -Force | Out-Null
+            New-ItemProperty -LiteralPath $change.Path -Name $change.Name -Value $change.Value -PropertyType $change.Type -Force | Out-Null
+            $privacyProcessed++
+            Update-RemnexaProgress $remnexaWorkProgress -Completed $privacyProcessed -CurrentItem $change.Path
+        }
+        $service = Get-Service -Name 'DiagTrack' -ErrorAction SilentlyContinue
+        if ($service) {
+            if ($service.Status -ne 'Stopped') { Stop-Service -Name 'DiagTrack' -Force -ErrorAction Stop }
+            Set-Service -Name 'DiagTrack' -StartupType Disabled -ErrorAction Stop
+        }
+        Update-RemnexaProgress $remnexaWorkProgress -Completed ($privacyChanges.Count + 1) -CurrentItem 'DiagTrack'
     }
-    $service = Get-Service -Name 'DiagTrack' -ErrorAction SilentlyContinue
-    if ($service) {
-        if ($service.Status -ne 'Stopped') { Stop-Service -Name 'DiagTrack' -Force -ErrorAction Stop }
-        Set-Service -Name 'DiagTrack' -StartupType Disabled -ErrorAction Stop
-    }
+    catch { Complete-RemnexaProgress $remnexaWorkProgress -Outcome Failed; throw }
+    finally { if ($remnexaWorkProgress.Outcome -eq 'Running') { Complete-RemnexaProgress $remnexaWorkProgress } }
 }
 
 function Restore-PrivacyProfile {
-    if (-not (Test-Path -LiteralPath $script:PrivacyBackupPath)) { return $false }
-    $backup = Get-Content -LiteralPath $script:PrivacyBackupPath -Raw -Encoding UTF8 | ConvertFrom-Json -DateKind String
-    $registryChanges = @(Get-PrivacyRegistryChanges)
-    [void](Assert-RemnexaPrivacyBackup -Backup $backup -AllowedChanges $registryChanges)
-    foreach ($snapshot in @($backup.Registry)) {
-        if ([bool]$snapshot.Existed) {
-            New-Item -Path ([string]$snapshot.Path) -Force | Out-Null
-            New-ItemProperty -LiteralPath ([string]$snapshot.Path) -Name ([string]$snapshot.Name) -Value $snapshot.Value -PropertyType ([string]$snapshot.Type) -Force | Out-Null
+    $remnexaWorkProgress = New-RemnexaProgress -Activity (Get-RemnexaProgressText 'ProgressTaskRestore') -Unit (Get-RemnexaProgressText 'ProgressUnitItems')
+    try {
+        if (-not (Test-Path -LiteralPath $script:PrivacyBackupPath)) { Add-RemnexaProgressNotice -Level Warning; return $false }
+        $backup = Get-Content -LiteralPath $script:PrivacyBackupPath -Raw -Encoding UTF8 | ConvertFrom-Json -DateKind String
+        $registryChanges = @(Get-PrivacyRegistryChanges)
+        [void](Assert-RemnexaPrivacyBackup -Backup $backup -AllowedChanges $registryChanges)
+        $restoreProcessed = 0
+        Update-RemnexaProgress $remnexaWorkProgress -Total (@($backup.Registry).Count + 1)
+        foreach ($snapshot in @($backup.Registry)) {
+            if ([bool]$snapshot.Existed) {
+                New-Item -Path ([string]$snapshot.Path) -Force | Out-Null
+                New-ItemProperty -LiteralPath ([string]$snapshot.Path) -Name ([string]$snapshot.Name) -Value $snapshot.Value -PropertyType ([string]$snapshot.Type) -Force | Out-Null
+            }
+            elseif (Test-Path -LiteralPath ([string]$snapshot.Path)) {
+                Remove-ItemProperty -LiteralPath ([string]$snapshot.Path) -Name ([string]$snapshot.Name) -ErrorAction SilentlyContinue
+            }
+            $restoreProcessed++
+            Update-RemnexaProgress $remnexaWorkProgress -Completed $restoreProcessed -CurrentItem ([string]$snapshot.Path)
         }
-        elseif (Test-Path -LiteralPath ([string]$snapshot.Path)) {
-            Remove-ItemProperty -LiteralPath ([string]$snapshot.Path) -Name ([string]$snapshot.Name) -ErrorAction SilentlyContinue
+        if ([bool]$backup.DiagTrack.Exists) {
+            $startupType = switch ([string]$backup.DiagTrack.StartMode) { 'Auto' { 'Automatic' }; 'Manual' { 'Manual' }; 'Disabled' { 'Disabled' }; default { 'Manual' } }
+            Set-Service -Name 'DiagTrack' -StartupType $startupType -ErrorAction SilentlyContinue
+            if ([string]$backup.DiagTrack.State -eq 'Running') { Start-Service -Name 'DiagTrack' -ErrorAction SilentlyContinue }
         }
+        Remove-Item -LiteralPath $script:PrivacyBackupPath -Force -ErrorAction Stop
+        Update-RemnexaProgress $remnexaWorkProgress -Completed (@($backup.Registry).Count + 1) -CurrentItem 'DiagTrack'
+        return $true
     }
-    if ([bool]$backup.DiagTrack.Exists) {
-        $startupType = switch ([string]$backup.DiagTrack.StartMode) { 'Auto' { 'Automatic' }; 'Manual' { 'Manual' }; 'Disabled' { 'Disabled' }; default { 'Manual' } }
-        Set-Service -Name 'DiagTrack' -StartupType $startupType -ErrorAction SilentlyContinue
-        if ([string]$backup.DiagTrack.State -eq 'Running') { Start-Service -Name 'DiagTrack' -ErrorAction SilentlyContinue }
-    }
-    Remove-Item -LiteralPath $script:PrivacyBackupPath -Force -ErrorAction Stop
-    return $true
+    catch { Complete-RemnexaProgress $remnexaWorkProgress -Outcome Failed; throw }
+    finally { if ($remnexaWorkProgress.Outcome -eq 'Running') { Complete-RemnexaProgress $remnexaWorkProgress } }
 }
 
 function Invoke-PrivacyMenu {
@@ -2513,13 +2626,16 @@ function Invoke-LogCleanupMenu {
         if ($answer -eq '1') {
             $deleted = 0
             $failed = 0
+            $logProgress = New-RemnexaProgress -Activity (T 'LogsDelete') -Total $logFiles.Count -Unit (Get-RemnexaProgressText 'ProgressUnitFiles')
             foreach ($file in $logFiles) {
                 try {
                     Remove-Item -LiteralPath $file.FullName -Force -ErrorAction Stop
                     $deleted++
                 }
                 catch { $failed++ }
+                Update-RemnexaProgress $logProgress -Completed ($deleted + $failed) -CurrentItem $file.Name
             }
+            Complete-RemnexaProgress $logProgress -Outcome $(if ($failed) { 'Warning' } else { 'Completed' })
             Write-Status (T 'LogsDeleted' @($deleted)) 'Success'
             if ($failed -gt 0) { Write-Status (T 'LogsFailed' @($failed)) 'Warning' }
             Write-Host ''
@@ -2562,79 +2678,84 @@ function Test-StartupItemProtected {
 }
 
 function Get-StartupItems {
-    $items = New-Object System.Collections.Generic.List[object]
-    $registryLocations = @(
-        [PSCustomObject]@{ Path = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run'; Scope = 'Benutzer'; RequiresAdmin = $false },
-        [PSCustomObject]@{ Path = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\RunOnce'; Scope = 'Benutzer (einmalig)'; RequiresAdmin = $false },
-        [PSCustomObject]@{ Path = 'HKLM:\Software\Microsoft\Windows\CurrentVersion\Run'; Scope = 'Computer'; RequiresAdmin = $true },
-        [PSCustomObject]@{ Path = 'HKLM:\Software\Microsoft\Windows\CurrentVersion\RunOnce'; Scope = 'Computer (einmalig)'; RequiresAdmin = $true },
-        [PSCustomObject]@{ Path = 'HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Run'; Scope = 'Computer (32-Bit)'; RequiresAdmin = $true },
-        [PSCustomObject]@{ Path = 'HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\RunOnce'; Scope = 'Computer (32-Bit, einmalig)'; RequiresAdmin = $true }
-    )
-
-    foreach ($location in $registryLocations) {
-        try {
-            if (-not (Test-Path -LiteralPath $location.Path)) { continue }
-            $key = Get-Item -LiteralPath $location.Path -ErrorAction Stop
-            foreach ($valueName in @($key.GetValueNames())) {
-                if ([string]::IsNullOrWhiteSpace($valueName)) { continue }
-                $value = $key.GetValue($valueName, $null, [Microsoft.Win32.RegistryValueOptions]::DoNotExpandEnvironmentNames)
-                $command = if ($value -is [Array]) { $value -join '; ' } else { [string]$value }
-                $id = Get-StableIdentifier -Value ('Registry|' + $location.Path + '|' + $valueName)
-                $items.Add([PSCustomObject]@{
-                    Id = $id; Name = $valueName; SourceType = 'Registry'; Scope = $location.Scope
-                    Command = $command; Location = $location.Path; RequiresAdmin = [bool]$location.RequiresAdmin
-                    IsProtected = (Test-StartupItemProtected -Name $valueName -Command $command)
-                    RegistryPath = $location.Path; ValueName = $valueName; Value = $value
-                    ValueKind = $key.GetValueKind($valueName).ToString(); FilePath = ''; TaskName = ''; TaskPath = ''
-                })
-            }
-        }
-        catch { Write-LogEntry -Message $_.Exception.Message -Level 'Warning' -Component 'Startup/Inventory' }
-    }
-
-    $startupFolders = @(
-        [PSCustomObject]@{ Path = [Environment]::GetFolderPath('Startup'); Scope = 'Benutzer'; RequiresAdmin = $false },
-        [PSCustomObject]@{ Path = [Environment]::GetFolderPath('CommonStartup'); Scope = 'Alle Benutzer'; RequiresAdmin = $true }
-    )
-    foreach ($folder in $startupFolders) {
-        try {
-            if ([string]::IsNullOrWhiteSpace($folder.Path) -or -not (Test-Path -LiteralPath $folder.Path)) { continue }
-            foreach ($file in @(Get-ChildItem -LiteralPath $folder.Path -File -Force -ErrorAction Stop)) {
-                if ($file.Name -ieq 'desktop.ini') { continue }
-                $id = Get-StableIdentifier -Value ('File|' + $file.FullName)
-                $items.Add([PSCustomObject]@{
-                    Id = $id; Name = $file.BaseName; SourceType = 'StartupFolder'; Scope = $folder.Scope
-                    Command = $file.FullName; Location = $folder.Path; RequiresAdmin = [bool]$folder.RequiresAdmin
-                    IsProtected = (Test-StartupItemProtected -Name $file.BaseName -Command $file.FullName)
-                    RegistryPath = ''; ValueName = ''; Value = $null; ValueKind = ''; FilePath = $file.FullName
-                    TaskName = ''; TaskPath = ''
-                })
-            }
-        }
-        catch { Write-LogEntry -Message $_.Exception.Message -Level 'Warning' -Component 'Startup/Inventory' }
-    }
-
+    $remnexaWorkProgress = New-RemnexaProgress -Activity (Get-RemnexaProgressText 'ProgressTaskStartup') -Unit (Get-RemnexaProgressText 'ProgressUnitItems')
     try {
-        if (Get-Command Get-ScheduledTask -ErrorAction SilentlyContinue) {
-            foreach ($task in @(Get-ScheduledTask -ErrorAction Stop | Where-Object {
-                $_.State -ne 'Disabled' -and @($_.Triggers | Where-Object { $_.CimClass.CimClassName -eq 'MSFT_TaskLogonTrigger' }).Count -gt 0
-            })) {
-                $command = @($task.Actions | ForEach-Object { (($_.Execute + ' ' + $_.Arguments).Trim()) }) -join ' | '
-                $id = Get-StableIdentifier -Value ('Task|' + $task.TaskPath + '|' + $task.TaskName)
-                $items.Add([PSCustomObject]@{
-                    Id = $id; Name = $task.TaskName; SourceType = 'ScheduledTask'; Scope = 'Geplante Aufgabe'
-                    Command = $command; Location = $task.TaskPath; RequiresAdmin = $true
-                    IsProtected = (Test-StartupItemProtected -Name $task.TaskName -Command $command -TaskPath $task.TaskPath)
-                    RegistryPath = ''; ValueName = ''; Value = $null; ValueKind = ''; FilePath = ''
-                    TaskName = $task.TaskName; TaskPath = $task.TaskPath
-                })
+        $items = New-Object System.Collections.Generic.List[object]
+        $registryLocations = @(
+            [PSCustomObject]@{ Path = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run'; Scope = 'Benutzer'; RequiresAdmin = $false },
+            [PSCustomObject]@{ Path = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\RunOnce'; Scope = 'Benutzer (einmalig)'; RequiresAdmin = $false },
+            [PSCustomObject]@{ Path = 'HKLM:\Software\Microsoft\Windows\CurrentVersion\Run'; Scope = 'Computer'; RequiresAdmin = $true },
+            [PSCustomObject]@{ Path = 'HKLM:\Software\Microsoft\Windows\CurrentVersion\RunOnce'; Scope = 'Computer (einmalig)'; RequiresAdmin = $true },
+            [PSCustomObject]@{ Path = 'HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Run'; Scope = 'Computer (32-Bit)'; RequiresAdmin = $true },
+            [PSCustomObject]@{ Path = 'HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\RunOnce'; Scope = 'Computer (32-Bit, einmalig)'; RequiresAdmin = $true }
+        )
+
+        foreach ($location in $registryLocations) {
+            try {
+                if (-not (Test-Path -LiteralPath $location.Path)) { continue }
+                $key = Get-Item -LiteralPath $location.Path -ErrorAction Stop
+                foreach ($valueName in @($key.GetValueNames())) {
+                    if ([string]::IsNullOrWhiteSpace($valueName)) { continue }
+                    $value = $key.GetValue($valueName, $null, [Microsoft.Win32.RegistryValueOptions]::DoNotExpandEnvironmentNames)
+                    $command = if ($value -is [Array]) { $value -join '; ' } else { [string]$value }
+                    $id = Get-StableIdentifier -Value ('Registry|' + $location.Path + '|' + $valueName)
+                    $items.Add([PSCustomObject]@{
+                        Id = $id; Name = $valueName; SourceType = 'Registry'; Scope = $location.Scope
+                        Command = $command; Location = $location.Path; RequiresAdmin = [bool]$location.RequiresAdmin
+                        IsProtected = (Test-StartupItemProtected -Name $valueName -Command $command)
+                        RegistryPath = $location.Path; ValueName = $valueName; Value = $value
+                        ValueKind = $key.GetValueKind($valueName).ToString(); FilePath = ''; TaskName = ''; TaskPath = ''
+                    })
+                }
+            }
+            catch { Write-LogEntry -Message $_.Exception.Message -Level 'Warning' -Component 'Startup/Inventory' }
+        }
+
+        $startupFolders = @(
+            [PSCustomObject]@{ Path = [Environment]::GetFolderPath('Startup'); Scope = 'Benutzer'; RequiresAdmin = $false },
+            [PSCustomObject]@{ Path = [Environment]::GetFolderPath('CommonStartup'); Scope = 'Alle Benutzer'; RequiresAdmin = $true }
+        )
+        foreach ($folder in $startupFolders) {
+            try {
+                if ([string]::IsNullOrWhiteSpace($folder.Path) -or -not (Test-Path -LiteralPath $folder.Path)) { continue }
+                foreach ($file in @(Get-ChildItem -LiteralPath $folder.Path -File -Force -ErrorAction Stop)) {
+                    if ($file.Name -ieq 'desktop.ini') { continue }
+                    $id = Get-StableIdentifier -Value ('File|' + $file.FullName)
+                    $items.Add([PSCustomObject]@{
+                        Id = $id; Name = $file.BaseName; SourceType = 'StartupFolder'; Scope = $folder.Scope
+                        Command = $file.FullName; Location = $folder.Path; RequiresAdmin = [bool]$folder.RequiresAdmin
+                        IsProtected = (Test-StartupItemProtected -Name $file.BaseName -Command $file.FullName)
+                        RegistryPath = ''; ValueName = ''; Value = $null; ValueKind = ''; FilePath = $file.FullName
+                        TaskName = ''; TaskPath = ''
+                    })
+                }
+            }
+            catch { Write-LogEntry -Message $_.Exception.Message -Level 'Warning' -Component 'Startup/Inventory' }
+        }
+
+        try {
+            if (Get-Command Get-ScheduledTask -ErrorAction SilentlyContinue) {
+                foreach ($task in @(Get-ScheduledTask -ErrorAction Stop | Where-Object {
+                    $_.State -ne 'Disabled' -and @($_.Triggers | Where-Object { $_.CimClass.CimClassName -eq 'MSFT_TaskLogonTrigger' }).Count -gt 0
+                })) {
+                    $command = @($task.Actions | ForEach-Object { (($_.Execute + ' ' + $_.Arguments).Trim()) }) -join ' | '
+                    $id = Get-StableIdentifier -Value ('Task|' + $task.TaskPath + '|' + $task.TaskName)
+                    $items.Add([PSCustomObject]@{
+                        Id = $id; Name = $task.TaskName; SourceType = 'ScheduledTask'; Scope = 'Geplante Aufgabe'
+                        Command = $command; Location = $task.TaskPath; RequiresAdmin = $true
+                        IsProtected = (Test-StartupItemProtected -Name $task.TaskName -Command $command -TaskPath $task.TaskPath)
+                        RegistryPath = ''; ValueName = ''; Value = $null; ValueKind = ''; FilePath = ''
+                        TaskName = $task.TaskName; TaskPath = $task.TaskPath
+                    })
+                }
             }
         }
-    }
-    catch { Write-LogEntry -Message $_.Exception.Message -Level 'Warning' -Component 'Startup/Inventory' }
+        catch { Write-LogEntry -Message $_.Exception.Message -Level 'Warning' -Component 'Startup/Inventory' }
 
-    return @($items | Sort-Object Name, SourceType, Scope)
+        return @($items | Sort-Object Name, SourceType, Scope)
+    }
+    catch { Complete-RemnexaProgress $remnexaWorkProgress -Outcome Failed; throw }
+    finally { if ($remnexaWorkProgress.Outcome -eq 'Running') { Complete-RemnexaProgress $remnexaWorkProgress } }
 }
 
 function Save-StartupManifest {
@@ -2688,19 +2809,24 @@ function Get-StartupHistory {
 }
 
 function Get-StartupBackups {
-    if (-not (Test-Path -LiteralPath $script:StartupBackupRoot)) { return @() }
-    $backups = New-Object System.Collections.Generic.List[object]
-    foreach ($file in @(Get-ChildItem -LiteralPath $script:StartupBackupRoot -Filter '*.json' -File -ErrorAction SilentlyContinue)) {
-        try {
-            $entry = Get-Content -LiteralPath $file.FullName -Raw -Encoding UTF8 | ConvertFrom-Json
-            if ([bool](Get-OptionalPropertyValue -InputObject $entry -PropertyName 'Active')) {
-                $entry | Add-Member -NotePropertyName '_ManifestPath' -NotePropertyValue $file.FullName -Force
-                $backups.Add($entry)
+    $remnexaWorkProgress = New-RemnexaProgress -Activity (Get-RemnexaProgressText 'ProgressTaskStartup') -Unit (Get-RemnexaProgressText 'ProgressUnitItems')
+    try {
+        if (-not (Test-Path -LiteralPath $script:StartupBackupRoot)) { return @() }
+        $backups = New-Object System.Collections.Generic.List[object]
+        foreach ($file in @(Get-ChildItem -LiteralPath $script:StartupBackupRoot -Filter '*.json' -File -ErrorAction SilentlyContinue)) {
+            try {
+                $entry = Get-Content -LiteralPath $file.FullName -Raw -Encoding UTF8 | ConvertFrom-Json
+                if ([bool](Get-OptionalPropertyValue -InputObject $entry -PropertyName 'Active')) {
+                    $entry | Add-Member -NotePropertyName '_ManifestPath' -NotePropertyValue $file.FullName -Force
+                    $backups.Add($entry)
+                }
             }
+            catch { Write-LogEntry -Message $_.Exception.Message -Level 'Warning' -Component 'Startup/Backup' }
         }
-        catch { Write-LogEntry -Message $_.Exception.Message -Level 'Warning' -Component 'Startup/Backup' }
+        return @($backups | Sort-Object DisabledAt -Descending)
     }
-    return @($backups | Sort-Object DisabledAt -Descending)
+    catch { Complete-RemnexaProgress $remnexaWorkProgress -Outcome Failed; throw }
+    finally { if ($remnexaWorkProgress.Outcome -eq 'Running') { Complete-RemnexaProgress $remnexaWorkProgress } }
 }
 
 function Disable-StartupItem {
@@ -2708,66 +2834,70 @@ function Disable-StartupItem {
         [Parameter(Mandatory = $true)][object]$Item,
         [switch]$SkipConfirmation
     )
-
-    if ([bool]$Item.IsProtected) {
-        Write-Status (T 'StartupProtected') 'Warning'
-        return $false
-    }
-    if (-not $SkipConfirmation) {
-        $choice = Read-ExplicitConfirmation -WarningText (T 'StartupConfirm' @([string]$Item.Name)) -ActionText (T 'StartupConfirm' @([string]$Item.Name))
-        if ($choice -ne 'start') { return $false }
-    }
-    if ([bool]$Item.RequiresAdmin -and -not (Test-IsAdministrator)) {
-        [void](Request-ElevationForTool -Mode Startup -ItemId ([string]$Item.Id))
-        return $false
-    }
-
-    $backupId = [Guid]::NewGuid().ToString('N')
-    $backupPath = ''
-    $manifest = [PSCustomObject]@{
-        BackupId = $backupId; Active = $true; DisabledAt = [DateTimeOffset]::Now.ToString('o'); RestoredAt = ''
-        Name = [string]$Item.Name; SourceType = [string]$Item.SourceType; Scope = [string]$Item.Scope
-        Command = [string]$Item.Command; Location = [string]$Item.Location; RequiresAdmin = [bool]$Item.RequiresAdmin
-        RegistryPath = [string]$Item.RegistryPath; ValueName = [string]$Item.ValueName
-        Value = $Item.Value; ValueKind = [string]$Item.ValueKind; OriginalFilePath = [string]$Item.FilePath
-        BackupFilePath = ''; TaskName = [string]$Item.TaskName; TaskPath = [string]$Item.TaskPath
-    }
-
+    $remnexaWorkProgress = New-RemnexaProgress -Activity (Get-RemnexaProgressText 'ProgressTaskStartup') -Unit (Get-RemnexaProgressText 'ProgressUnitItems')
     try {
-        if ($Item.SourceType -eq 'StartupFolder') {
-            $fileBackupRoot = Join-Path (Join-Path $script:StartupBackupRoot 'Files') $backupId
-            New-Item -ItemType Directory -Path $fileBackupRoot -Force | Out-Null
-            $backupPath = Join-Path $fileBackupRoot ([IO.Path]::GetFileName([string]$Item.FilePath))
-            $manifest.BackupFilePath = $backupPath
+        if ([bool]$Item.IsProtected) {
+            Write-Status (T 'StartupProtected') 'Warning'
+            return $false
         }
-        $manifestPath = Save-StartupManifest -Manifest $manifest
-
-        switch ([string]$Item.SourceType) {
-            'Registry' {
-                Remove-ItemProperty -LiteralPath ([string]$Item.RegistryPath) -Name ([string]$Item.ValueName) -ErrorAction Stop
-            }
-            'StartupFolder' {
-                Move-Item -LiteralPath ([string]$Item.FilePath) -Destination $backupPath -ErrorAction Stop
-            }
-            'ScheduledTask' {
-                Disable-ScheduledTask -TaskName ([string]$Item.TaskName) -TaskPath ([string]$Item.TaskPath) -ErrorAction Stop | Out-Null
-            }
-            default { throw "Unbekannter Autostart-Typ: $($Item.SourceType)" }
+        if (-not $SkipConfirmation) {
+            $choice = Read-ExplicitConfirmation -WarningText (T 'StartupConfirm' @([string]$Item.Name)) -ActionText (T 'StartupConfirm' @([string]$Item.Name))
+            if ($choice -ne 'start') { Complete-RemnexaProgress $remnexaWorkProgress -Outcome Cancelled; return $false }
+        }
+        if ([bool]$Item.RequiresAdmin -and -not (Test-IsAdministrator)) {
+            [void](Request-ElevationForTool -Mode Startup -ItemId ([string]$Item.Id))
+            return $false
         }
 
-        Add-StartupHistory -Action 'Disabled' -Item $Item -Succeeded $true -Details $manifestPath
-        [void](Save-ToolLog -Action 'StartupDisabled' -Data $manifest)
-        Write-Status (T 'StartupDisabled' @([string]$Item.Name)) 'Success'
-        return $true
+        $backupId = [Guid]::NewGuid().ToString('N')
+        $backupPath = ''
+        $manifest = [PSCustomObject]@{
+            BackupId = $backupId; Active = $true; DisabledAt = [DateTimeOffset]::Now.ToString('o'); RestoredAt = ''
+            Name = [string]$Item.Name; SourceType = [string]$Item.SourceType; Scope = [string]$Item.Scope
+            Command = [string]$Item.Command; Location = [string]$Item.Location; RequiresAdmin = [bool]$Item.RequiresAdmin
+            RegistryPath = [string]$Item.RegistryPath; ValueName = [string]$Item.ValueName
+            Value = $Item.Value; ValueKind = [string]$Item.ValueKind; OriginalFilePath = [string]$Item.FilePath
+            BackupFilePath = ''; TaskName = [string]$Item.TaskName; TaskPath = [string]$Item.TaskPath
+        }
+
+        try {
+            if ($Item.SourceType -eq 'StartupFolder') {
+                $fileBackupRoot = Join-Path (Join-Path $script:StartupBackupRoot 'Files') $backupId
+                New-Item -ItemType Directory -Path $fileBackupRoot -Force | Out-Null
+                $backupPath = Join-Path $fileBackupRoot ([IO.Path]::GetFileName([string]$Item.FilePath))
+                $manifest.BackupFilePath = $backupPath
+            }
+            $manifestPath = Save-StartupManifest -Manifest $manifest
+
+            switch ([string]$Item.SourceType) {
+                'Registry' {
+                    Remove-ItemProperty -LiteralPath ([string]$Item.RegistryPath) -Name ([string]$Item.ValueName) -ErrorAction Stop
+                }
+                'StartupFolder' {
+                    Move-Item -LiteralPath ([string]$Item.FilePath) -Destination $backupPath -ErrorAction Stop
+                }
+                'ScheduledTask' {
+                    Disable-ScheduledTask -TaskName ([string]$Item.TaskName) -TaskPath ([string]$Item.TaskPath) -ErrorAction Stop | Out-Null
+                }
+                default { throw "Unbekannter Autostart-Typ: $($Item.SourceType)" }
+            }
+
+            Add-StartupHistory -Action 'Disabled' -Item $Item -Succeeded $true -Details $manifestPath
+            [void](Save-ToolLog -Action 'StartupDisabled' -Data $manifest)
+            Write-Status (T 'StartupDisabled' @([string]$Item.Name)) 'Success'
+            return $true
+        }
+        catch {
+            $manifest.Active = $false
+            $manifest.RestoredAt = [DateTimeOffset]::Now.ToString('o')
+            try { [void](Save-StartupManifest -Manifest $manifest) } catch { }
+            Add-StartupHistory -Action 'DisableFailed' -Item $Item -Succeeded $false -Details $_.Exception.Message
+            Write-Status (T 'StartupActionFailed' @($_.Exception.Message)) 'Error'
+            return $false
+        }
     }
-    catch {
-        $manifest.Active = $false
-        $manifest.RestoredAt = [DateTimeOffset]::Now.ToString('o')
-        try { [void](Save-StartupManifest -Manifest $manifest) } catch { }
-        Add-StartupHistory -Action 'DisableFailed' -Item $Item -Succeeded $false -Details $_.Exception.Message
-        Write-Status (T 'StartupActionFailed' @($_.Exception.Message)) 'Error'
-        return $false
-    }
+    catch { Complete-RemnexaProgress $remnexaWorkProgress -Outcome Failed; throw }
+    finally { if ($remnexaWorkProgress.Outcome -eq 'Running') { Complete-RemnexaProgress $remnexaWorkProgress } }
 }
 
 function Restore-StartupItem {
@@ -2775,58 +2905,62 @@ function Restore-StartupItem {
         [Parameter(Mandatory = $true)][object]$Backup,
         [switch]$SkipConfirmation
     )
-
-    if (-not $SkipConfirmation) {
-        $choice = Read-ExplicitConfirmation -WarningText (T 'StartupRestoreConfirm' @([string]$Backup.Name)) -ActionText (T 'StartupRestoreConfirm' @([string]$Backup.Name))
-        if ($choice -ne 'start') { return $false }
-    }
-    if ([bool]$Backup.RequiresAdmin -and -not (Test-IsAdministrator)) {
-        [void](Request-ElevationForTool -Mode Startup -ItemId ('restore:' + [string]$Backup.BackupId))
-        return $false
-    }
-
+    $remnexaWorkProgress = New-RemnexaProgress -Activity (Get-RemnexaProgressText 'ProgressTaskRestore') -Unit (Get-RemnexaProgressText 'ProgressUnitItems')
     try {
-        switch ([string]$Backup.SourceType) {
-            'Registry' {
-                if (-not (Test-Path -LiteralPath ([string]$Backup.RegistryPath))) {
-                    New-Item -Path ([string]$Backup.RegistryPath) -Force | Out-Null
-                }
-                $value = $Backup.Value
-                switch ([string]$Backup.ValueKind) {
-                    'Binary' { $value = [byte[]]@($Backup.Value) }
-                    'DWord' { $value = [int]$Backup.Value }
-                    'QWord' { $value = [long]$Backup.Value }
-                    'MultiString' { $value = [string[]]@($Backup.Value) }
-                    default { $value = [string]$Backup.Value }
-                }
-                New-ItemProperty -LiteralPath ([string]$Backup.RegistryPath) -Name ([string]$Backup.ValueName) -Value $value -PropertyType ([string]$Backup.ValueKind) -Force -ErrorAction Stop | Out-Null
-            }
-            'StartupFolder' {
-                if (-not (Test-Path -LiteralPath ([string]$Backup.BackupFilePath))) { throw 'Die gesicherte Autostart-Datei fehlt.' }
-                if (Test-Path -LiteralPath ([string]$Backup.OriginalFilePath)) { throw 'Am ursprünglichen Ort existiert bereits eine Datei mit demselben Namen.' }
-                $parent = Split-Path -Parent ([string]$Backup.OriginalFilePath)
-                New-Item -ItemType Directory -Path $parent -Force | Out-Null
-                Move-Item -LiteralPath ([string]$Backup.BackupFilePath) -Destination ([string]$Backup.OriginalFilePath) -ErrorAction Stop
-            }
-            'ScheduledTask' {
-                Enable-ScheduledTask -TaskName ([string]$Backup.TaskName) -TaskPath ([string]$Backup.TaskPath) -ErrorAction Stop | Out-Null
-            }
-            default { throw "Unbekannter Autostart-Typ: $($Backup.SourceType)" }
+        if (-not $SkipConfirmation) {
+            $choice = Read-ExplicitConfirmation -WarningText (T 'StartupRestoreConfirm' @([string]$Backup.Name)) -ActionText (T 'StartupRestoreConfirm' @([string]$Backup.Name))
+            if ($choice -ne 'start') { Complete-RemnexaProgress $remnexaWorkProgress -Outcome Cancelled; return $false }
+        }
+        if ([bool]$Backup.RequiresAdmin -and -not (Test-IsAdministrator)) {
+            [void](Request-ElevationForTool -Mode Startup -ItemId ('restore:' + [string]$Backup.BackupId))
+            return $false
         }
 
-        $Backup.Active = $false
-        $Backup.RestoredAt = [DateTimeOffset]::Now.ToString('o')
-        [void](Save-StartupManifest -Manifest $Backup -Path ([string]$Backup._ManifestPath))
-        Add-StartupHistory -Action 'Restored' -Item $Backup -Succeeded $true -Details ([string]$Backup.BackupId)
-        [void](Save-ToolLog -Action 'StartupRestored' -Data $Backup)
-        Write-Status (T 'StartupRestored' @([string]$Backup.Name)) 'Success'
-        return $true
+        try {
+            switch ([string]$Backup.SourceType) {
+                'Registry' {
+                    if (-not (Test-Path -LiteralPath ([string]$Backup.RegistryPath))) {
+                        New-Item -Path ([string]$Backup.RegistryPath) -Force | Out-Null
+                    }
+                    $value = $Backup.Value
+                    switch ([string]$Backup.ValueKind) {
+                        'Binary' { $value = [byte[]]@($Backup.Value) }
+                        'DWord' { $value = [int]$Backup.Value }
+                        'QWord' { $value = [long]$Backup.Value }
+                        'MultiString' { $value = [string[]]@($Backup.Value) }
+                        default { $value = [string]$Backup.Value }
+                    }
+                    New-ItemProperty -LiteralPath ([string]$Backup.RegistryPath) -Name ([string]$Backup.ValueName) -Value $value -PropertyType ([string]$Backup.ValueKind) -Force -ErrorAction Stop | Out-Null
+                }
+                'StartupFolder' {
+                    if (-not (Test-Path -LiteralPath ([string]$Backup.BackupFilePath))) { throw 'Die gesicherte Autostart-Datei fehlt.' }
+                    if (Test-Path -LiteralPath ([string]$Backup.OriginalFilePath)) { throw 'Am ursprünglichen Ort existiert bereits eine Datei mit demselben Namen.' }
+                    $parent = Split-Path -Parent ([string]$Backup.OriginalFilePath)
+                    New-Item -ItemType Directory -Path $parent -Force | Out-Null
+                    Move-Item -LiteralPath ([string]$Backup.BackupFilePath) -Destination ([string]$Backup.OriginalFilePath) -ErrorAction Stop
+                }
+                'ScheduledTask' {
+                    Enable-ScheduledTask -TaskName ([string]$Backup.TaskName) -TaskPath ([string]$Backup.TaskPath) -ErrorAction Stop | Out-Null
+                }
+                default { throw "Unbekannter Autostart-Typ: $($Backup.SourceType)" }
+            }
+
+            $Backup.Active = $false
+            $Backup.RestoredAt = [DateTimeOffset]::Now.ToString('o')
+            [void](Save-StartupManifest -Manifest $Backup -Path ([string]$Backup._ManifestPath))
+            Add-StartupHistory -Action 'Restored' -Item $Backup -Succeeded $true -Details ([string]$Backup.BackupId)
+            [void](Save-ToolLog -Action 'StartupRestored' -Data $Backup)
+            Write-Status (T 'StartupRestored' @([string]$Backup.Name)) 'Success'
+            return $true
+        }
+        catch {
+            Add-StartupHistory -Action 'RestoreFailed' -Item $Backup -Succeeded $false -Details $_.Exception.Message
+            Write-Status (T 'StartupActionFailed' @($_.Exception.Message)) 'Error'
+            return $false
+        }
     }
-    catch {
-        Add-StartupHistory -Action 'RestoreFailed' -Item $Backup -Succeeded $false -Details $_.Exception.Message
-        Write-Status (T 'StartupActionFailed' @($_.Exception.Message)) 'Error'
-        return $false
-    }
+    catch { Complete-RemnexaProgress $remnexaWorkProgress -Outcome Failed; throw }
+    finally { if ($remnexaWorkProgress.Outcome -eq 'Running') { Complete-RemnexaProgress $remnexaWorkProgress } }
 }
 
 function Show-StartupHistoryScreen {
@@ -2976,12 +3110,15 @@ function Invoke-StartupMenu {
 }
 
 function Invoke-ActiveServicesScreen {
+    $servicesProgress = New-RemnexaProgress -Activity (Get-RemnexaProgressText 'ProgressTaskServices')
     try {
         $allServices = @(Get-CimInstance -ClassName Win32_Service -ErrorAction Stop |
             Where-Object { $_.State -eq 'Running' } |
             Sort-Object DisplayName, Name)
+        Complete-RemnexaProgress $servicesProgress
     }
     catch {
+        Complete-RemnexaProgress $servicesProgress -Outcome Failed
         Write-Status (T 'ServicesReadError' @($_.Exception.Message)) 'Error'
         return 'menu'
     }
@@ -3381,7 +3518,7 @@ function Invoke-RemnexaSelfTest {
         $checks.Add([PSCustomObject]@{ Name = $Name; Passed = $Passed; Details = $Details })
     }
 
-    & $addCheck 'Brand' ($script:BrandName -eq 'REMNEXA' -and $script:CleanerVersion -eq '2.2.0-rc.1') "$($script:BrandName) $($script:CleanerVersion)"
+    & $addCheck 'Brand' ($script:BrandName -eq 'REMNEXA' -and $script:CleanerVersion -eq '2.2.0-rc.2') "$($script:BrandName) $($script:CleanerVersion)"
     $translationProblems = @(
         foreach ($key in $script:Texts.Keys) {
             $translations = @($script:Texts[$key])
@@ -3725,6 +3862,7 @@ function Main {
 $scriptExitCode = 0
 try {
     if ($SelfTest) {
+        Set-RemnexaProgressRendering -Enabled $false
         $selfTestResult = Invoke-RemnexaSelfTest
         $selfTestResult | ConvertTo-Json -Depth 6
         if (-not $selfTestResult.Passed) { $scriptExitCode = 1 }
@@ -3741,4 +3879,3 @@ catch {
 Complete-OperationProgress
 
 exit $scriptExitCode
-
