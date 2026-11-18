@@ -6,6 +6,14 @@ Development changes are not published release claims. Existing release artifacts
 
 ## 2.2.0 — development, not released
 
+### Candidate 2.2.0-rc.5
+
+- Add a reusable ClamAV 1.5.4 native engine with inherited private pipes instead of an unauthenticated TCP daemon. Engine/signature updates invalidate and stop the owned cache.
+- Bound native scan concurrency and reordering, restrict worker privileges, enforce job CPU/commit limits and kill owned workers on cancellation, idle timeout or owner exit.
+- Keep CLI fallback for unsupported startup configurations, complete per-file accounting, explicit limit/error results and existing update/quarantine controls.
+- Add six-language startup/reuse/fallback messages, lifecycle APIs, reproducible native tests and cold/warm benchmark tools. The optional linked adapter is GPL-2.0-or-later; frontend/transport remain MIT.
+- See [implementation and validation boundaries](docs/PRIVATE_SCAN_ENGINE.md). No stable release is created.
+
 ### Candidate 2.2.0-rc.4
 
 - Stream directory entries into a temporary file list using lazy .NET enumerators; avoid materializing every child and retaining acknowledged file paths.

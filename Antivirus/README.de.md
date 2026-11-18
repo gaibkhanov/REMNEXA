@@ -71,6 +71,8 @@ Normale Scans melden Funde. `-Quarantine` erlaubt ausdrücklich das Verschieben 
 
 ## Konfiguration
 
+Kandidat rc.5 kann eine native ClamAV-1.5.4-Engine zwischen Scans geladen halten, mit vererbten privaten Pipes und begrenzten nativen Threads. `ScanBackend` akzeptiert `Auto` (Standard), `ClamScan` oder `PrivateWorker`; `ScanEngineIdleSeconds` ist standardmäßig 60. Kein Daemon-Port oder Dienst wird geöffnet. Siehe [private Engine, Fallback und Lizenzdetails](../docs/PRIVATE_SCAN_ENGINE.de.md).
+
 Kandidat rc.4 ergänzt **P** im Antivirus-Menü für Eco/Balanced/Fast-Prozessprioritäten. Während eines Scans brechen **X**, **Esc** oder **Strg+C** den Vorgang mit unvollständiger Abdeckung ab. Je konfigurierter Installation läuft höchstens ein REMNEXA-Scan/Update. Engine-Limitwarnungen sind sichtbar und werden nie als Malware in Quarantäne verschoben. Siehe [Verhalten und Benchmark-Grenzen](../docs/CLAMAV_SCAN_PERFORMANCE.de.md).
 
 Verwende `config/antivirus.json`, `Get-AVConfig` und `Set-AVConfig`; bevorzuge unterstützte validierte Schreibvorgänge:
@@ -90,4 +92,4 @@ Die Einstellungen ändern zukünftiges Verhalten und starten nicht unmittelbar e
 
 Prüfe Engine-/Signaturbereitschaft, konkrete Fehler, Berechtigungen und konfigurierte Pfade vor einem neuen Versuch. Eine Warnung zum Signaturalter ist etwas anderes als ein Startfehler der Engine. Deaktiviere vorhandene Sicherheitssoftware nicht, um REMNEXA zu erzwingen.
 
-ClamAV hat eigene Lizenz- und Drittanbieterhinweise, unabhängig von REMNEXAs MIT-Lizenz. Erhalte diese bei Weitergabe. Siehe [Drittanbieterhinweise](../docs/THIRD_PARTY_NOTICES.de.md) und [offizielle ClamAV-Dokumentation](https://docs.clamav.net/).
+Der optionale native REMNEXA-Adapter in `Workers` steht unter GPL-2.0-or-later; Oberfläche/Transport bleiben MIT. ClamAV hat eigene Lizenz- und Drittanbieterhinweise. Erhalte diese bei Weitergabe. Siehe [Drittanbieterhinweise](../docs/THIRD_PARTY_NOTICES.de.md) und [offizielle ClamAV-Dokumentation](https://docs.clamav.net/).

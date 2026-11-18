@@ -6,7 +6,7 @@ Dokumentation der **Entwicklungsversion 2.2.0**. Jede Markdown-Anleitung hat ein
 
 ## Für Anwender
 
-- [Aktueller Kandidat: 2.2.0-rc.4](CLAMAV_SCAN_PERFORMANCE.de.md): Änderungen, Prüfsummen, Paketierung und Prüfgrenzen.
+- [Aktueller Kandidat: 2.2.0-rc.5](PRIVATE_SCAN_ENGINE.de.md): Änderungen, Prüfsummen, Paketierung und Prüfgrenzen.
 
 - [Projektübersicht und Installation](../README.de.md)
 - [Benutzerhandbuch](USER_GUIDE.de.md): Navigation, Entfernung, Autostart, Rechte, Ergebnisse und Logs.

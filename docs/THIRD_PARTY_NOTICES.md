@@ -2,12 +2,13 @@
 
 # Third-party components and licensing
 
-The [MIT license](../LICENSE) covers REMNEXA's own code as specified there. It does not relicense dependencies, upstream binaries, databases, models or other bundled materials. Keep original legal notices unchanged.
+The [MIT license](../LICENSE) covers the REMNEXA frontend and IPC transport. The separate optional native adapter described below has explicit GPL notices. The MIT license does not relicense dependencies, upstream binaries, databases, models or other bundled materials. Keep original legal notices unchanged.
 
 | Component | Role | Distribution and obligations |
 | --- | --- | --- |
 | PowerShell | Required application runtime, 7.5+ | Source checkout does not bundle it. PowerShell's MIT license and package-specific third-party notices remain applicable when redistributed. |
 | ClamAV | Optional on-demand scanner and updater | Source checkout excludes binaries/signatures. Upstream ClamAV is GPLv2; preserve the supplied license/third-party notices and review source/provision obligations for the exact package. |
+| REMNEXA native scan adapter | Optional separate-process libclamav integration | `Antivirus/Workers/NativeEngine.cs` and `NativeScan.ps1` are GPL-2.0-or-later; [GPL text](../Antivirus/Workers/COPYING.txt) is included. `WorkerTransport.cs` remains MIT and is GPL-compatible when compiled into the worker. Preserve these source notices; distributed linked workers must meet GPL source/license obligations. |
 | Pester | Development tests | Not an end-user runtime requirement. Review the exact upstream version's license/notices before bundling. |
 | PSScriptAnalyzer | Development analysis | Not an end-user runtime requirement. Review the exact upstream version's license/notices before bundling. |
 | AI runtime/model | Planned only | Nothing selected or shipped. License/redistribution review is an acceptance requirement, not a completed clearance. |

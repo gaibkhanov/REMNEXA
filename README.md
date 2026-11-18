@@ -6,9 +6,9 @@
 
 A free, open-source Windows utility for application removal, startup management, system maintenance and optional local malware scanning. Review detected items and choose which supported changes to make.
 
-**Windows 10 / 11 · PowerShell 7.5+ · MIT License · Six interface languages**
+**Windows 10 / 11 · PowerShell 7.5+ · Open Source · Six interface languages**
 
-> **Current candidate: 2.2.0-rc.4**, available on the [candidate branch](https://github.com/gaibkhanov/REMNEXA/tree/feature/clamav-scan-performance). It is not a stable release. Read the [candidate notes and package instructions](docs/CLAMAV_SCAN_PERFORMANCE.md). The default branch may contain an earlier version.
+> **Current candidate: 2.2.0-rc.5**, available on the [candidate branch](https://github.com/gaibkhanov/REMNEXA/tree/feature/clamav-private-worker). It is not a stable release. Read the [candidate notes and package instructions](docs/PRIVATE_SCAN_ENGINE.md). The default branch may contain an earlier version.
 
 ## Features
 
@@ -73,7 +73,7 @@ Service and antivirus checks are snapshots. A stopped demand-start service is no
 
 ## What's new in 2.2.0
 
-Candidate rc.4 adds streaming scan inventories, bounded scan concurrency, Eco/Balanced/Fast priorities, cancellation and explicit scan-limit warnings. Antivirus **P** selects performance settings; **X**, **Esc** or **Ctrl+C** cancels a running scan. The confirmed U/I update workflow from rc.3 remains. See [measurements and validation limits](docs/CLAMAV_SCAN_PERFORMANCE.md).
+Candidate rc.5 adds a reusable native ClamAV 1.5.4 engine in a separate process with private pipes, bounded threads, CPU/memory limits and idle shutdown. The CLI scan backend remains available. Antivirus **P** selects Eco/Balanced/Fast; **X**, **Esc** or **Ctrl+C** cancels a scan. Confirmed U/I updates and existing quarantine controls remain. See [behavior, measurements and validation limits](docs/PRIVATE_SCAN_ENGINE.md).
 
 - HTTPS and SHA-256 checks for supported ClamAV downloads; staged installation and configuration recovery.
 - Additional linked-path checks and validation of supported privacy backups.
@@ -83,7 +83,7 @@ Candidate rc.4 adds streaming scan inventories, bounded scan concurrency, Eco/Ba
 - Page navigation only when another page exists; one visible exit option per prompt.
 - Modular core components, external translations and a read-only system overview.
 
-Current validation and remaining limits are recorded in the [smart-update report](docs/CLAMAV_SCAN_PERFORMANCE.md). Earlier results remain in the historical [development report](docs/VERSION_2.2.0.md).
+Current behavior and remaining limits are recorded in the [private-engine report](docs/PRIVATE_SCAN_ENGINE.md). Earlier results remain in the historical [development report](docs/VERSION_2.2.0.md).
 
 ## Documentation
 
@@ -111,4 +111,4 @@ Bug reports, translations and code contributions also help.
 
 ## License
 
-REMNEXA uses the [MIT License](LICENSE). Optional third-party components retain their own terms; see [third-party notices](docs/THIRD_PARTY_NOTICES.md). REMNEXA's license does not replace those obligations.
+The REMNEXA frontend and IPC transport use the [MIT License](LICENSE). The optional native adapter in `Antivirus/Workers` is **GPL-2.0-or-later** with its own license notices. Optional third-party components retain their own terms; see [third-party notices](docs/THIRD_PARTY_NOTICES.md).

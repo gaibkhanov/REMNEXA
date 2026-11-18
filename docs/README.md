@@ -6,7 +6,7 @@ Documentation for the **2.2.0 development build**. Each Markdown guide has an En
 
 ## For users
 
-- [Current candidate: 2.2.0-rc.4](CLAMAV_SCAN_PERFORMANCE.md): changes, checksums, packaging and validation limits.
+- [Current candidate: 2.2.0-rc.5](PRIVATE_SCAN_ENGINE.md): changes, checksums, packaging and validation limits.
 
 - [Project overview and installation](../README.md)
 - [User guide](USER_GUIDE.md): navigation, removal, startup, permissions, results and logs.

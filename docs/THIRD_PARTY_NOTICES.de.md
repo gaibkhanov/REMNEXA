@@ -2,12 +2,13 @@
 
 # Drittkomponenten und Lizenzen
 
-Die [MIT-Lizenz](../LICENSE) betrifft REMNEXAs eigenen Code gemäß ihrem Wortlaut. Sie lizenziert keine Abhängigkeiten, fremden Binärdateien, Datenbanken, Modelle oder sonstigen Inhalte um. Originale rechtliche Hinweise unverändert erhalten.
+Die [MIT-Lizenz](../LICENSE) betrifft REMNEXA-Oberfläche und IPC-Transport. Der separate optionale native Adapter trägt eigene GPL-Hinweise. Die MIT-Lizenz lizenziert keine Abhängigkeiten, fremden Binärdateien, Datenbanken, Modelle oder sonstigen Inhalte um. Originale rechtliche Hinweise unverändert erhalten.
 
 | Komponente | Rolle | Weitergabe und Pflichten |
 | --- | --- | --- |
 | PowerShell | Erforderliche Laufzeit ab 7.5 | Im Quellcode-Checkout nicht enthalten. Bei Weitergabe gelten PowerShells MIT-Lizenz und paketbezogene Drittanbieterhinweise. |
 | ClamAV | Optionaler Scanner/Updater bei Bedarf | Binärdateien/Signaturen nicht im Quellcode. Upstream-ClamAV ist GPLv2; mitgelieferte Lizenzen/Hinweise erhalten und Quellcode-/Bereitstellungspflichten des konkreten Pakets prüfen. |
+| Nativer REMNEXA-Scanadapter | Optionale libclamav-Anbindung in eigenem Prozess | `Antivirus/Workers/NativeEngine.cs` und `NativeScan.ps1` stehen unter GPL-2.0-or-later; der [GPL-Text](../Antivirus/Workers/COPYING.txt) liegt bei. `WorkerTransport.cs` bleibt MIT-lizenziert und ist beim Kompilieren in den Worker GPL-kompatibel. Quellenhinweise erhalten; weitergegebene verlinkte Worker müssen GPL-Quellcode-/Lizenzpflichten erfüllen. |
 | Pester | Entwicklungstests | Keine Endnutzer-Laufzeitabhängigkeit. Vor Bündelung Lizenz/Hinweise der konkreten Upstream-Version prüfen. |
 | PSScriptAnalyzer | Entwicklungsanalyse | Keine Endnutzer-Laufzeitabhängigkeit. Vor Bündelung Lizenz/Hinweise der konkreten Upstream-Version prüfen. |
 | KI-Laufzeit/Modell | Nur geplant | Nichts ausgewählt oder mitgeliefert. Lizenz-/Weitergabeprüfung ist Abnahmebedingung, keine bereits erteilte Freigabe. |

@@ -6,9 +6,9 @@
 
 Ein kostenloses Open-Source-Werkzeug für die Deinstallation von Anwendungen, Autostart-Verwaltung, Windows-Wartung und optionale lokale Malware-Scans. Prüfe die gefundenen Einträge und entscheide selbst über die unterstützten Änderungen.
 
-**Windows 10 / 11 · PowerShell 7.5+ · MIT-Lizenz · Sechs Oberflächensprachen**
+**Windows 10 / 11 · PowerShell 7.5+ · Open Source · Sechs Oberflächensprachen**
 
-> **Aktueller Kandidat: 2.2.0-rc.4**, verfügbar im [Kandidatenbranch](https://github.com/gaibkhanov/REMNEXA/tree/feature/clamav-scan-performance). Dies ist kein stabiles Release. Beachte [Kandidatenbericht und Paketanleitung](docs/CLAMAV_SCAN_PERFORMANCE.de.md). Der Standardbranch kann eine ältere Version enthalten.
+> **Aktueller Kandidat: 2.2.0-rc.5**, verfügbar im [Kandidatenbranch](https://github.com/gaibkhanov/REMNEXA/tree/feature/clamav-private-worker). Dies ist kein stabiles Release. Beachte [Kandidatenbericht und Paketanleitung](docs/PRIVATE_SCAN_ENGINE.de.md). Der Standardbranch kann eine ältere Version enthalten.
 
 ## Funktionen
 
@@ -73,7 +73,7 @@ Dienste- und Antivirus-Prüfungen sind Momentaufnahmen. Ein gestoppter Dienst mi
 
 ## Neu in 2.2.0
 
-Kandidat rc.4 ergänzt speicherbegrenzte Dateierfassung, begrenzte gleichzeitige Scans, Eco/Balanced/Fast-Prioritäten, Scanabbruch und ausdrückliche Hinweise auf Scanlimits. Im Antivirus-Menü wählt **P** die Leistungseinstellung; **X**, **Esc** oder **Strg+C** bricht einen laufenden Scan ab. Die bestätigten U/I-Updates aus rc.3 bleiben erhalten. Siehe [Messungen und Prüfgrenzen](docs/CLAMAV_SCAN_PERFORMANCE.de.md).
+Kandidat rc.5 ergänzt eine wiederverwendbare native ClamAV-1.5.4-Engine in einem separaten Prozess mit privaten Pipes, begrenzten Threads, CPU-/Speicherlimits und Leerlaufende. Der CLI-Scanpfad bleibt verfügbar. **P** wählt Eco/Balanced/Fast; **X**, **Esc** oder **Strg+C** bricht einen Scan ab. Bestätigte U/I-Updates und bestehende Quarantänekontrollen bleiben erhalten. Siehe [Verhalten, Messungen und Prüfgrenzen](docs/PRIVATE_SCAN_ENGINE.de.md).
 
 - HTTPS- und SHA-256-Prüfung unterstützter ClamAV-Downloads; gestufte Installation und Konfigurationswiederherstellung.
 - Zusätzliche Prüfungen verknüpfter Pfade und unterstützter Datenschutzsicherungen.
@@ -83,7 +83,7 @@ Kandidat rc.4 ergänzt speicherbegrenzte Dateierfassung, begrenzte gleichzeitige
 - Seitenwechsel nur bei vorhandenen Seiten; genau eine sichtbare Beenden-Option je Eingabe.
 - Modulare Kernbausteine, externe Übersetzungen und eine rein lesende Systemübersicht.
 
-Aktuelle Prüfungen und verbleibende Grenzen stehen im [Bericht zur Updateverwaltung](docs/CLAMAV_SCAN_PERFORMANCE.de.md). Frühere Prüfergebnisse bleiben im historischen [Entwicklungsbericht](docs/VERSION_2.2.0.de.md) dokumentiert.
+Aktuelles Verhalten und verbleibende Grenzen stehen im [Bericht zur privaten Engine](docs/PRIVATE_SCAN_ENGINE.de.md). Frühere Prüfergebnisse bleiben im historischen [Entwicklungsbericht](docs/VERSION_2.2.0.de.md) dokumentiert.
 
 ## Dokumentation
 
@@ -111,4 +111,4 @@ Auch Fehlermeldungen, Übersetzungen und Codebeiträge helfen.
 
 ## Lizenz
 
-REMNEXA steht unter der [MIT-Lizenz](LICENSE). Optionale Drittkomponenten behalten ihre eigenen Bedingungen; siehe [Drittanbieterhinweise](docs/THIRD_PARTY_NOTICES.de.md). Die REMNEXA-Lizenz ersetzt diese Pflichten nicht.
+REMNEXA-Oberfläche und IPC-Transport stehen unter der [MIT-Lizenz](LICENSE). Der optionale native Adapter in `Antivirus/Workers` steht unter **GPL-2.0-or-later** mit eigenen Lizenzhinweisen. Optionale Drittkomponenten behalten ihre Bedingungen; siehe [Drittanbieterhinweise](docs/THIRD_PARTY_NOTICES.de.md).

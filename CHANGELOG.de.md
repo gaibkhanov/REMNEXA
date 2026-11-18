@@ -6,6 +6,14 @@ Entwicklungsänderungen sind keine veröffentlichten Releases. Dieses Dokument v
 
 ## 2.2.0 — Entwicklung, nicht veröffentlicht
 
+### Kandidat 2.2.0-rc.5
+
+- Wiederverwendbare native ClamAV-1.5.4-Engine mit vererbten privaten Pipes statt eines nicht authentifizierten TCP-Daemons. Engine-/Signaturupdates beenden den eigenen Cache und machen ihn ungültig.
+- Begrenzte native Parallelität und Ergebnisumsortierung, reduzierte Worker-Rechte, Job-Limits für CPU/Speicher sowie Beenden bei Abbruch, Leerlauf oder Ende des Besitzers.
+- CLI-Fallback bei nicht unterstützter Startkonfiguration; vollständige Dateizählung, ausdrückliche Limit-/Fehlerergebnisse sowie bestehende Update-/Quarantänekontrollen bleiben erhalten.
+- Neue Start-/Wiederverwendungs-/Fallbacktexte in sechs Sprachen, Lebenszyklus-APIs, reproduzierbare native Tests und Kalt-/Warmscan-Benchmarks. Optionaler verlinkter Adapter unter GPL-2.0-or-later; Oberfläche/Transport bleiben MIT.
+- Siehe [Implementierung und Prüfgrenzen](docs/PRIVATE_SCAN_ENGINE.de.md). Kein stabiles Release wird erstellt.
+
 ### Kandidat 2.2.0-rc.4
 
 - Verzeichniseinträge über verzögert gelesene .NET-Enumeratoren in eine temporäre Dateiliste schreiben; keine vollständigen Verzeichnisinhalte und bestätigten Dateipfade im Speicher sammeln.

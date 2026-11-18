@@ -1,0 +1,31 @@
+{
+  "Passed": true,
+  "Engine": "1.5.4",
+  "TokenMode": "restricted",
+  "Threads": 2,
+  "Signatures": 1,
+  "InitializationSeconds": 3.6153299,
+  "IdleExitObserved": true,
+  "TcpConnections": 0,
+  "PublicStartupCancellationObserved": true,
+  "PrivateTemporaryAclVerified": true,
+  "Dataset": "Isolated harmless custom HDB, matching file and ZIP, clean Unicode file, empty file",
+  "Passes": [
+    {
+      "Iteration": 1,
+      "Seconds": 0.2725205,
+      "Files": 4,
+      "Detections": 2,
+      "Clean": 2,
+      "SameProcess": true
+    },
+    {
+      "Iteration": 2,
+      "Seconds": 0.1207209,
+      "Files": 4,
+      "Detections": 2,
+      "Clean": 2,
+      "SameProcess": true
+    }
+  ]
+}

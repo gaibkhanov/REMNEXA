@@ -20,6 +20,7 @@ Treat application names, registered uninstall commands, filesystem metadata, dow
 | Configuration | Schema checks, atomic replacement and read-back for supported settings | Not a backup of all Windows state. |
 | Privacy restore | Validate supported Registry path/name/type allowlist before writes | No universal cryptographic authentication or transactional system restore. |
 | Processes | Shared native-process adapter avoids shell invocation for its calls | Registered vendor uninstallers remain a trust boundary. |
+| Native scanner | Private inherited pipes, non-elevated worker, restricted-token attempt, job limits and kill-on-close; no daemon TCP endpoint | Not a complete native-exploit sandbox. Elevated-parent launch and additional Windows configurations need validation; see [private-engine boundaries](PRIVATE_SCAN_ENGINE.md). |
 | Quarantine | Deliberate action, manifest/hash and no-overwrite checks on restore | Restoration can reintroduce malicious content. |
 | Logging | Structured events and explicit outcome categories | Logs can expose sensitive paths or commands. |
 

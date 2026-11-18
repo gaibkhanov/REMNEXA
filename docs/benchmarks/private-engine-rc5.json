@@ -1,0 +1,164 @@
+{
+  "SchemaVersion": 1,
+  "Dataset": "Seed 48291; harmless random data; 1-8 KiB files",
+  "FileCount": 1000,
+  "Bytes": 4608000,
+  "LogicalCores": 8,
+  "EngineVersion": "1.5.4",
+  "Notes": [
+    "Local SSD; shared Windows workload; no HDD or 8-GB VM validation.",
+    "Worker-only sampled peak working set; warm peak includes initialization high-water mark.",
+    "CPU and RAM exclude the PowerShell frontend. Warm CPU subtracts pre-scan worker CPU.",
+    "Same installed signatures and dataset; alternating backend order. No downloads or quarantine."
+  ],
+  "Runs": [
+    {
+      "Iteration": 1,
+      "Backend": "clamscan",
+      "Warm": false,
+      "Seconds": 93.1783104,
+      "Files": 1000,
+      "FilesPerSecond": 10.732111321906949,
+      "CpuSeconds": 87.203125,
+      "CpuPercentOfMachine": 11.698420563977086,
+      "SampledPeakMiB": 971.74609375,
+      "FirstFileSeconds": 38.7256691,
+      "Phases": {
+        "StatusSeconds": 0.2620199,
+        "DiscoverySeconds": 0.0698236,
+        "InventorySeconds": 0.5262465,
+        "ScannerSeconds": 89.6879207,
+        "FirstFileSeconds": 38.7256691,
+        "ResultSeconds": 0.0543128
+      },
+      "Threads": 1,
+      "EngineReused": false
+    },
+    {
+      "Iteration": 1,
+      "Backend": "libclamav-private",
+      "Warm": false,
+      "Seconds": 76.8544765,
+      "Files": 1000,
+      "FilesPerSecond": 13.011603819850363,
+      "CpuSeconds": 93.71875,
+      "CpuPercentOfMachine": 15.242890568645015,
+      "SampledPeakMiB": 1130.88671875,
+      "FirstFileSeconds": 47.6222769,
+      "Phases": {
+        "StatusSeconds": 0.0474242,
+        "DiscoverySeconds": 0.0141416,
+        "InventorySeconds": 0.3330927,
+        "ScannerSeconds": 76.1269427,
+        "FirstFileSeconds": 47.6222769,
+        "ResultSeconds": 0.0183246
+      },
+      "Threads": 2,
+      "EngineReused": false
+    },
+    {
+      "Iteration": 1,
+      "Backend": "libclamav-private",
+      "Warm": true,
+      "Seconds": 10.7402957,
+      "Files": 1000,
+      "FilesPerSecond": 93.10730616103986,
+      "CpuSeconds": 5.46875,
+      "CpuPercentOfMachine": 6.364757257102334,
+      "SampledPeakMiB": 1130.88671875,
+      "FirstFileSeconds": 3.2433728,
+      "Phases": {
+        "StatusSeconds": 0.0230836,
+        "DiscoverySeconds": 0.006181,
+        "InventorySeconds": 0.3433762,
+        "ScannerSeconds": 9.8570388,
+        "FirstFileSeconds": 3.2433728,
+        "ResultSeconds": 0.0112471
+      },
+      "Threads": 2,
+      "EngineReused": true
+    },
+    {
+      "Iteration": 2,
+      "Backend": "libclamav-private",
+      "Warm": false,
+      "Seconds": 74.4378841,
+      "Files": 1000,
+      "FilesPerSecond": 13.434019680846893,
+      "CpuSeconds": 95.140625,
+      "CpuPercentOfMachine": 15.976512858725922,
+      "SampledPeakMiB": 1132.69921875,
+      "FirstFileSeconds": 44.2155965,
+      "Phases": {
+        "StatusSeconds": 0.0404823,
+        "DiscoverySeconds": 0.0100079,
+        "InventorySeconds": 0.5398508,
+        "ScannerSeconds": 73.4402854,
+        "FirstFileSeconds": 44.2155965,
+        "ResultSeconds": 0.0057925
+      },
+      "Threads": 2,
+      "EngineReused": false
+    },
+    {
+      "Iteration": 2,
+      "Backend": "libclamav-private",
+      "Warm": true,
+      "Seconds": 9.3953425,
+      "Files": 1000,
+      "FilesPerSecond": 106.43571535577335,
+      "CpuSeconds": 5.390625,
+      "CpuPercentOfMachine": 7.171937851121447,
+      "SampledPeakMiB": 1132.69921875,
+      "FirstFileSeconds": 2.3198615,
+      "Phases": {
+        "StatusSeconds": 0.0472928,
+        "DiscoverySeconds": 0.0133384,
+        "InventorySeconds": 0.3148979,
+        "ScannerSeconds": 8.493045,
+        "FirstFileSeconds": 2.3198615,
+        "ResultSeconds": 0.011437
+      },
+      "Threads": 2,
+      "EngineReused": true
+    },
+    {
+      "Iteration": 2,
+      "Backend": "clamscan",
+      "Warm": false,
+      "Seconds": 84.4655245,
+      "Files": 1000,
+      "FilesPerSecond": 11.839149829703597,
+      "CpuSeconds": 80.828125,
+      "CpuPercentOfMachine": 11.961703529112638,
+      "SampledPeakMiB": 971.875,
+      "FirstFileSeconds": 39.3206119,
+      "Phases": {
+        "StatusSeconds": 0.05096,
+        "DiscoverySeconds": 0.0130086,
+        "InventorySeconds": 0.6093519,
+        "ScannerSeconds": 83.5138453,
+        "FirstFileSeconds": 39.3206119,
+        "ResultSeconds": 0.0045232
+      },
+      "Threads": 1,
+      "EngineReused": false
+    }
+  ],
+  "DiskType": "SSD",
+  "Repetitions": 2,
+  "DatabaseHashes": [
+    {
+      "Name": "bytecode.cvd",
+      "SHA256": "6D4AA01F219E988060FC419F495D07F27E0CDF1A2CCCC065971DA922C76F7FFB"
+    },
+    {
+      "Name": "daily.cld",
+      "SHA256": "C83DC940215AB9008BD90A7B32886CFDFB7920C667B6482B5476B8B6F11E36B6"
+    },
+    {
+      "Name": "main.cvd",
+      "SHA256": "0B2182D229F46981EC8F535382222F7C9DFDD656B250AD47988B910A8D302365"
+    }
+  ]
+}
