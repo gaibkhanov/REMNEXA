@@ -46,6 +46,7 @@ function Update-ClamAVEngine {
     try {
         $config = Get-AVConfig -Path $ConfigPath
         $scanLease=Enter-AVScanLease $config
+        Stop-ClamAVScanEngine
         $statusBefore = Get-ClamAVStatus -ConfigPath $ConfigPath
         if (-not $statusBefore.Installed) {
             throw "ClamAV ist noch nicht installiert. Bitte zuerst Initialize-ClamAV ausfuehren."

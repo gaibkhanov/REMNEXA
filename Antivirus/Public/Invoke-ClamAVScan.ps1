@@ -75,7 +75,7 @@ function Invoke-ClamAVScan {
         $scanLease=Enter-AVScanLease $config
         $mode=if($PerformanceMode){$PerformanceMode}elseif($config.PSObject.Properties['ScanPerformanceMode']){[string]$config.ScanPerformanceMode}else{'Balanced'}
         $profile=Get-ClamAVScanPerformance -Mode $mode
-        if(-not $profile.CanStart){throw (Get-RemnexaProgressText 'AVScanMemoryLow')}
+        if(-not $profile.CanStart -and -not(Test-AVWarmWorkerMemory $profile)){throw (Get-RemnexaProgressText 'AVScanMemoryLow')}
         $phase=[Diagnostics.Stopwatch]::StartNew()
         $status = Get-ClamAVStatus -ConfigPath $ConfigPath -ForScan
         $phaseTimes.StatusSeconds=$phase.Elapsed.TotalSeconds
@@ -152,7 +152,23 @@ function Invoke-ClamAVScan {
             }.GetNewClosure()
             $filter = { param($Line, $Stream) return ($Stream -eq 'Stderr' -or $Line -match '\s(?:FOUND|ERROR)\s*$') }
             Write-AVLog -Message "ClamAV-$ScanType-Scan gestartet; Dateien: $($inventory.Files)." -Event 'Scan'
-            $run = Invoke-AVNativeProcess -FilePath $status.ClamScanPath -ArgumentList $arguments.ToArray() -TimeoutSeconds $effectiveTimeout -WorkingDirectory (Split-Path -Parent $status.ClamScanPath) -OnOutput $onOutput -OnHeartbeat $heartbeat -CaptureFilter $filter -ProcessPriority $profile.ProcessPriority -CancellationToken $cancellation.Source.Token
+            $backend=if($config.PSObject.Properties['ScanBackend']){[string]$config.ScanBackend}else{'ClamScan'}
+            $privateDll=Join-Path (Split-Path -Parent $status.ClamScanPath) 'libclamav.dll'
+            $usePrivate=$backend -eq 'PrivateWorker' -or ($backend -eq 'Auto' -and (Test-Path -LiteralPath $privateDll -PathType Leaf))
+            $run=$null
+            if($usePrivate) {
+                try {
+                    $run=Invoke-AVPrivateScan -Config $config -Status $status -Profile $profile -FileList $targetListPath -MaxFileSize $effectiveMaxFileSize -IncludePUA $effectivePUA -TimeoutSeconds $effectiveTimeout -OnOutput $onOutput -OnHeartbeat $heartbeat -CaptureFilter $filter -CancellationToken $cancellation.Source.Token
+                }catch{
+                    if($backend -ne 'Auto' -or -not $_.Exception.Data.Contains('AVWorkerStartupFailed')){throw}
+                    Write-Warning (Get-RemnexaProgressText 'AVWorkerFallback')
+                    Write-AVLog -Message $_.Exception.Message -Level Warning -Event 'Scan/Engine'
+                }
+            }
+            if(-not $run) {
+                Stop-ClamAVScanEngine
+                $run=Invoke-AVNativeProcess -FilePath $status.ClamScanPath -ArgumentList $arguments.ToArray() -TimeoutSeconds $effectiveTimeout -WorkingDirectory (Split-Path -Parent $status.ClamScanPath) -OnOutput $onOutput -OnHeartbeat $heartbeat -CaptureFilter $filter -ProcessPriority $profile.ProcessPriority -CancellationToken $cancellation.Source.Token
+            }
             $phaseTimes.ScannerSeconds=$scannerWatch.Elapsed.TotalSeconds
         }
         $phase.Restart()
@@ -191,7 +207,8 @@ function Invoke-ClamAVScan {
             $results = @([PSCustomObject]@{ Path=($targets -join '; '); Signature=$null; Severity=$(if($partial){'Warning'}else{'None'}); Status=$(if($partial){'Partial'}else{'Clean'}); ExitCode=0; ScanType=$ScanType; Quarantined=$false; QuarantineId=$null; Message=$coverage })
         }
         foreach ($result in $results) {
-            foreach ($entry in @{ StartedAt=$started; CompletedAt=[DateTimeOffset]::Now; DurationSeconds=[Math]::Round($scanWatch.Elapsed.TotalSeconds,2); FilesTotal=$inventory.Files; FilesReported=$metrics.Reported; FilesUnconfirmed=$unconfirmed; InventorySkipped=$inventory.Skipped; CoverageComplete=(-not $partial);PerformanceMode=$profile.Mode;ProcessPriority=$profile.ProcessPriority;ScanBackend='clamscan';PhaseTimes=$phaseTimes }.GetEnumerator()) { $result | Add-Member -NotePropertyName $entry.Key -NotePropertyValue $entry.Value -Force }
+            foreach ($entry in @{ StartedAt=$started; CompletedAt=[DateTimeOffset]::Now; DurationSeconds=[Math]::Round($scanWatch.Elapsed.TotalSeconds,2); FilesTotal=$inventory.Files; FilesReported=$metrics.Reported; FilesUnconfirmed=$unconfirmed; InventorySkipped=$inventory.Skipped; CoverageComplete=(-not $partial);PerformanceMode=$profile.Mode;ProcessPriority=$profile.ProcessPriority;ScanBackend=$(if($run.PSObject.Properties['Backend']){$run.Backend}else{'clamscan'});PhaseTimes=$phaseTimes }.GetEnumerator()) { $result | Add-Member -NotePropertyName $entry.Key -NotePropertyValue $entry.Value -Force }
+            foreach($property in @('EngineProcessId','EngineReused','ScanThreads')){if($run.PSObject.Properties[$property]){$result|Add-Member -NotePropertyName $property -NotePropertyValue $run.$property -Force}}
         }
         $phaseTimes.ResultSeconds=$phase.Elapsed.TotalSeconds
         Update-RemnexaProgress $progress -Completed ([Math]::Min($metrics.Reported, $inventory.Files)) -Status $coverage -CurrentItem '' -Force
@@ -200,6 +217,7 @@ function Invoke-ClamAVScan {
         return $results
     }
     catch {
+        Stop-ClamAVScanEngine
         if(-not $_.Exception.Data.Contains('NativeCleanupFailed') -and (($cancellation -and $cancellation.Source.IsCancellationRequested) -or $_.Exception -is [OperationCanceledException])) {
             if($inventoryProgress -and $inventoryProgress.Outcome -eq 'Running'){Complete-RemnexaProgress $inventoryProgress -Outcome Cancelled}
             Complete-RemnexaProgress $progress -Outcome Cancelled -Status (Get-RemnexaProgressText 'AVScanCancelled')

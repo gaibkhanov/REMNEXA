@@ -9,7 +9,7 @@ function Get-ClamAVScanPerformance {
     } catch { Write-Verbose $_.Exception.Message }
     $limited=($null -ne $memory -and $memory -lt 3GB) -or ($null -ne $load -and $load -ge 80)
     $priority=if($Mode -eq 'Eco' -or $limited){'Idle'}elseif($Mode -eq 'Fast'){'Normal'}else{'BelowNormal'}
-    # A clamscan process is single-job. Do not invent MaxThreads support or
-    # launch multiple copies of the multi-gigabyte signature database.
-    [pscustomobject]@{Mode=$Mode;Backend='clamscan';MaxConcurrentScans=1;ProcessPriority=$priority;LogicalCores=[Environment]::ProcessorCount;AvailableMemoryBytes=$memory;CpuLoadPercent=$load;ResourceConstrained=$limited;CanStart=($null -eq $memory -or $memory -ge 2GB);DiskType=$disk}
+    # One scan job owns the installation lease. Private-engine threads are
+    # selected separately; actual backend metadata is returned by each scan.
+    [pscustomobject]@{Mode=$Mode;Backend='selected-per-scan';MaxConcurrentScans=1;ProcessPriority=$priority;LogicalCores=[Environment]::ProcessorCount;AvailableMemoryBytes=$memory;CpuLoadPercent=$load;ResourceConstrained=$limited;CanStart=($null -eq $memory -or $memory -ge 2GB);DiskType=$disk}
 }

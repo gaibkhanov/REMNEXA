@@ -41,7 +41,7 @@ Import-Module -Name (Join-Path $PSScriptRoot 'Core\NativeProcess.psd1') -ErrorAc
 Import-Module -Name (Join-Path $PSScriptRoot 'Core\SecurityAssessment.psd1') -Force -ErrorAction Stop
 
 $script:BrandName = 'REMNEXA'
-$script:CleanerVersion = '2.2.0-rc.4'
+$script:CleanerVersion = '2.2.0-rc.5'
 $script:OperationProgress = $null
 $script:RestartRequired = $false
 $script:ExitRequested = $false
@@ -173,6 +173,7 @@ function Stop-RemnexaApplication {
     $script:ExitRequested = $true
     try {
         if(Get-Command Stop-ClamAVUpdateCheck -ErrorAction SilentlyContinue) { Stop-ClamAVUpdateCheck }
+        if(Get-Command Stop-ClamAVScanEngine -ErrorAction SilentlyContinue) { Stop-ClamAVScanEngine }
         Complete-OperationProgress
         if (Get-Command Get-RemnexaActiveProgress -ErrorAction SilentlyContinue) {
             while ($activeProgress = Get-RemnexaActiveProgress) { Complete-RemnexaProgress $activeProgress -Outcome Cancelled }
@@ -3655,7 +3656,7 @@ function Invoke-RemnexaSelfTest {
         $checks.Add([PSCustomObject]@{ Name = $Name; Passed = $Passed; Details = $Details })
     }
 
-    & $addCheck 'Brand' ($script:BrandName -eq 'REMNEXA' -and $script:CleanerVersion -eq '2.2.0-rc.4') "$($script:BrandName) $($script:CleanerVersion)"
+    & $addCheck 'Brand' ($script:BrandName -eq 'REMNEXA' -and $script:CleanerVersion -eq '2.2.0-rc.5') "$($script:BrandName) $($script:CleanerVersion)"
     $translationProblems = @(
         foreach ($key in $script:Texts.Keys) {
             $translations = @($script:Texts[$key])
@@ -4016,6 +4017,7 @@ catch {
 }
 finally {
     if(Get-Command Stop-ClamAVUpdateCheck -ErrorAction SilentlyContinue) { try { Stop-ClamAVUpdateCheck } catch { Write-Verbose 'Antivirus metadata worker cleanup failed.' } }
+    if(Get-Command Stop-ClamAVScanEngine -ErrorAction SilentlyContinue) { try { Stop-ClamAVScanEngine } catch { Write-Verbose 'Antivirus scan worker cleanup failed.' } }
 }
 Complete-OperationProgress
 

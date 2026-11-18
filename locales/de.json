@@ -354,5 +354,8 @@
   "AVScanLive": "Modus: {0} | Funde: {1} | {2} Dateien/s | X / Esc / Strg+C: Scan abbrechen",
   "AVScanCancelled": "Scan abgebrochen – unvollständig. Vorhandene Funde bleiben sichtbar; keine automatische Quarantäne.",
   "AVScanBusy": "Ein REMNEXA-Scan oder Update dieser Installation läuft bereits. Bitte dessen Abschluss abwarten.",
-  "AVScanMemoryLow": "Zu wenig freier Arbeitsspeicher für einen sicheren Scan (mindestens 2 GiB erforderlich). Schließe andere Programme und versuche es erneut."
+  "AVScanMemoryLow": "Zu wenig freier Arbeitsspeicher für einen sicheren Scan (mindestens 2 GiB erforderlich). Schließe andere Programme und versuche es erneut.",
+  "AVWorkerLoading": "Lokale Scan-Engine wird vorbereitet und lädt die Signaturen. Der erste Start kann länger dauern; X / Esc / Strg+C bricht ab.",
+  "AVWorkerReuse": "Die bereits geladene lokale Scan-Engine wird wiederverwendet.",
+  "AVWorkerFallback": "Die private Scan-Engine ist derzeit nicht verfügbar. Dieser Scan verwendet clamscan; es wird kein Netzwerkport geöffnet."
 }

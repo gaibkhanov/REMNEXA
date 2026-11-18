@@ -354,5 +354,8 @@
   "AVScanLive": "Mode: {0} | Threats: {1} | {2} files/s | X / Esc / Ctrl+C: cancel scan",
   "AVScanCancelled": "Scan cancelled – incomplete. Existing findings remain visible; no automatic quarantine.",
   "AVScanBusy": "A REMNEXA scan or update of this installation is already running. Wait for it to finish.",
-  "AVScanMemoryLow": "Not enough available memory for a safe scan (at least 2 GiB required). Close other applications and try again."
+  "AVScanMemoryLow": "Not enough available memory for a safe scan (at least 2 GiB required). Close other applications and try again.",
+  "AVWorkerLoading": "Preparing the local scan engine and loading signatures. The first start can take longer; X / Esc / Ctrl+C cancels.",
+  "AVWorkerReuse": "Reusing the already loaded local scan engine.",
+  "AVWorkerFallback": "The private scan engine is currently unavailable. This scan uses clamscan; no network port is opened."
 }

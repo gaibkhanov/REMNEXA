@@ -30,6 +30,7 @@ function Update-ClamAVSignature {
     try {
         $config = Get-AVConfig -Path $ConfigPath
         $scanLease=Enter-AVScanLease $config
+        Stop-ClamAVScanEngine
         $root = Find-ClamAVInstallation -Config $config
         if (-not $root) {
             throw "ClamAV nicht gefunden unter '$([Environment]::ExpandEnvironmentVariables([string]$config.ClamAVPath))'. Bitte Initialize-ClamAV ausfuehren oder ClamAVPath in antivirus.json setzen."

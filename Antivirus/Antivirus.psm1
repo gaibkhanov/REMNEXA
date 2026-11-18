@@ -8,7 +8,9 @@ $script:AVDiscoveryProgress = $null
 $script:AVDiscoverySkipped = 0
 $script:AVCancellation = $null
 $script:AVUpdateWorker = $null
-$ExecutionContext.SessionState.Module.OnRemove = { Stop-ClamAVUpdateCheck }
+$script:AVPrivateWorker = $null
+$script:AVPrivateFailure = $null
+$ExecutionContext.SessionState.Module.OnRemove = { try{Stop-ClamAVUpdateCheck}finally{Stop-ClamAVScanEngine} }
 
 foreach ($folder in @('Private', 'Public')) {
     $folderPath = Join-Path $PSScriptRoot $folder
@@ -25,6 +27,7 @@ Export-ModuleMember -Function @(
     'Update-ClamAVSignature',
     'Get-ClamAVStatus',
     'Get-ClamAVScanPerformance',
+    'Get-ClamAVScanEngineState','Stop-ClamAVScanEngine',
     'Invoke-ClamAVScan',
     'Invoke-ClamAVTargetedScan',
     'Get-ClamAVScanResult',

@@ -354,5 +354,8 @@
   "AVScanLive": "Mod: {0} | Tehditler: {1} | {2} dosya/sn | X / Esc / Ctrl+C: iptal",
   "AVScanCancelled": "Tarama iptal edildi, tamamlanmadı. Bulgular görünür kalır; otomatik karantina uygulanmaz.",
   "AVScanBusy": "Bu kurulum için bir REMNEXA taraması veya güncellemesi zaten çalışıyor. Tamamlanmasını bekleyin.",
-  "AVScanMemoryLow": "Güvenli tarama için yeterli boş bellek yok (en az 2 GiB gerekli). Diğer uygulamaları kapatıp yeniden deneyin."
+  "AVScanMemoryLow": "Güvenli tarama için yeterli boş bellek yok (en az 2 GiB gerekli). Diğer uygulamaları kapatıp yeniden deneyin.",
+  "AVWorkerLoading": "Yerel tarama motoru hazırlanıyor ve imzalar yükleniyor. İlk başlatma daha uzun sürebilir; X / Esc / Ctrl+C iptal eder.",
+  "AVWorkerReuse": "Önceden yüklenen yerel tarama motoru yeniden kullanılıyor.",
+  "AVWorkerFallback": "Özel tarama motoru kullanılamıyor. Bu tarama clamscan kullanır; ağ bağlantı noktası açılmaz."
 }

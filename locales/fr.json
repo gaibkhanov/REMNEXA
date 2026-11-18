@@ -354,5 +354,8 @@
   "AVScanLive": "Mode : {0} | Menaces : {1} | {2} fichiers/s | X / Échap / Ctrl+C : annuler",
   "AVScanCancelled": "Analyse annulée : incomplète. Les détections restent visibles ; aucune quarantaine automatique.",
   "AVScanBusy": "Une analyse ou mise à jour REMNEXA de cette installation est déjà en cours. Attendez sa fin.",
-  "AVScanMemoryLow": "Mémoire disponible insuffisante pour une analyse sûre (2 Gio minimum). Fermez les autres programmes et réessayez."
+  "AVScanMemoryLow": "Mémoire disponible insuffisante pour une analyse sûre (2 Gio minimum). Fermez les autres programmes et réessayez.",
+  "AVWorkerLoading": "Préparation du moteur local et chargement des signatures. Le premier démarrage peut être plus long ; X / Échap / Ctrl+C annule.",
+  "AVWorkerReuse": "Réutilisation du moteur local déjà chargé.",
+  "AVWorkerFallback": "Le moteur privé est indisponible. Cette analyse utilise clamscan ; aucun port réseau ouvert."
 }

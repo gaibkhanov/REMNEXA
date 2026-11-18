@@ -38,6 +38,8 @@ function Set-AVConfig {
     }
     [void](Get-AVUpdateOptions $config)
     if($config.ScanPerformanceMode -notin @('Eco','Balanced','Fast')) { throw 'Invalid ScanPerformanceMode. Use Eco, Balanced or Fast.' }
+    if($config.ScanBackend -notin @('Auto','ClamScan','PrivateWorker')){throw 'Invalid ScanBackend. Use Auto, ClamScan or PrivateWorker.'}
+    foreach($rule in @(@('ScanEngineIdleSeconds',15,600),@('ScanEngineStartupSeconds',15,300))){$value=$config.($rule[0]);if(($value -isnot [int] -and $value -isnot [long]) -or $value -lt $rule[1] -or $value -gt $rule[2]){throw 'Invalid private-engine timeout setting.'}}
 
     if ($PSCmdlet.ShouldProcess($resolvedPath, 'Antivirus-Konfiguration speichern')) {
         $directory = Split-Path -Parent $resolvedPath
