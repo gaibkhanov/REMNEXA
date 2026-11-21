@@ -4,7 +4,7 @@ Describe 'REMNEXA source package integrity' {
         $script:packageFixture = Join-Path ([IO.Path]::GetTempPath()) ('REMNEXA-PackageTest-' + [guid]::NewGuid().ToString('N'))
         $script:packageSource = Join-Path $script:packageFixture 'source'
         $script:packageOutput = Join-Path $script:packageFixture 'output'
-        $script:packageGit = (Get-Command git.exe -ErrorAction SilentlyContinue).Source
+        $script:packageGit = (Get-Command git.exe -ErrorAction SilentlyContinue | Select-Object -First 1).Source
         if (-not $script:packageGit) { $script:packageGit = Join-Path $env:ProgramFiles 'Git\cmd\git.exe' }
         if (-not (Test-Path -LiteralPath $script:packageGit)) { throw 'Git is required for package fixtures.' }
         New-Item -ItemType Directory -Path $script:packageSource | Out-Null
@@ -63,6 +63,22 @@ Describe 'REMNEXA source package integrity' {
             & $script:packageGit -C $script:packageSource check-ignore --quiet -- $name
             if($LASTEXITCODE -ne 0){throw ('Generated test report is not ignored: '+$name)}
         }
+    }
+
+    It 'selects one executable when Git is available in several PATH directories' {
+        $gitRoot=Split-Path -Parent (Split-Path -Parent $script:packageGit)
+        $directories=@(foreach($relative in @('bin','cmd','ucrt64/bin','mingw64/bin')){
+            $directory=Join-Path $gitRoot $relative
+            if(Test-Path -LiteralPath (Join-Path $directory 'git.exe')){$directory}
+        })
+        if($directories.Count -lt 2){throw 'This Windows Git fixture requires two executable locations.'}
+        $originalPath=$env:PATH
+        try{
+            $env:PATH=($directories -join ';')+';'+$originalPath
+            if(@(Get-Command git -CommandType Application).Count -lt 2){throw 'Multiple-PATH regression was not exercised.'}
+            $result=& $script:packageBuilder -SourcePath $script:packageSource -OutputDirectory $script:packageOutput -Version '2.2.0-rc.1'
+            if(-not (& $script:packageVerifier -Path $result.Package -ExpectedSha256 $result.SHA256).Passed){throw 'Default Git resolution failed.'}
+        }finally{$env:PATH=$originalPath}
     }
 
     It 'rejects dirty sources and a mismatched application version' {

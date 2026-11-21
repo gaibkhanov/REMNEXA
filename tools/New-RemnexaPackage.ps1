@@ -11,7 +11,7 @@ $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path -LiteralPath $SourcePath -ErrorAction Stop).Path.TrimEnd('\', '/')
 Import-Module (Join-Path $PSScriptRoot '..\Core\PathSafety.psd1') -Force -ErrorAction Stop
 if (-not (Get-RemnexaPathSafety -Path $root).IsSafe) { throw 'Source root has an unsafe path component.' }
-$git = (Get-Command -Name $GitPath -CommandType Application -ErrorAction Stop).Source
+$git = (Get-Command -Name $GitPath -CommandType Application -ErrorAction Stop | Select-Object -First 1).Source
 $gitRoot = & $git -C $root rev-parse --show-toplevel
 if ($LASTEXITCODE -ne 0 -or [IO.Path]::GetFullPath($gitRoot).TrimEnd('\', '/') -ne $root) { throw 'SourcePath must be the Git checkout root.' }
 $commit = & $git -C $root rev-parse HEAD
