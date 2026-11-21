@@ -9,6 +9,7 @@ function Initialize-AVBackgroundSupport {
 
 function Enter-AVScanLease {
     param($Config)
+    Stop-AVBackgroundIdleEngine
     $name='Global\REMNEXA.ClamAV.Scan.'+(Get-AVUpdateContext $Config)
     $mutex=[Threading.Mutex]::new($false,$name)
     $acquired=$false

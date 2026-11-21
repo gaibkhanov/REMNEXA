@@ -56,6 +56,8 @@ Describe 'ClamAV nonblocking scan management' {
         $end=Wait-BackgroundState {param($s)$s.State -in @('Completed','Warning','Cancelled','Failed')}
         $result=Get-ClamAVBackgroundScan -IncludeResults
         if($end.State -ne 'Warning' -or $end.Files -ne 20 -or $end.Findings -ne 1 -or @($result.Results|Where-Object Status -eq 'Infected').Count -ne 1){throw ('Resume lost coverage: '+($result|ConvertTo-Json -Depth 5))}
+        & $script:bgModule {param($Config)$lease=Enter-AVScanLease (Get-AVConfig -Path $Config);try{if(-not $script:AVBackgroundScan.RunspaceDisposed){throw 'Foreground work retained the background engine host.'}}finally{$lease.ReleaseMutex();$lease.Dispose()}} $script:bgConfig
+        if(@((Get-ClamAVBackgroundScan -IncludeResults).Results|Where-Object Status -eq 'Infected').Count -ne 1){throw 'Releasing the background engine discarded completed results.'}
     }
     It 'cancels a paused scan, retains earlier evidence, and releases its installation lease' {
         [void](Start-ClamAVBackgroundScan -ScanType Custom -Path (Join-Path $script:bgTemp 'data') -ConfigPath $script:bgConfig)

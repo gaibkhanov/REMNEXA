@@ -1,30 +1,32 @@
 {
   "Passed": true,
-  "TimeUtc": "2026-11-21T21:14:02.1269169+05:00",
+  "TimeUtc": "2026-11-21T16:30:35.7698558+00:00",
   "HarmlessCustomSignatures": true,
   "ProductionDatabaseChanged": false,
   "Backends": [
     {
       "Backend": "ClamScan",
-      "StartReturnSeconds": 1.438,
+      "StartReturnSeconds": 1.27,
       "Files": 2501,
       "Findings": 1,
       "PausedFilesUnchanged": true,
-      "ElapsedSeconds": 11.611,
+      "ElapsedSeconds": 12.679,
       "CoverageComplete": true,
       "NoAutomaticQuarantine": true,
       "CancelWhilePaused": true
     },
     {
       "Backend": "PrivateWorker",
-      "StartReturnSeconds": 0.015,
+      "StartReturnSeconds": 0.011,
       "Files": 2501,
       "Findings": 1,
       "PausedFilesUnchanged": true,
-      "ElapsedSeconds": 13.449,
+      "ElapsedSeconds": 12.567,
       "CoverageComplete": true,
       "NoAutomaticQuarantine": true,
-      "CancelWhilePaused": true
+      "CancelWhilePaused": true,
+      "WarmEngineReused": true,
+      "IdleEngineReleasedBeforeForeground": true
     }
   ]
 }

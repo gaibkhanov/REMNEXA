@@ -41,7 +41,7 @@ Stop-ClamAVBackgroundScan
 Get-ClamAVBackgroundScan -IncludeResults
 ```
 
-Die synchronen Befehle `Invoke-ClamAVScan` und `Invoke-ClamAVTargetedScan` bleiben für Skripte und geordnete Deinstallationsabläufe erhalten. Hintergrundaufträge aktualisieren keine Komponenten und verschieben keine Funde automatisch in Quarantäne. Der Hintergrund-Runspace beendet seine zwischengespeicherte native Engine nach Abschluss; ein neuer Hintergrundscan lädt eine eigene Engine. Es bleibt kein unbeaufsichtigter Runspace im Leerlauf aktiv.
+Die synchronen Befehle `Invoke-ClamAVScan` und `Invoke-ClamAVTargetedScan` bleiben für Skripte und geordnete Deinstallationsabläufe erhalten. Hintergrundaufträge aktualisieren keine Komponenten und verschieben keine Funde automatisch in Quarantäne. Der Scan-Runspace bleibt zwischen Aufträgen erhalten, damit die native Engine ohne erneutes Laden aller Signaturen wiederverwendet werden kann. Die eigene Engine endet nach ihrer bisherigen konfigurierten Leerlaufzeit (standardmäßig 60 Sekunden). Vor synchronen Scans oder Updates werden die inaktive Hintergrund-Engine und ihr Runspace freigegeben; abgeschlossene Ergebnisse bleiben erhalten. Auch Beenden/Modulentfernung geben sie frei. Es wird kein Dienst und keine eigenständige dauerhafte Anwendung installiert.
 
 ## Kandidatenpaket
 
@@ -58,8 +58,10 @@ ZIP und SHA-256-Begleitdatei entstehen unter `dist/`. Dies ist ein Quellkandidat
 
 `tests/BackgroundScan.Tests.ps1` prüft einen tatsächlich asynchronen Runspace und einen harmlosen externen Testscanner: bedienbarer Aufrufer, frühe Befunde, echte Prozesspause/Fortsetzung, Abbruch aus der Pause, erhaltene Befunde, Installationssperre, Fehler, begrenzte Vorschau und Texte in sechs Sprachen. `tests/BackgroundScanUI.Tests.ps1` prüft Hintergrundstart, Rückkehr nach `/scan` und zustandsabhängige Bedienung. Die bisherigen Tests für synchrone Scans und Update-Rückfragen bleiben anwendbar.
 
+Abschließende lokale Regression: **191 bestanden, 0 fehlgeschlagen, 0 übersprungen** mit Pester 5.7.1 und PowerShell 7.6.9. Die statische Analyse fand keine Fehler im geänderten PowerShell-Code. Die entfernte CI dieses Kandidaten wurde noch nicht bestätigt, weil GitHub den öffentlichen API-Statusabruf begrenzt hat.
+
 Zusätzlich lief `tools/Test-ClamAVBackgroundScan.ps1` mit installiertem ClamAV 1.5.4: **2.501 harmlose Dateien und ein eigener Hash-Testfund pro Scanverfahren**, jeweils mit echtem CLI-Scanner und eingeschränktem nativem Worker. Beide pausierten ohne weitere Dateibestätigungen, setzten mit vollständiger Testabdeckung fort und brachen einen zweiten Scan aus der Pause ab. Es gab keine automatische Quarantäne. Installierte Signaturdateien und persönliche Ordner wurden nicht verändert oder gescannt. Das isolierte Testmodul ändert ausschließlich die Bereitschaftsanzeige für seine harmlose HDB-Datenbank; Scanner- und Prozesscode entsprechen der Anwendung.
 
-Der Hintergrundstart kehrte beim ersten CLI-Aufruf nach 1,438 Sekunden und beim anschließenden nativen Aufruf nach 0,015 Sekunden zurück, einschließlich unterschiedlicher einmaliger Vorbereitung. Dies sind Beobachtungen zur Bedienbarkeit, kein Vergleich der Engine-Leistung. Siehe [bereinigte Messergebnisse](benchmarks/rc7-background-scan.json).
+Der native Test prüft zusätzlich dieselbe Engine-PID beim nächsten Auftrag und die Freigabe der zwischengespeicherten Engine eines abgeschlossenen Scans vor synchronem Zugriff. Die protokollierten Rückkehrzeiten des Hintergrundstarts enthalten unterschiedliche einmalige Vorbereitungen. Sie beschreiben die Bedienbarkeit und sind kein Vergleich der Engine-Leistung. Siehe [bereinigte Messergebnisse](benchmarks/rc7-background-scan.json).
 
 Geprüft wurde auf dem verfügbaren Windows-11-Rechner mit SSD und 16 GB RAM. Damit sind Windows 10, HDD, eine echte 8-GB-VM, Malware-Erkennungsleistung und lange Pausen bei sämtlichen Dateiformaten nicht nachgewiesen. Die bisherigen [Grenzen und Lizenzhinweise der nativen Engine](PRIVATE_SCAN_ENGINE.de.md) gelten weiterhin.

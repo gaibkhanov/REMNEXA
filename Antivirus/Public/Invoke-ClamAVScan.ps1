@@ -130,7 +130,7 @@ function Invoke-ClamAVScan {
             $heartbeat = {
                 param($Event)
                 $cancellationCommand.Poll()
-                if($BackgroundControl){$BackgroundControl.Checkpoint([int]$Event.ProcessId)}
+                if($BackgroundControl){$BackgroundControl.ObserveScanner([int]$Event.ProcessId);$BackgroundControl.Checkpoint([int]$Event.ProcessId)}
                 $rate=if($null -ne $phaseTimes.FirstFileSeconds -and $scannerWatch.Elapsed.TotalSeconds -gt $phaseTimes.FirstFileSeconds){$metrics.Reported/($scannerWatch.Elapsed.TotalSeconds-$phaseTimes.FirstFileSeconds)}else{0}
                 & $updateProgressCommand $progress -Status ($liveText -f $profile.Mode,$metrics.Findings,([Math]::Round($rate,1)))
             }.GetNewClosure()

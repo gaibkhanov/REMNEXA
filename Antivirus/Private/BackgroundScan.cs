@@ -10,7 +10,7 @@ namespace Remnexa.Scan {
     public sealed class ScanSnapshot {
         public string State, Phase, Mode, Error;
         public long Files, Total;
-        public int Findings, Omitted;
+        public int Findings, Omitted, ScannerProcessId;
         public double ElapsedSeconds, ActiveSeconds;
         public string[] Evidence;
     }
@@ -24,6 +24,7 @@ namespace Remnexa.Scan {
         private string state="Starting",phase="Preparing",mode="Balanced",error="";
         private long files,total=-1;
         private int findings,omitted;
+        private int scannerProcessId;
         private double pausedSeconds,pauseStarted;
         public double PausedSeconds {get {lock(sync)return pausedSeconds;}}
         public void Pause() {lock(sync){if(state=="Starting"||state=="Running"){pause=true;state="Pausing";}}}
@@ -36,9 +37,10 @@ namespace Remnexa.Scan {
         public void AddEvidence(string line,bool finding) {
             lock(sync){if(finding)findings++;if(evidence.Count<1000)evidence.Add(line);else omitted++;}
         }
+        public void ObserveScanner(int pid){lock(sync){scannerProcessId=pid;}}
         public void Finish(string outcome,string message) {lock(sync){state=outcome;error=message;pause=false;clock.Stop();Monitor.PulseAll(sync);}}
         public ScanSnapshot Snapshot() {
-            lock(sync){return new ScanSnapshot{State=state,Phase=phase,Mode=mode,Files=files,Total=total,Findings=findings,Omitted=omitted,Error=error,
+            lock(sync){return new ScanSnapshot{State=state,Phase=phase,Mode=mode,Files=files,Total=total,Findings=findings,Omitted=omitted,Error=error,ScannerProcessId=scannerProcessId,
                 ElapsedSeconds=clock.Elapsed.TotalSeconds,ActiveSeconds=Math.Max(0,clock.Elapsed.TotalSeconds-pausedSeconds-(state=="Paused"?clock.Elapsed.TotalSeconds-pauseStarted:0)),Evidence=evidence.ToArray()};}
         }
         public void Checkpoint(int ownedScannerPid) {
@@ -60,6 +62,7 @@ namespace Remnexa.Scan {
         [DllImport("kernel32.dll",SetLastError=true)] private static extern IntPtr OpenThread(uint rights,bool inherit,uint id);
         [DllImport("kernel32.dll",SetLastError=true)] private static extern uint SuspendThread(IntPtr thread);
         [DllImport("kernel32.dll",SetLastError=true)] private static extern uint ResumeThread(IntPtr thread);
+        [DllImport("kernel32.dll",SetLastError=true)] private static extern bool GetExitCodeThread(IntPtr thread,out uint code);
         [DllImport("kernel32.dll")] private static extern bool CloseHandle(IntPtr handle);
         private readonly List<IntPtr> handles=new List<IntPtr>();
         public SuspendedScanner(int pid) {
@@ -74,7 +77,7 @@ namespace Remnexa.Scan {
                         foreach(ProcessThread thread in process.Threads) {
                             using(thread) {
                                 if(!seen.Add(thread.Id))continue;
-                                IntPtr handle=OpenThread(2,false,(uint)thread.Id);
+                                IntPtr handle=OpenThread(2|0x0800,false,(uint)thread.Id);
                                 if(handle==IntPtr.Zero){if(thread.ThreadState==System.Diagnostics.ThreadState.Terminated)continue;throw new Win32Exception(Marshal.GetLastWin32Error());}
                                 if(SuspendThread(handle)==UInt32.MaxValue){int code=Marshal.GetLastWin32Error();CloseHandle(handle);throw new Win32Exception(code);}
                                 handles.Add(handle);added=true;
@@ -87,6 +90,13 @@ namespace Remnexa.Scan {
             }catch(ArgumentException){Dispose();} // Scanner already exited.
             catch{Dispose();throw;}
         }
-        public void Dispose(){foreach(IntPtr handle in handles){ResumeThread(handle);CloseHandle(handle);}handles.Clear();}
+        public void Dispose(){
+            Exception failure=null;
+            foreach(IntPtr handle in handles){
+                if(ResumeThread(handle)==UInt32.MaxValue){int error=Marshal.GetLastWin32Error();if(!GetExitCodeThread(handle,out uint code)||code==259)failure=new Win32Exception(error);}
+                CloseHandle(handle);
+            }
+            handles.Clear();if(failure!=null)throw failure;
+        }
     }
 }

@@ -55,17 +55,27 @@ function Get-ClamAVStatus {
         $end=Wait-ScanState {param($s)$s.State -in @('Completed','Warning','Cancelled','Failed')}
         $full=Get-ClamAVBackgroundScan -IncludeResults
         if($end.State -ne 'Warning' -or $end.Files -ne 2501 -or $end.Findings -ne 1 -or @($full.Results|Where-Object { $_.Status -eq 'Infected' -and $_.CoverageComplete -and -not $_.Quarantined }).Count -ne 1){throw ('Real backend coverage failed: '+($full|ConvertTo-Json -Depth 5 -Compress))}
-        Stop-ClamAVBackgroundScan
+        $firstProcessId=$end.ScannerProcessId
         $passes.Add([pscustomobject]@{Backend=$backend;StartReturnSeconds=[Math]::Round($startSeconds,3);Files=$end.Files;Findings=$end.Findings;PausedFilesUnchanged=$true;ElapsedSeconds=[Math]::Round($end.ElapsedSeconds,3);CoverageComplete=$true;NoAutomaticQuarantine=$true})
         # Cancel a second, genuinely active backend from the paused state.
         [void](Start-ClamAVBackgroundScan -ScanType Custom -Path (Join-Path $workspace 'data') -ConfigPath $configPath)
         [void](Wait-ScanState {param($s)$s.Findings -eq 1 -and $s.Files -lt $s.Total})
         Set-ClamAVBackgroundScan -Action Pause
-        [void](Wait-ScanState {param($s)$s.State -eq 'Paused'})
+        $second=Wait-ScanState {param($s)$s.State -eq 'Paused'}
+        if($backend -eq 'PrivateWorker' -and $second.ScannerProcessId -ne $firstProcessId){throw 'The native background engine was not reused.'}
         Stop-ClamAVBackgroundScan
         $cancelled=Get-ClamAVBackgroundScan -IncludeResults
         if($cancelled.State -ne 'Cancelled' -or @($cancelled.Results|Where-Object CoverageComplete).Count){throw 'Real paused cancellation claimed completion.'}
         $passes[$passes.Count-1]|Add-Member CancelWhilePaused $true
+        if($backend -eq 'PrivateWorker'){$passes[$passes.Count-1]|Add-Member WarmEngineReused $true}
+        if($backend -eq 'PrivateWorker') {
+            [void](Start-ClamAVBackgroundScan -ScanType Custom -Path (Join-Path $workspace 'data') -ConfigPath $configPath)
+            $idle=Wait-ScanState {param($s)$s.State -in @('Completed','Warning','Failed')}
+            if($idle.State -ne 'Warning' -or -not(Get-Process -Id $idle.ScannerProcessId -ErrorAction SilentlyContinue)){throw 'Native engine cache was not alive after completion.'}
+            & $module {param($Path)$lease=Enter-AVScanLease (Get-AVConfig -Path $Path);$lease.ReleaseMutex();$lease.Dispose()} $configPath
+            if(Get-Process -Id $idle.ScannerProcessId -ErrorAction SilentlyContinue){throw 'Foreground access did not release the background cache.'}
+            $passes[$passes.Count-1]|Add-Member IdleEngineReleasedBeforeForeground $true
+        }
     }
     $report=[pscustomobject]@{Passed=$true;TimeUtc=[DateTimeOffset]::UtcNow.ToString('o');HarmlessCustomSignatures=$true;ProductionDatabaseChanged=$false;Backends=$passes.ToArray()}
     [void][IO.Directory]::CreateDirectory((Split-Path -Parent ([IO.Path]::GetFullPath($OutputPath))))
