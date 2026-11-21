@@ -2,11 +2,13 @@
 
 # Dokumentation
 
-Dokumentation der **Entwicklungsversion 2.2.0**. Jede Markdown-Anleitung hat eine englische und deutsche Fassung, oben miteinander verlinkt. Rechtliche Lizenztexte bleiben im Original.
+Dokumentation der **Quellrelease 2.2.0**. Jede Markdown-Anleitung hat eine englische und deutsche Fassung, oben miteinander verlinkt. Rechtliche Lizenztexte bleiben im Original.
 
 ## Für Anwender
 
-- [Aktueller Kandidat: 2.2.0-rc.8 unabhängige Scans](INDEPENDENT_SCANS.de.md): REMNEXA beenden und Scan fortsetzen, abbrechen oder zur Anwendung zurückkehren.
+- [Release 2.2.0](RELEASE_2.2.0.de.md): Download, Installation, Änderungen, Prüfstand und bekannte Grenzen.
+
+- [Unabhängige Scans (eingeführt in rc.8)](INDEPENDENT_SCANS.de.md): REMNEXA beenden und Scan fortsetzen, abbrechen oder zur Anwendung zurückkehren.
 
 - [Vorheriger Kandidat: 2.2.0-rc.6](RELEASE_2.2.0_RC6.de.md): Änderungen, Prüfsummen, Paketierung und Prüfgrenzen.
 

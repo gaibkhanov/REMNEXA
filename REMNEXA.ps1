@@ -41,7 +41,7 @@ Import-Module -Name (Join-Path $PSScriptRoot 'Core\NativeProcess.psd1') -ErrorAc
 Import-Module -Name (Join-Path $PSScriptRoot 'Core\SecurityAssessment.psd1') -Force -ErrorAction Stop
 
 $script:BrandName = 'REMNEXA'
-$script:CleanerVersion = '2.2.0-rc.8'
+$script:CleanerVersion = '2.2.0'
 $script:OperationProgress = $null
 $script:RestartRequired = $false
 $script:ExitRequested = $false
@@ -3777,7 +3777,7 @@ function Invoke-RemnexaSelfTest {
         $checks.Add([PSCustomObject]@{ Name = $Name; Passed = $Passed; Details = $Details })
     }
 
-    & $addCheck 'Brand' ($script:BrandName -eq 'REMNEXA' -and $script:CleanerVersion -eq '2.2.0-rc.8') "$($script:BrandName) $($script:CleanerVersion)"
+    & $addCheck 'Brand' ($script:BrandName -eq 'REMNEXA' -and $script:CleanerVersion -eq '2.2.0') "$($script:BrandName) $($script:CleanerVersion)"
     $translationProblems = @(
         foreach ($key in $script:Texts.Keys) {
             $translations = @($script:Texts[$key])

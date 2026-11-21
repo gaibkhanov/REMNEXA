@@ -90,11 +90,11 @@ jobs:
             throw "$($errors.Count) PSScriptAnalyzer error(s) found."
           }
 
-      - name: Build and verify source release candidate
+      - name: Build and verify source distribution
         shell: pwsh
         run: |
           try {
-            $package = ./tools/New-RemnexaPackage.ps1 -Version '2.2.0-rc.8'
+            $package = ./tools/New-RemnexaPackage.ps1 -Version '2.2.0'
             ./tools/Test-RemnexaPackage.ps1 -Path $package.Package -ExpectedSha256 $package.SHA256
           } catch {
             $message = $_.Exception.Message.Replace('%', '%25').Replace("`r", '%0D').Replace("`n", '%0A')
@@ -107,7 +107,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: REMNEXA-source-candidate
-          path: dist/REMNEXA-2.2.0-rc.8-source.zip*
+          path: dist/REMNEXA-2.2.0-source.zip*
           if-no-files-found: error
 
       - name: Upload validation reports

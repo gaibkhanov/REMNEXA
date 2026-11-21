@@ -2,7 +2,9 @@
 
 # Benutzerhandbuch
 
-Gilt für die **Entwicklungsversion 2.2.0**. Installation: [Projekt-README](../README.de.md). Prüfgrenzen: [Kompatibilitätsmatrix](COMPATIBILITY_MATRIX.de.md).
+Gilt für die **Quellrelease 2.2.0**. Installation: [Projekt-README](../README.de.md). Prüfgrenzen: [Kompatibilitätsmatrix](COMPATIBILITY_MATRIX.de.md).
+
+> 2.2.0: Interaktive Antivirus-Scans laufen im eigenen Fenster. Beim Beenden von REMNEXA mit aktivem Scan kannst du Fortsetzen, Abbrechen oder Zurück wählen. Siehe [unabhängige Scans](INDEPENDENT_SCANS.de.md) und [Release-Hinweise](RELEASE_2.2.0.de.md).
 
 ## Start und Berechtigungen
 
@@ -26,7 +28,7 @@ Beachte die Auswahlmöglichkeiten der aktuellen Eingabe. Eine Nummer aus einem a
 - Angezeigte Zurück-Optionen führen zur vorherigen Funktion oder Programmliste; beim Zurückkehren zur Programmliste bleiben Seite und Filter erhalten.
 - Programm- und Autostart-Listen zeigen nächste/vorherige Seiten nur bei deren Existenz. Verfügbare Befehle stehen im Menü; nicht verfügbare Seitenwechsel werden erklärt.
 
-Beenden gilt, solange REMNEXA auf Eingaben wartet. Es ergänzt keinen Abbruchmechanismus für laufende fremde Deinstallationsprogramme, Scans, Reparaturbefehle oder Windows-Rechteabfragen. Warte bei kritischen Schreibvorgängen auf deren Abschluss; erzwungenes Schließen kann sie unterbrechen.
+Beenden gilt, solange REMNEXA auf Eingaben wartet. Unabhängige Antivirus-Scans besitzen eigene Pause-/Fortsetzen-/Abbruchfunktionen und können nach bestätigtem Beenden der Hauptanwendung weiterlaufen. Die Beenden-Option bricht keine fremden Deinstallationsprogramme, Reparaturbefehle oder Windows-Rechteabfragen ab. Warte bei kritischen Schreibvorgängen auf deren Abschluss; erzwungenes Schließen kann sie unterbrechen.
 
 ## Verarbeitungsstatus
 

@@ -4,7 +4,13 @@
 
 Development changes are not published release claims. Existing release artifacts and tags are not modified by this document.
 
-## 2.2.0 — development, not released
+## 2.2.0 — 2026-11-21
+
+### Stable source release
+
+- Promote the verified rc.8 functional baseline to 2.2.0; earlier candidate reports remain historical validation records.
+- Source ZIP, SHA-256 checksum and English/German release notes; no bundled runtime, ClamAV database, AI or installer.
+- Confirm rc.8 GitHub CI success. Final release source is checked again before publication. See [validation and limits](docs/RELEASE_2.2.0.md).
 
 ### Candidate 2.2.0-rc.8
 

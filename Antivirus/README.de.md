@@ -6,7 +6,7 @@ REMNEXA bindet ClamAV für lokale Prüfungen bei Bedarf ein. Es bietet keinen re
 
 ## Unabhängige Scans und Beenden
 
-Kandidat rc.8 startet interaktive Scans im eigenen Fenster. REMNEXA bleibt bedienbar und kann mit der Wahl **Scan fortsetzen**, **Scan abbrechen** oder **Zur Anwendung zurückkehren** beendet werden. Das Scanfenster unterstützt Pause/Fortsetzen/Abbrechen; Ergebnisse werden lokal gespeichert. Siehe [Bedienung und geprüfte Grenzen](../docs/INDEPENDENT_SCANS.de.md).
+Version 2.2.0 startet interaktive Scans im eigenen Fenster. REMNEXA bleibt bedienbar und kann mit der Wahl **Scan fortsetzen**, **Scan abbrechen** oder **Zur Anwendung zurückkehren** beendet werden. Das Scanfenster unterstützt Pause/Fortsetzen/Abbrechen; Ergebnisse werden lokal gespeichert. Siehe [Bedienung und geprüfte Grenzen](../docs/INDEPENDENT_SCANS.de.md).
 
 ## Bestandteile und Voraussetzungen
 
@@ -79,7 +79,7 @@ Kandidat rc.6 korrigiert den eingeschränkten Start aus einer erhöhten Anwendun
 
 Kandidat rc.5 kann eine native ClamAV-1.5.4-Engine zwischen Scans geladen halten, mit vererbten privaten Pipes und begrenzten nativen Threads. `ScanBackend` akzeptiert `Auto` (Standard), `ClamScan` oder `PrivateWorker`; `ScanEngineIdleSeconds` ist standardmäßig 60. Kein Daemon-Port oder Dienst wird geöffnet. Siehe [private Engine, Fallback und Lizenzdetails](../docs/PRIVATE_SCAN_ENGINE.de.md).
 
-Kandidat rc.4 ergänzt **P** im Antivirus-Menü für Eco/Balanced/Fast-Prozessprioritäten. Während eines Scans brechen **X**, **Esc** oder **Strg+C** den Vorgang mit unvollständiger Abdeckung ab. Je konfigurierter Installation läuft höchstens ein REMNEXA-Scan/Update. Engine-Limitwarnungen sind sichtbar und werden nie als Malware in Quarantäne verschoben. Siehe [Verhalten und Benchmark-Grenzen](../docs/CLAMAV_SCAN_PERFORMANCE.de.md).
+Wähle **P** im Antivirus-Menü für Eco/Balanced/Fast. Unabhängige Scans werden über **C** im Scanfenster oder Scanmanager abgebrochen; synchrone Konsolenscans behalten ihre X/Esc/Strg+C-Abbruchsteuerung. Ein Abbruch meldet unvollständige Abdeckung. Je konfigurierter Installation läuft höchstens ein REMNEXA-Scan/Update. Engine-Limitwarnungen sind sichtbar und werden nie als Malware in Quarantäne verschoben. Siehe [Verhalten und Benchmark-Grenzen](../docs/CLAMAV_SCAN_PERFORMANCE.de.md).
 
 Verwende `config/antivirus.json`, `Get-AVConfig` und `Set-AVConfig`; bevorzuge unterstützte validierte Schreibvorgänge:
 
@@ -94,9 +94,9 @@ Set-AVConfig -Values @{
 
 Die Einstellungen ändern zukünftiges Verhalten und starten nicht unmittelbar einen Scan. Prüfe vor großen Scans Pfade, Ausschlüsse, Signaturrichtlinie und Zeitlimit. Logs und Quarantäne werden gemäß Konfiguration ausgeschlossen. Das [Ablaufbeispiel](../Examples/Invoke-AntivirusWorkflow.ps1) zeigt die Modul-API.
 
-## Hintergrundscans in rc.7
+## Hintergrundscans
 
-Schnellscans und benutzerdefinierte Scans aus dem Antivirus-Menü laufen im Hintergrund weiter. Wähle **B** oder gib **/scan** an einer anderen REMNEXA-Eingabe ein, um Status und aktuelle Befunde zu sehen, zu pausieren, fortzusetzen oder abzubrechen. **D** öffnet eine ruhige Befund-Momentaufnahme; **0** kehrt zurück, während der Scan weiterläuft. Das Beenden von REMNEXA bricht seinen Scan ab. Während einer Pause bleibt RAM belegt, Updates und konkurrierende Scans bleiben gesperrt. Die synchronen Modulbefehle behalten ihr bisheriges Verhalten. Siehe [Bedienung und Prüfung](../docs/BACKGROUND_SCANS.de.md).
+Schnellscans und benutzerdefinierte Scans aus dem Antivirus-Menü laufen im Hintergrund weiter. Wähle **B** oder gib **/scan** an einer anderen REMNEXA-Eingabe ein, um Status und aktuelle Befunde zu sehen, zu pausieren, fortzusetzen oder abzubrechen. **D** öffnet eine ruhige Befund-Momentaufnahme; **0** kehrt zurück, während der Scan weiterläuft. Beim Beenden von REMNEXA erscheint Fortsetzen/Abbrechen/Zurück; Fortsetzen lässt das unabhängige Scanfenster weiterarbeiten. Während einer Pause bleibt RAM belegt, Updates und konkurrierende Scans bleiben gesperrt. Die synchronen Modulbefehle behalten ihr bisheriges Verhalten. Siehe [Bedienung und Prüfung](../docs/INDEPENDENT_SCANS.de.md).
 
 ## Fehlerbehebung und Lizenzen
 

@@ -2,11 +2,13 @@
 
 # Documentation
 
-Documentation for the **2.2.0 development build**. Each Markdown guide has an English and German version, linked at the top. Legal license text remains in its original form.
+Documentation for the **2.2.0 source release**. Each Markdown guide has an English and German version, linked at the top. Legal license text remains in its original form.
 
 ## For users
 
-- [Current candidate: 2.2.0-rc.8 independent scans](INDEPENDENT_SCANS.md): exit REMNEXA and continue scanning, cancel, or return to the application.
+- [Release 2.2.0](RELEASE_2.2.0.md): download, installation, changes, validation and known limits.
+
+- [Independent scans (introduced in rc.8)](INDEPENDENT_SCANS.md): exit REMNEXA and continue scanning, cancel, or return to the application.
 
 - [Previous candidate: 2.2.0-rc.6](RELEASE_2.2.0_RC6.md): changes, checksums, packaging and validation limits.
 

@@ -6,7 +6,7 @@ REMNEXA integrates ClamAV for local, on-demand scanning. It is not a resident pr
 
 ## Independent scans and application exit
 
-Candidate rc.8 starts interactive scans in their own window. REMNEXA remains usable and offers **continue scanning**, **cancel scan**, or **return to application** on exit. The scan window supports pause/resume/cancel; results are saved locally. See [usage and verified limits](../docs/INDEPENDENT_SCANS.md).
+Version 2.2.0 starts interactive scans in their own window. REMNEXA remains usable and offers **continue scanning**, **cancel scan**, or **return to application** on exit. The scan window supports pause/resume/cancel; results are saved locally. See [usage and verified limits](../docs/INDEPENDENT_SCANS.md).
 
 ## Components and requirements
 
@@ -79,7 +79,7 @@ Candidate rc.6 fixes restricted launch from an elevated application and adds con
 
 Candidate rc.5 can keep a native ClamAV 1.5.4 engine loaded between scans, using private inherited pipes and bounded native threads. `ScanBackend` accepts `Auto` (default), `ClamScan` or `PrivateWorker`; `ScanEngineIdleSeconds` defaults to 60. No daemon port or service is opened. See [private engine, fallback and license details](../docs/PRIVATE_SCAN_ENGINE.md).
 
-Candidate rc.4 adds **P** in the Antivirus menu for Eco/Balanced/Fast process priorities. During a scan, **X**, **Esc** or **Ctrl+C** cancels it and reports incomplete coverage. One REMNEXA scan/update at a time is allowed per configured installation. Engine limit warnings are visible and never quarantined as malware. See [performance behavior and benchmark limits](../docs/CLAMAV_SCAN_PERFORMANCE.md).
+Choose **P** in the Antivirus menu for Eco/Balanced/Fast settings. Cancel an independent scan through **C** in its window or scan manager; synchronous console scans retain their X/Esc/Ctrl+C cancellation controls. Cancellation reports incomplete coverage. One REMNEXA scan/update at a time is allowed per configured installation. Engine limit warnings are visible and never quarantined as malware. See [performance behavior and benchmark limits](../docs/CLAMAV_SCAN_PERFORMANCE.md).
 
 Use `config/antivirus.json`, `Get-AVConfig` and `Set-AVConfig`; prefer supported validated writes:
 
@@ -94,9 +94,9 @@ Set-AVConfig -Values @{
 
 These settings change future behavior; they do not run a scan immediately. Check configured paths, exclusions, signature policy and timeout before broad scans. Logs and quarantine are excluded from scanning as configured. See [the workflow example](../Examples/Invoke-AntivirusWorkflow.ps1) for the module API.
 
-## Background scans in rc.7
+## Background scans
 
-Quick/custom scans started from the Antivirus menu continue in the background. Choose **B** or enter **/scan** at another REMNEXA input prompt to view status and live findings, pause/resume or cancel. **D** opens a static findings snapshot; **0** returns while scanning continues. Exiting REMNEXA cancels its scan. The scanner retains its RAM while paused, and updates/competing scans stay excluded. Synchronous module commands retain their existing behavior. See [usage and verification](../docs/BACKGROUND_SCANS.md).
+Quick/custom scans started from the Antivirus menu continue in the background. Choose **B** or enter **/scan** at another REMNEXA input prompt to view status and live findings, pause/resume or cancel. **D** opens a static findings snapshot; **0** returns while scanning continues. Exiting REMNEXA offers continue/cancel/back; choosing continue leaves the independent scan window running. The scanner retains its RAM while paused, and updates/competing scans stay excluded. Synchronous module commands retain their existing behavior. See [usage and verification](../docs/INDEPENDENT_SCANS.md).
 
 ## Troubleshooting and licensing
 

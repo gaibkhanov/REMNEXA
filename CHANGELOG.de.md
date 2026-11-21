@@ -4,7 +4,13 @@
 
 Entwicklungsänderungen sind keine veröffentlichten Releases. Dieses Dokument verändert keine vorhandenen Release-Dateien oder Tags.
 
-## 2.2.0 — Entwicklung, nicht veröffentlicht
+## 2.2.0 — 2026-11-21
+
+### Stabiles Quellrelease
+
+- Geprüften rc.8-Funktionsstand als 2.2.0 übernehmen; frühere Kandidatenberichte bleiben historische Prüfprotokolle.
+- Quell-ZIP, SHA-256-Prüfsumme und englische/deutsche Release Notes; keine gebündelte Laufzeit, ClamAV-Datenbank, KI oder Installer.
+- rc.8-GitHub-CI erfolgreich bestätigt. Der endgültige Release-Stand wird vor Veröffentlichung erneut geprüft. Siehe [Prüfstand und Grenzen](docs/RELEASE_2.2.0.de.md).
 
 ### Kandidat 2.2.0-rc.8
 

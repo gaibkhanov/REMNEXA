@@ -2,7 +2,9 @@
 
 # User guide
 
-Applies to the **2.2.0 development build**. See the [project README](../README.md) for installation and the [compatibility matrix](COMPATIBILITY_MATRIX.md) for verification limits.
+Applies to the **2.2.0 source release**. See the [project README](../README.md) for installation and the [compatibility matrix](COMPATIBILITY_MATRIX.md) for verification limits.
+
+> 2.2.0: Interactive Antivirus scans run in their own window. Exiting REMNEXA with an active scan offers continue, cancel or back. See [independent scans](INDEPENDENT_SCANS.md) and [release notes](RELEASE_2.2.0.md).
 
 ## Start and permissions
 
@@ -26,7 +28,7 @@ Read the choices shown at the current prompt. A number from another screen does 
 - Return choices take you to the preceding function or program list when offered; returning to a program list retains its page and filter.
 - Program and startup lists show next/previous pages only when they exist. Available page commands are shown; unavailable commands explain why they cannot be used.
 
-The exit option applies while REMNEXA waits for input. It does not add a cancellation mechanism to a running external uninstaller, scan, repair command or Windows permission dialog. Wait for critical write operations to finish; forcing the window closed can interrupt them.
+The exit option applies while REMNEXA waits for input. Independent Antivirus scans have their own pause/resume/cancel controls and can continue after confirmed main-application exit. The exit option does not cancel external uninstallers, repair commands or Windows permission dialogs. Wait for critical write operations to finish; forcing the window closed can interrupt them.
 
 ## Processing status
 

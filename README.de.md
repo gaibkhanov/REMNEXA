@@ -8,7 +8,7 @@ Ein kostenloses Open-Source-Werkzeug für die Deinstallation von Anwendungen, Au
 
 **Windows 10 / 11 · PowerShell 7.5+ · Open Source · Sechs Oberflächensprachen**
 
-> **Aktueller Kandidat: 2.2.0-rc.8**, verfügbar im [Kandidatenbranch](https://github.com/gaibkhanov/REMNEXA/tree/feature/independent-antivirus-session). Dies ist kein stabiles Release. Beachte [Kandidatenbericht und Paketanleitung](docs/INDEPENDENT_SCANS.de.md). Der Standardbranch kann eine ältere Version enthalten.
+> **Version 2.2.0**: [Download und Release Notes](https://github.com/gaibkhanov/REMNEXA/releases/tag/v2.2.0). Quellpaket mit SHA-256-Prüfsumme; PowerShell und optionale ClamAV-Komponenten werden separat benötigt. Siehe [Installation, Prüfstand und Grenzen](docs/RELEASE_2.2.0.de.md).
 
 ## Funktionen
 
@@ -44,10 +44,10 @@ Deutsch, Englisch, Spanisch, Französisch, Russisch und Türkisch. Übersetzunge
 
 Voraussetzungen: Windows 10 oder 11, PowerShell **ab Version 7.5** sowie Administratorfreigabe für Aktionen, die erhöhte Rechte benötigen. Windows PowerShell 5.1 kann die Anwendung nicht ausführen. Die [Kompatibilitätsmatrix](docs/COMPATIBILITY_MATRIX.de.md) beschreibt die Prüfgrenzen.
 
-Lade das ZIP des Kandidatenbranches herunter oder verwende Git:
+Lade das Release-Quellpaket herunter oder verwende den Release-Tag mit Git:
 
 ```powershell
-git clone --branch feature/2.2.0-progress https://github.com/gaibkhanov/REMNEXA.git
+git clone --branch v2.2.0 https://github.com/gaibkhanov/REMNEXA.git
 Set-Location REMNEXA
 .\REMNEXA.cmd
 ```
@@ -75,7 +75,7 @@ Dienste- und Antivirus-Prüfungen sind Momentaufnahmen. Ein gestoppter Dienst mi
 
 ## Neu in 2.2.0
 
-Kandidat rc.8 ergänzt unabhängige Scanfenster und Fortsetzen/Abbrechen/Zurück beim Beenden von REMNEXA. Der frühere Kandidat rc.6 korrigiert den nativen Worker-Start aus einer erhöhten Anwendung und erweitert Prüfungen realer Job-Grenzen, knappen Speichers, von Archiven und Signatur-Neuladen. Wiederverwendbare ClamAV-1.5.4-Engine, CLI-Fallback, Eco/Balanced/Fast und Scanabbruch bleiben verfügbar. Bestehende Update- und Quarantänekontrollen bleiben erhalten. Siehe [Prüfungen und verbleibende Grenzen](docs/INDEPENDENT_SCANS.de.md).
+Version 2.2.0 ergänzt unabhängige Scanfenster und Fortsetzen/Abbrechen/Zurück beim Beenden von REMNEXA. Der frühere Kandidat rc.6 korrigiert den nativen Worker-Start aus einer erhöhten Anwendung und erweitert Prüfungen realer Job-Grenzen, knappen Speichers, von Archiven und Signatur-Neuladen. Wiederverwendbare ClamAV-1.5.4-Engine, CLI-Fallback, Eco/Balanced/Fast und Scanabbruch bleiben verfügbar. Bestehende Update- und Quarantänekontrollen bleiben erhalten. Siehe [Prüfungen und verbleibende Grenzen](docs/INDEPENDENT_SCANS.de.md).
 
 - HTTPS- und SHA-256-Prüfung unterstützter ClamAV-Downloads; gestufte Installation und Konfigurationswiederherstellung.
 - Zusätzliche Prüfungen verknüpfter Pfade und unterstützter Datenschutzsicherungen.
