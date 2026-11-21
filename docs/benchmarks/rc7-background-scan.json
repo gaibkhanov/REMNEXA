@@ -1,0 +1,30 @@
+{
+  "Passed": true,
+  "TimeUtc": "2026-11-21T21:14:02.1269169+05:00",
+  "HarmlessCustomSignatures": true,
+  "ProductionDatabaseChanged": false,
+  "Backends": [
+    {
+      "Backend": "ClamScan",
+      "StartReturnSeconds": 1.438,
+      "Files": 2501,
+      "Findings": 1,
+      "PausedFilesUnchanged": true,
+      "ElapsedSeconds": 11.611,
+      "CoverageComplete": true,
+      "NoAutomaticQuarantine": true,
+      "CancelWhilePaused": true
+    },
+    {
+      "Backend": "PrivateWorker",
+      "StartReturnSeconds": 0.015,
+      "Files": 2501,
+      "Findings": 1,
+      "PausedFilesUnchanged": true,
+      "ElapsedSeconds": 13.449,
+      "CoverageComplete": true,
+      "NoAutomaticQuarantine": true,
+      "CancelWhilePaused": true
+    }
+  ]
+}

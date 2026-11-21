@@ -41,7 +41,7 @@ Import-Module -Name (Join-Path $PSScriptRoot 'Core\NativeProcess.psd1') -ErrorAc
 Import-Module -Name (Join-Path $PSScriptRoot 'Core\SecurityAssessment.psd1') -Force -ErrorAction Stop
 
 $script:BrandName = 'REMNEXA'
-$script:CleanerVersion = '2.2.0-rc.6'
+$script:CleanerVersion = '2.2.0-rc.7'
 $script:OperationProgress = $null
 $script:RestartRequired = $false
 $script:ExitRequested = $false
@@ -153,14 +153,23 @@ function Initialize-AppSettings {
 function Read-RemnexaInput {
     param(
         [Parameter(Position = 0)][AllowEmptyString()][string]$Prompt = '',
-        [switch]$ExitOptionAlreadyShown
+        [switch]$ExitOptionAlreadyShown,
+        [switch]$ScanManagerContext
     )
 
     # The caller still handles its existing zero choice. Keep x/exit as quiet
     # compatibility aliases, but advertise just one exit option per prompt.
     if (-not $ExitOptionAlreadyShown) { Write-Host ('  [X] ' + (T 'ExitApplication')) -ForegroundColor DarkGray }
     if (Get-Command Suspend-RemnexaProgress -ErrorAction SilentlyContinue) { Suspend-RemnexaProgress }
-    $answer = Read-Host -Prompt $Prompt
+    while($true) {
+        if(-not $ScanManagerContext -and (Get-Command Show-AVBackgroundSummary -ErrorAction SilentlyContinue)){Show-AVBackgroundSummary}
+        $answer = Read-Host -Prompt $Prompt
+        if(-not $ScanManagerContext -and $answer -and $answer.Trim() -ieq '/scan' -and (Get-Command Show-AVBackgroundManager -ErrorAction SilentlyContinue)) {
+            Show-AVBackgroundManager
+            continue
+        }
+        break
+    }
     if (Get-Command Resume-RemnexaProgress -ErrorAction SilentlyContinue) { Resume-RemnexaProgress }
     if ($null -eq $answer) { return '' }
     if ($answer.Trim() -ieq 'x' -or $answer.Trim() -ieq 'exit') {
@@ -2248,7 +2257,8 @@ function Invoke-AVUpdateMenu {
 }
 
 function Invoke-AVScanWithUpdatePrompt {
-    param([ValidateSet('Quick','Full','Custom')][string]$ScanType='Custom',[string[]]$Path=@(),[switch]$Targeted)
+    param([ValidateSet('Quick','Full','Custom')][string]$ScanType='Custom',[string[]]$Path=@(),[switch]$Targeted,[switch]$Background)
+    if($Background -and (Get-ClamAVBackgroundScan) -and (Get-ClamAVBackgroundScan).State -in @('Starting','Running','Pausing','Paused','Cancelling')){throw (T 'AVScanBusy')}
     $state=Get-ClamAVUpdateState
     $signatures=($state.signatures.status -eq 'update_available' -and $state.signatures.canUpdate -and -not $state.signatures.isStale)
     $engine=($state.engine.updateAvailable -and $state.engine.canUpdate -and -not $state.engine.isStale)
@@ -2287,6 +2297,11 @@ function Invoke-AVScanWithUpdatePrompt {
         }
     }
     if($Targeted) { return @(Invoke-ClamAVTargetedScan -Path $Path) }
+    if($Background) {
+        [void](Start-ClamAVBackgroundScan -ScanType $ScanType -Path $Path -Language $script:Language)
+        Write-Status (T 'AVBackgroundStarted') 'Success'
+        return @()
+    }
     $parameters=@{ScanType=$ScanType}
     if($Path.Count) { $parameters.Path=$Path }
     return @(Invoke-ClamAVScan @parameters)
@@ -2311,6 +2326,72 @@ function Invoke-AVPerformanceMenu {
     }
 }
 
+function Show-AVBackgroundSummary {
+    if(-not (Get-Command Get-ClamAVBackgroundScan -ErrorAction SilentlyContinue)){return}
+    $scan=Get-ClamAVBackgroundScan
+    if(-not $scan){return}
+    $percent=if($scan.Total -gt 0){'{0}%' -f [Math]::Floor(100*$scan.Files/$scan.Total)}else{T 'ProgressUnknown'}
+    $color=if($scan.State -eq 'Failed'){'Red'}elseif($scan.State -in @('Warning','Cancelled','Paused','Pausing')){'Yellow'}elseif($scan.State -eq 'Completed'){'Green'}else{'Cyan'}
+    $total=if($scan.Total -lt 0){'?'}else{$scan.Total}
+    Write-Host (T 'AVBackgroundSummary' @((T ('AVBackgroundState'+$scan.State)),$scan.Files,$total,$percent,$scan.Findings)) -ForegroundColor $color
+}
+
+function Show-AVBackgroundManager {
+    if(-not (Get-Command Get-ClamAVBackgroundScan -ErrorAction SilentlyContinue)){return}
+    while($true) {
+        $scan=Get-ClamAVBackgroundScan -IncludeResults
+        if(-not $scan){Write-Host (T 'AVBackgroundNone');return}
+        Clear-RemnexaScreen
+        Write-Host (T 'AVBackgroundTitle') -ForegroundColor White
+        Show-AVBackgroundSummary
+        $elapsed=[TimeSpan]::FromSeconds([Math]::Floor($scan.ElapsedSeconds)).ToString('hh\:mm\:ss')
+        $rate=if($scan.ActiveSeconds -gt 0){[Math]::Round($scan.Files/$scan.ActiveSeconds,1)}else{0}
+        Write-Host (T 'AVBackgroundDetail' @($scan.Mode,(T ('AVBackgroundPhase'+$scan.Phase)),$elapsed,$rate))
+        if($scan.Error){Write-Host ([regex]::Replace($scan.Error,'[\p{Cc}\p{Cf}]',' ')) -ForegroundColor Red}
+        if($scan.Evidence.Length) {
+            Write-Host (T 'AVBackgroundFindings') -ForegroundColor Yellow
+            foreach($line in @($scan.Evidence|Select-Object -Last 20)){Write-Host ([regex]::Replace($line,'[\p{Cc}\p{Cf}]',' ')) -ForegroundColor Yellow}
+            if($scan.Omitted){Write-Host (T 'AVBackgroundOmitted' @($scan.Omitted))}
+            Write-Host ('  [D] '+(T 'AVBackgroundAllFindings'))
+        }
+        $active=$scan.State -in @('Starting','Running','Pausing','Paused','Cancelling')
+        if($active) {
+            if($scan.State -in @('Paused','Pausing')){Write-Host ('  [R] '+(T 'AVBackgroundResume'))}
+            elseif($scan.State -ne 'Cancelling'){Write-Host ('  [P] '+(T 'AVBackgroundPause'))}
+            Write-Host ('  [C] '+(T 'AVBackgroundCancel'))
+        }
+        else {
+            Write-Host (T 'AVBackgroundFinished')
+            if($scan.Results.Count){$scan.Results|Select-Object Status,Severity,Signature,Path,CoverageComplete|Format-Table -AutoSize|Out-Host}
+        }
+        Write-Host ('  [0] '+(T 'BackPreviousMenu'))
+        Write-Host ('  [X] '+(T 'ExitApplication'))
+        $interactive=$false
+        try{$interactive=-not [Console]::IsInputRedirected -and -not [Console]::IsOutputRedirected}catch{}
+        if($interactive -and $active) {
+            $until=[DateTimeOffset]::UtcNow.AddSeconds(2)
+            while(-not [Console]::KeyAvailable -and [DateTimeOffset]::UtcNow -lt $until){Start-Sleep -Milliseconds 100}
+            if(-not [Console]::KeyAvailable){continue}
+            $choice=[Console]::ReadKey($true).KeyChar.ToString().ToUpperInvariant()
+        }else{$choice=(Read-RemnexaInput (T 'SelectPrompt') -ExitOptionAlreadyShown -ScanManagerContext).Trim().ToUpperInvariant()}
+        switch($choice) {
+            '0'{return}
+            'X'{Stop-RemnexaApplication}
+            'P'{if($active){Set-ClamAVBackgroundScan -Action Pause}}
+            'R'{if($active){Set-ClamAVBackgroundScan -Action Resume}}
+            'C'{if($active){Set-ClamAVBackgroundScan -Action Cancel}}
+            'D'{
+                # Static snapshot so the refresh does not prevent reading older findings.
+                foreach($line in $scan.Evidence){Write-Host ([regex]::Replace($line,'[\p{Cc}\p{Cf}]',' ')) -ForegroundColor Yellow}
+                if($scan.Omitted){Write-Host (T 'AVBackgroundOmitted' @($scan.Omitted))}
+                Write-Host ('  [0] '+(T 'BackPreviousMenu'))
+                Write-Host ('  [X] '+(T 'ExitApplication'))
+                while($true){$back=(Read-RemnexaInput (T 'SelectPrompt') -ExitOptionAlreadyShown -ScanManagerContext).Trim().ToUpperInvariant();if($back -eq '0'){break}}
+            }
+        }
+    }
+}
+
 function Invoke-AntivirusMenu {
     if (-not (Request-ElevationForTool -Mode Antivirus)) { return 'menu' }
     if (-not (Initialize-AntivirusModule)) { return 'menu' }
@@ -2331,10 +2412,11 @@ function Invoke-AntivirusMenu {
         Write-Host ('  [U] ' + (T 'AVUpdateCheck'))
         Write-Host ('  [I] ' + (T 'AVUpdateInfo'))
         Write-Host ('  [P] ' + (T 'AVPerformanceMenu'))
+        Write-Host ('  [B] ' + (T 'AVBackgroundTitle'))
         Write-Host ('  [0] ' + (T 'BackPreviousMenu'))
         $choice = (Read-RemnexaInput (T 'SelectPrompt')).Trim().ToUpperInvariant()
         if ($choice -eq '0') { return 'menu' }
-        if ($choice -notmatch '^[1-7UIP]$') {
+        if ($choice -notmatch '^[1-7UIPB]$') {
             Write-Status (T 'InvalidAVChoice') 'Warning'
             Start-Sleep -Milliseconds 800
             continue antivirusLoop
@@ -2342,6 +2424,7 @@ function Invoke-AntivirusMenu {
 
         try {
             switch ($choice) {
+                'B' { Show-AVBackgroundManager;continue antivirusLoop }
                 'P' { Invoke-AVPerformanceMenu;continue antivirusLoop }
                 'U' { Invoke-AVUpdateMenu;continue antivirusLoop }
                 'I' { Show-AVUpdateSummary -Detailed }
@@ -2358,14 +2441,14 @@ function Invoke-AntivirusMenu {
                     [void](Invoke-AVConfirmedUpdate -Component Signatures)
                 }
                 '5' {
-                    $results = @(Invoke-AVScanWithUpdatePrompt -ScanType Quick)
+                    $results = @(Invoke-AVScanWithUpdatePrompt -ScanType Quick -Background)
                     if($results.Count -eq 0) { continue antivirusLoop }
                     $results | Format-Table Status, Severity, Signature, Path -AutoSize | Out-Host
                 }
                 '6' {
                     $customPath = (Read-RemnexaInput (T 'AVPathPrompt')).Trim().Trim('"')
                     if (-not [string]::IsNullOrWhiteSpace($customPath)) {
-                        $results = @(Invoke-AVScanWithUpdatePrompt -Path $customPath -ScanType Custom)
+                        $results = @(Invoke-AVScanWithUpdatePrompt -Path $customPath -ScanType Custom -Background)
                         if($results.Count -eq 0) { continue antivirusLoop }
                         $results | Format-Table Status, Severity, Signature, Path -AutoSize | Out-Host
                     }
@@ -3656,7 +3739,7 @@ function Invoke-RemnexaSelfTest {
         $checks.Add([PSCustomObject]@{ Name = $Name; Passed = $Passed; Details = $Details })
     }
 
-    & $addCheck 'Brand' ($script:BrandName -eq 'REMNEXA' -and $script:CleanerVersion -eq '2.2.0-rc.6') "$($script:BrandName) $($script:CleanerVersion)"
+    & $addCheck 'Brand' ($script:BrandName -eq 'REMNEXA' -and $script:CleanerVersion -eq '2.2.0-rc.7') "$($script:BrandName) $($script:CleanerVersion)"
     $translationProblems = @(
         foreach ($key in $script:Texts.Keys) {
             $translations = @($script:Texts[$key])
@@ -4016,6 +4099,7 @@ catch {
     $scriptExitCode = 1
 }
 finally {
+    if(Get-Command Stop-ClamAVBackgroundScan -ErrorAction SilentlyContinue) { try { Stop-ClamAVBackgroundScan } catch { Write-Warning $_.Exception.Message } }
     if(Get-Command Stop-ClamAVUpdateCheck -ErrorAction SilentlyContinue) { try { Stop-ClamAVUpdateCheck } catch { Write-Verbose 'Antivirus metadata worker cleanup failed.' } }
     if(Get-Command Stop-ClamAVScanEngine -ErrorAction SilentlyContinue) { try { Stop-ClamAVScanEngine } catch { Write-Verbose 'Antivirus scan worker cleanup failed.' } }
 }

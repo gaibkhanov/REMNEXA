@@ -8,7 +8,8 @@ Describe 'REMNEXA localization resources' {
         Import-Module -Name $modulePath -Force -ErrorAction Stop
         try {
             $texts = Import-RemnexaLocalization -Root $localeRoot -LanguageCodes $languages -FallbackLanguage 'de'
-            if ($texts.Count -ne 359) { throw "Expected 359 localized keys, found $($texts.Count)." }
+            $reference=[IO.File]::ReadAllText((Join-Path $localeRoot 'de.json'))|ConvertFrom-Json -AsHashtable
+            if ($texts.Count -ne $reference.Count -or $texts.Count -lt 359) { throw "Locale keys were dropped: found $($texts.Count)." }
             foreach ($key in $texts.Keys) {
                 $values = @($texts[$key])
                 if ($values.Count -ne $languages.Count) { throw "Translation '$key' has an incorrect language count." }

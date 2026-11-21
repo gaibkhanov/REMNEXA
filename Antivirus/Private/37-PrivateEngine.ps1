@@ -44,7 +44,7 @@ function Test-AVWarmWorkerMemory {
 }
 
 function Start-AVPrivateWorker {
-    param($Config,$Status,$Profile,[long]$MaxBytes,[bool]$IncludePUA,[scriptblock]$OnHeartbeat,[Threading.CancellationToken]$CancellationToken)
+    param($Config,$Status,$Profile,[long]$MaxBytes,[bool]$IncludePUA,[scriptblock]$OnHeartbeat,[Threading.CancellationToken]$CancellationToken,$PauseControl=$null)
     $dll=Join-Path (Split-Path -Parent $Status.ClamScanPath) 'libclamav.dll'
     $key=Get-AVEngineFingerprint -Config $Config -Dll $dll -MaxBytes $MaxBytes -IncludePUA $IncludePUA -Mode $Profile.Mode
     if($script:AVPrivateWorker -and $script:AVPrivateWorker.Key -eq $key -and $script:AVPrivateWorker.Client.Alive) {
@@ -77,10 +77,12 @@ function Start-AVPrivateWorker {
         $executable=Join-Path $PSHOME 'pwsh.exe'
         $client=[Remnexa.Worker.Client]::new($executable,(Join-Path $script:AVModuleRoot 'Workers/NativeScan.ps1'),$frame,$policy.MemoryLimit,$policy.CpuRate)
         $watch=[Diagnostics.Stopwatch]::StartNew()
+        $pauseBaseline=if($PauseControl){$PauseControl.PausedSeconds}else{0}
         while(-not $client.Ready.IsCompleted) {
             $CancellationToken.ThrowIfCancellationRequested()
             if($OnHeartbeat){& $OnHeartbeat ([pscustomobject]@{ElapsedSeconds=$watch.Elapsed.TotalSeconds;ProcessId=$client.ProcessId})|Out-Null}
-            if($watch.Elapsed.TotalSeconds -gt [int]$Config.ScanEngineStartupSeconds){throw 'Private engine startup timed out.'}
+            $paused=if($PauseControl){$PauseControl.PausedSeconds-$pauseBaseline}else{0}
+            if(($watch.Elapsed.TotalSeconds-$paused) -gt [int]$Config.ScanEngineStartupSeconds){throw 'Private engine startup timed out.'}
             [Threading.Thread]::Sleep(100)
         }
         try{$ready=$client.Ready.GetAwaiter().GetResult()}catch{throw ('Private engine startup failed: '+$client.Diagnostics)}
@@ -98,26 +100,28 @@ function Start-AVPrivateWorker {
 }
 
 function Invoke-AVPrivateScan {
-    param($Config,$Status,$Profile,[string]$FileList,[string]$MaxFileSize,[bool]$IncludePUA,[int]$TimeoutSeconds,[scriptblock]$OnOutput,[scriptblock]$OnHeartbeat,[scriptblock]$CaptureFilter,[Threading.CancellationToken]$CancellationToken)
+    param($Config,$Status,$Profile,[string]$FileList,[string]$MaxFileSize,[bool]$IncludePUA,[int]$TimeoutSeconds,[scriptblock]$OnOutput,[scriptblock]$OnHeartbeat,[scriptblock]$CaptureFilter,[Threading.CancellationToken]$CancellationToken,$PauseControl=$null)
     try {
     $match=[regex]::Match($MaxFileSize.ToUpperInvariant(),'^(\d+(?:\.\d+)?)([KMG]?)$')
     if(-not $match.Success){throw 'Invalid private-engine file limit.'}
     $factor=switch($match.Groups[2].Value){'K'{1KB};'M'{1MB};'G'{1GB};default{1}}
     $max=[long]([double]::Parse($match.Groups[1].Value,[Globalization.CultureInfo]::InvariantCulture)*$factor)
     if($max -lt 1 -or $max -gt 128MB){throw 'The private engine supports configured file limits from 1 byte through 128 MiB. Use ClamScan for larger or unlimited limits.'}
-    $engine=Start-AVPrivateWorker -Config $Config -Status $Status -Profile $Profile -MaxBytes $max -IncludePUA $IncludePUA -OnHeartbeat $OnHeartbeat -CancellationToken $CancellationToken
+    $engine=Start-AVPrivateWorker -Config $Config -Status $Status -Profile $Profile -MaxBytes $max -IncludePUA $IncludePUA -OnHeartbeat $OnHeartbeat -CancellationToken $CancellationToken -PauseControl $PauseControl
     }catch{if(-not $CancellationToken.IsCancellationRequested){$_.Exception.Data['AVWorkerStartupFailed']=$true};throw}
     $policy=Get-AVWorkerPolicy $Profile
     $threads=[Math]::Min($engine.Threads,$policy.Threads)
     $engine.Client.SetPriority($Profile.ProcessPriority)
     $watch=[Diagnostics.Stopwatch]::StartNew();$batch=$null
+    $pauseBaseline=if($PauseControl){$PauseControl.PausedSeconds}else{0}
     $pending=[Collections.Generic.SortedDictionary[int,object]]::new();$next=1;$exitCode=0
     $evidence=[Text.StringBuilder]::new()
     try {
         $batch=$engine.Client.BeginBatch($FileList,$threads)
         while(-not $batch.Completed -or $batch.QueuedResults -gt 0) {
             $CancellationToken.ThrowIfCancellationRequested()
-            if($watch.Elapsed.TotalSeconds -gt $TimeoutSeconds){throw 'Private scan exceeded its timeout.'}
+            $paused=if($PauseControl){$PauseControl.PausedSeconds-$pauseBaseline}else{0}
+            if(($watch.Elapsed.TotalSeconds-$paused) -gt $TimeoutSeconds){throw 'Private scan exceeded its timeout.'}
             $reply=$batch.Take(50)
             if($reply){$pending.Add($reply.Id,$reply)}
             while($pending.ContainsKey($next)) {

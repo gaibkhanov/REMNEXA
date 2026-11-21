@@ -6,6 +6,13 @@ Development changes are not published release claims. Existing release artifacts
 
 ## 2.2.0 — development, not released
 
+### Candidate 2.2.0-rc.7
+
+- Run interactive Antivirus quick/custom scans in a background runspace while other REMNEXA tools remain usable.
+- Add **B** and global **/scan** access to live status/findings, pause/resume, cancellation and a static evidence snapshot; translate controls into all six languages.
+- Keep one active scan per installation, preserve detections on cancellation, and collect results/cleanup before publishing completion. Exiting REMNEXA cancels the scan.
+- Test real CLI/private-worker pause/resume and paused cancellation with 2,501 harmless files per backend. See [behavior and validation limits](docs/BACKGROUND_SCANS.md).
+
 ### Candidate 2.2.0-rc.6
 
 - Fix restricted worker startup from an elevated parent by explicitly preserving current-user/SYSTEM access to token defaults and process/thread objects.

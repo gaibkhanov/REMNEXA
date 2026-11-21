@@ -8,7 +8,7 @@ A free, open-source Windows utility for application removal, startup management,
 
 **Windows 10 / 11 · PowerShell 7.5+ · Open Source · Six interface languages**
 
-> **Current candidate: 2.2.0-rc.6**, available on the [candidate branch](https://github.com/gaibkhanov/REMNEXA/tree/fix/clamav-worker-validation). It is not a stable release. Read the [candidate notes and package instructions](docs/RELEASE_2.2.0_RC6.md). The default branch may contain an earlier version.
+> **Current candidate: 2.2.0-rc.7**, available on the [candidate branch](https://github.com/gaibkhanov/REMNEXA/tree/feature/antivirus-background-scans). It is not a stable release. Read the [candidate notes and package instructions](docs/BACKGROUND_SCANS.md). The default branch may contain an earlier version.
 
 ## Features
 
@@ -73,7 +73,7 @@ Service and antivirus checks are snapshots. A stopped demand-start service is no
 
 ## What's new in 2.2.0
 
-Candidate rc.6 fixes native worker launch from an elevated application and extends real job-limit, constrained-memory, archive and signature-reload checks. The reusable ClamAV 1.5.4 engine, CLI fallback, Eco/Balanced/Fast controls and cancellation remain available. Existing update and quarantine safeguards are preserved. See [verification and remaining limits](docs/RELEASE_2.2.0_RC6.md).
+Candidate rc.6 fixes native worker launch from an elevated application and extends real job-limit, constrained-memory, archive and signature-reload checks. The reusable ClamAV 1.5.4 engine, CLI fallback, Eco/Balanced/Fast controls and cancellation remain available. Existing update and quarantine safeguards are preserved. See [verification and remaining limits](docs/BACKGROUND_SCANS.md).
 
 - HTTPS and SHA-256 checks for supported ClamAV downloads; staged installation and configuration recovery.
 - Additional linked-path checks and validation of supported privacy backups.
@@ -83,7 +83,7 @@ Candidate rc.6 fixes native worker launch from an elevated application and exten
 - Page navigation only when another page exists; one visible exit option per prompt.
 - Modular core components, external translations and a read-only system overview.
 
-Current behavior and remaining limits are recorded in the [private-engine report](docs/RELEASE_2.2.0_RC6.md). Earlier results remain in the historical [development report](docs/VERSION_2.2.0.md).
+Current behavior and remaining limits are recorded in the [private-engine report](docs/BACKGROUND_SCANS.md). Earlier results remain in the historical [development report](docs/VERSION_2.2.0.md).
 
 ## Documentation
 

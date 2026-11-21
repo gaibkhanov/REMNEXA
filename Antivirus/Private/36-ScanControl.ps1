@@ -2,6 +2,11 @@ function Initialize-AVScanSupport {
     if(-not ('Remnexa.Scan.Inventory' -as [type])) { Add-Type -Path (Join-Path $PSScriptRoot 'ScanInventory.cs') -ErrorAction Stop }
 }
 
+function Initialize-AVBackgroundSupport {
+    Initialize-AVScanSupport
+    if(-not ('Remnexa.Scan.BackgroundControl' -as [type])) { Add-Type -Path (Join-Path $PSScriptRoot 'BackgroundScan.cs') -ErrorAction Stop }
+}
+
 function Enter-AVScanLease {
     param($Config)
     $name='Global\REMNEXA.ClamAV.Scan.'+(Get-AVUpdateContext $Config)

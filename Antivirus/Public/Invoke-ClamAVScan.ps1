@@ -51,7 +51,8 @@ function Invoke-ClamAVScan {
         [ValidateRange(1, 86400)][int]$Timeout = 0,
         [string]$ConfigPath = $script:AVConfigPath,
         [ValidateSet('Eco','Balanced','Fast')][string]$PerformanceMode,
-        [Threading.CancellationToken]$CancellationToken=[Threading.CancellationToken]::None
+        [Threading.CancellationToken]$CancellationToken=[Threading.CancellationToken]::None,
+        [object]$BackgroundControl=$null
     )
 
     $progress = New-RemnexaProgress -Activity (Get-RemnexaProgressText 'ProgressTaskScan') -Unit (Get-RemnexaProgressText 'ProgressUnitFiles')
@@ -69,12 +70,13 @@ function Invoke-ClamAVScan {
         Update-RemnexaProgress $progress -Status (Get-RemnexaProgressText 'ProgressTaskPrepare') -Force
         $config = Get-AVConfig -Path $ConfigPath
         Initialize-AVScanSupport
-        $cancellation=[Remnexa.Scan.Cancellation]::new($CancellationToken)
+        $cancellation=[Remnexa.Scan.Cancellation]::new($CancellationToken,($null -eq $BackgroundControl))
         $script:AVCancellation=$cancellation
         $cancellation.Poll()
         $scanLease=Enter-AVScanLease $config
         $mode=if($PerformanceMode){$PerformanceMode}elseif($config.PSObject.Properties['ScanPerformanceMode']){[string]$config.ScanPerformanceMode}else{'Balanced'}
         $profile=Get-ClamAVScanPerformance -Mode $mode
+        if($BackgroundControl){$BackgroundControl.Update('Preparing',0,-1,$mode);$BackgroundControl.Checkpoint(0)}
         if(-not $profile.CanStart -and -not(Test-AVWarmWorkerMemory $profile)){throw (Get-RemnexaProgressText 'AVScanMemoryLow')}
         $phase=[Diagnostics.Stopwatch]::StartNew()
         $status = Get-ClamAVStatus -ConfigPath $ConfigPath -ForScan
@@ -102,7 +104,7 @@ function Invoke-ClamAVScan {
 
         $inventoryProgress = New-RemnexaProgress -Activity (Get-RemnexaProgressText 'ProgressTaskDiscovery') -Unit (Get-RemnexaProgressText 'ProgressUnitFiles')
         $phase.Restart()
-        $inventory = New-AVScanFileList -Targets $targets -Config $config -ListPath $targetListPath -Progress $inventoryProgress -CancellationToken $cancellation.Source.Token -CancellationControl $cancellation
+        $inventory = New-AVScanFileList -Targets $targets -Config $config -ListPath $targetListPath -Progress $inventoryProgress -CancellationToken $cancellation.Source.Token -CancellationControl $cancellation -BackgroundControl $BackgroundControl
         $phaseTimes.InventorySeconds=$phase.Elapsed.TotalSeconds
         $cancellation.Poll()
         if($inventory.PSObject.Properties['Issues']) { foreach($issue in $inventory.Issues) { Write-AVLog -Message $issue -Level Warning -Event 'Scan/Inventory' } }
@@ -110,6 +112,7 @@ function Invoke-ClamAVScan {
         Complete-RemnexaProgress $inventoryProgress -Outcome $(if ($inventory.Skipped) { 'Warning' } else { 'Completed' })
         $inventoryProgress = $null
         Update-RemnexaProgress $progress -Total $inventory.Files -Status (Get-RemnexaProgressText 'ProgressTaskLoadEngine') -CurrentItem '' -Force
+        if($BackgroundControl){$BackgroundControl.Update('Loading',0,$inventory.Files,$mode)}
 
         $run = [PSCustomObject]@{ ExitCode=0; StandardOutput=''; StandardError='' }
         if ($inventory.Files -gt 0) {
@@ -127,6 +130,7 @@ function Invoke-ClamAVScan {
             $heartbeat = {
                 param($Event)
                 $cancellationCommand.Poll()
+                if($BackgroundControl){$BackgroundControl.Checkpoint([int]$Event.ProcessId)}
                 $rate=if($null -ne $phaseTimes.FirstFileSeconds -and $scannerWatch.Elapsed.TotalSeconds -gt $phaseTimes.FirstFileSeconds){$metrics.Reported/($scannerWatch.Elapsed.TotalSeconds-$phaseTimes.FirstFileSeconds)}else{0}
                 & $updateProgressCommand $progress -Status ($liveText -f $profile.Mode,$metrics.Findings,([Math]::Round($rate,1)))
             }.GetNewClosure()
@@ -144,6 +148,10 @@ function Invoke-ClamAVScan {
                         $metrics.Reported++;$metrics.LastFile=$file;$metrics.NextFile=$acknowledgements.ReadLine()
                         if ($message -match '\sERROR$') { $metrics.Errors++ }
                         if ($message -match '\sFOUND$' -and $message -notlike 'Heuristics.Limits.Exceeded*') { $metrics.Findings++ }
+                        if($BackgroundControl){
+                            $BackgroundControl.Update('Scanning',$metrics.Reported,$inventory.Files,$profile.Mode)
+                            if($message -match '\s(?:FOUND|ERROR)$'){$BackgroundControl.AddEvidence($Line,($message -match '\sFOUND$' -and $message -notlike 'Heuristics.Limits.Exceeded*'))}
+                        }
                         & $updateProgressCommand $progress -Completed $metrics.Reported -CurrentItem $file
                     }
                     else{$metrics.Unexpected++}
@@ -158,7 +166,7 @@ function Invoke-ClamAVScan {
             $run=$null
             if($usePrivate) {
                 try {
-                    $run=Invoke-AVPrivateScan -Config $config -Status $status -Profile $profile -FileList $targetListPath -MaxFileSize $effectiveMaxFileSize -IncludePUA $effectivePUA -TimeoutSeconds $effectiveTimeout -OnOutput $onOutput -OnHeartbeat $heartbeat -CaptureFilter $filter -CancellationToken $cancellation.Source.Token
+                    $run=Invoke-AVPrivateScan -Config $config -Status $status -Profile $profile -FileList $targetListPath -MaxFileSize $effectiveMaxFileSize -IncludePUA $effectivePUA -TimeoutSeconds $effectiveTimeout -OnOutput $onOutput -OnHeartbeat $heartbeat -CaptureFilter $filter -CancellationToken $cancellation.Source.Token -PauseControl $BackgroundControl
                 }catch{
                     if($backend -ne 'Auto' -or -not $_.Exception.Data.Contains('AVWorkerStartupFailed')){throw}
                     Write-Warning (Get-RemnexaProgressText 'AVWorkerFallback')
@@ -167,12 +175,13 @@ function Invoke-ClamAVScan {
             }
             if(-not $run) {
                 Stop-ClamAVScanEngine
-                $run=Invoke-AVNativeProcess -FilePath $status.ClamScanPath -ArgumentList $arguments.ToArray() -TimeoutSeconds $effectiveTimeout -WorkingDirectory (Split-Path -Parent $status.ClamScanPath) -OnOutput $onOutput -OnHeartbeat $heartbeat -CaptureFilter $filter -ProcessPriority $profile.ProcessPriority -CancellationToken $cancellation.Source.Token
+                $run=Invoke-AVNativeProcess -FilePath $status.ClamScanPath -ArgumentList $arguments.ToArray() -TimeoutSeconds $effectiveTimeout -WorkingDirectory (Split-Path -Parent $status.ClamScanPath) -OnOutput $onOutput -OnHeartbeat $heartbeat -CaptureFilter $filter -ProcessPriority $profile.ProcessPriority -CancellationToken $cancellation.Source.Token -PauseControl $BackgroundControl
             }
             $phaseTimes.ScannerSeconds=$scannerWatch.Elapsed.TotalSeconds
         }
         $phase.Restart()
         Update-RemnexaProgress $progress -Status (Get-RemnexaProgressText 'ProgressTaskEvaluate') -CurrentItem '' -Force
+        if($BackgroundControl){$BackgroundControl.Update('Evaluating',$metrics.Reported,$inventory.Files,$profile.Mode)}
         if ($run.ExitCode -notin @(0,1,2)) { throw "Unbekannter clamscan Exit-Code $($run.ExitCode)." }
         $results = @(Get-ClamAVScanResult -InputObject @($run.StandardOutput,$run.StandardError) -ExitCode $run.ExitCode -ScanType $ScanType)
         if ($run.ExitCode -eq 2) { throw ("ClamAV konnte den Scan nicht abschliessen (Exit-Code 2): " + $run.StandardError + ' ' + $run.StandardOutput) }

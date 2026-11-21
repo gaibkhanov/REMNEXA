@@ -90,6 +90,10 @@ Set-AVConfig -Values @{
 
 These settings change future behavior; they do not run a scan immediately. Check configured paths, exclusions, signature policy and timeout before broad scans. Logs and quarantine are excluded from scanning as configured. See [the workflow example](../Examples/Invoke-AntivirusWorkflow.ps1) for the module API.
 
+## Background scans in rc.7
+
+Quick/custom scans started from the Antivirus menu continue in the background. Choose **B** or enter **/scan** at another REMNEXA input prompt to view status and live findings, pause/resume or cancel. **D** opens a static findings snapshot; **0** returns while scanning continues. Exiting REMNEXA cancels its scan. The scanner retains its RAM while paused, and updates/competing scans stay excluded. Synchronous module commands retain their existing behavior. See [usage and verification](../docs/BACKGROUND_SCANS.md).
+
 ## Troubleshooting and licensing
 
 Check engine/signature readiness, exact errors, permissions and configured paths before retrying. An expired signature warning is different from an engine startup failure. Do not disable installed security software to force REMNEXA to run.

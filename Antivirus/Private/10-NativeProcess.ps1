@@ -17,7 +17,8 @@ function Invoke-AVNativeProcess {
         [scriptblock]$OnHeartbeat,
         [scriptblock]$CaptureFilter,
         [ValidateSet('Idle','BelowNormal','Normal')][string]$ProcessPriority='Normal',
-        [Threading.CancellationToken]$CancellationToken=[Threading.CancellationToken]::None
+        [Threading.CancellationToken]$CancellationToken=[Threading.CancellationToken]::None,
+        [object]$PauseControl=$null
     )
 
     if (-not $OnHeartbeat) {
@@ -32,5 +33,5 @@ function Invoke-AVNativeProcess {
             }
         }
     }
-    return Invoke-RemnexaNativeProcess -FilePath $FilePath -ArgumentList $ArgumentList -TimeoutSeconds $TimeoutSeconds -WorkingDirectory $WorkingDirectory -OnOutput $OnOutput -OnHeartbeat $OnHeartbeat -CaptureFilter $CaptureFilter -ProcessPriority $ProcessPriority -CancellationToken $CancellationToken
+    return Invoke-RemnexaNativeProcess -FilePath $FilePath -ArgumentList $ArgumentList -TimeoutSeconds $TimeoutSeconds -WorkingDirectory $WorkingDirectory -OnOutput $OnOutput -OnHeartbeat $OnHeartbeat -CaptureFilter $CaptureFilter -ProcessPriority $ProcessPriority -CancellationToken $CancellationToken -PauseControl $PauseControl
 }

@@ -41,7 +41,8 @@ function Invoke-RemnexaNativeProcess {
         [scriptblock]$CaptureFilter,
         [ValidateRange(1024, 67108864)][int]$MaxCapturedCharacters = 16777216,
         [ValidateSet('Idle','BelowNormal','Normal')][string]$ProcessPriority='Normal',
-        [Threading.CancellationToken]$CancellationToken=[Threading.CancellationToken]::None
+        [Threading.CancellationToken]$CancellationToken=[Threading.CancellationToken]::None,
+        [object]$PauseControl=$null
     )
 
     if (-not (Test-Path -LiteralPath $FilePath -PathType Leaf)) {
@@ -67,7 +68,7 @@ function Invoke-RemnexaNativeProcess {
     }
 
     if ($OnOutput -or $OnHeartbeat -or $CaptureFilter -or $CancellationToken.CanBeCanceled -or $ProcessPriority -ne 'Normal') {
-        return Invoke-RemnexaObservedProcess -StartInfo $startInfo -TimeoutSeconds $TimeoutSeconds -OnOutput $OnOutput -OnHeartbeat $OnHeartbeat -CaptureFilter $CaptureFilter -MaxCapturedCharacters $MaxCapturedCharacters -Arguments $ArgumentList -ProcessPriority $ProcessPriority -CancellationToken $CancellationToken
+        return Invoke-RemnexaObservedProcess -StartInfo $startInfo -TimeoutSeconds $TimeoutSeconds -OnOutput $OnOutput -OnHeartbeat $OnHeartbeat -CaptureFilter $CaptureFilter -MaxCapturedCharacters $MaxCapturedCharacters -Arguments $ArgumentList -ProcessPriority $ProcessPriority -CancellationToken $CancellationToken -PauseControl $PauseControl
     }
 
     $process = New-Object Diagnostics.Process
@@ -115,7 +116,7 @@ Export-ModuleMember -Function ConvertTo-RemnexaNativeArgument, Invoke-RemnexaNat
 
 function Invoke-RemnexaObservedProcess {
     param([Diagnostics.ProcessStartInfo]$StartInfo, [int]$TimeoutSeconds, [scriptblock]$OnOutput, [scriptblock]$OnHeartbeat, [scriptblock]$CaptureFilter, [int]$MaxCapturedCharacters, [string[]]$Arguments,
-        [string]$ProcessPriority='Normal',[Threading.CancellationToken]$CancellationToken=[Threading.CancellationToken]::None)
+        [string]$ProcessPriority='Normal',[Threading.CancellationToken]$CancellationToken=[Threading.CancellationToken]::None,$PauseControl=$null)
     $process = [Diagnostics.Process]::new()
     $process.StartInfo = $StartInfo
     $started = $false
@@ -123,6 +124,7 @@ function Invoke-RemnexaObservedProcess {
     $output = @{ Stdout=[Text.StringBuilder]::new(); Stderr=[Text.StringBuilder]::new() }
     $captured = 0
     $lastHeartbeat = [long]-1000
+    $pauseBaseline=if($PauseControl){$PauseControl.PausedSeconds}else{0}
     try {
         $CancellationToken.ThrowIfCancellationRequested()
         $started = $process.Start()
@@ -132,7 +134,8 @@ function Invoke-RemnexaObservedProcess {
         $pending = @{ Stdout=$readers.Stdout.ReadLineAsync(); Stderr=$readers.Stderr.ReadLineAsync() }
         while ($pending.Count -gt 0 -or -not $process.HasExited) {
             $CancellationToken.ThrowIfCancellationRequested()
-            if ($watch.Elapsed.TotalSeconds -ge $TimeoutSeconds) { throw "Process '$($StartInfo.FileName)' exceeded the $TimeoutSeconds second timeout." }
+            $paused=if($PauseControl){$PauseControl.PausedSeconds-$pauseBaseline}else{0}
+            if (($watch.Elapsed.TotalSeconds-$paused) -ge $TimeoutSeconds) { throw "Process '$($StartInfo.FileName)' exceeded the $TimeoutSeconds second timeout." }
             foreach ($streamName in @($pending.Keys)) {
                 # Bound each batch so stderr, heartbeats and the deadline cannot
                 # be starved by a process continuously producing stdout.

@@ -2,7 +2,7 @@ Import-Module (Join-Path $PSScriptRoot '..\..\Core\PathSafety.psd1') -ErrorActio
 
 function New-AVScanFileList {
     param([string[]]$Targets,[object]$Config,[string]$ListPath,[object]$Progress,
-        [Threading.CancellationToken]$CancellationToken=[Threading.CancellationToken]::None,$CancellationControl=$null)
+        [Threading.CancellationToken]$CancellationToken=[Threading.CancellationToken]::None,$CancellationControl=$null,$BackgroundControl=$null)
     if(-not ('Remnexa.Scan.Inventory' -as [type])) {
         Add-Type -Path (Join-Path $PSScriptRoot 'ScanInventory.cs') -ErrorAction Stop
     }
@@ -29,6 +29,7 @@ function New-AVScanFileList {
     $text=Get-RemnexaProgressText 'ProgressScanSkipped'
     $callback=[Action[long,long,string]]{param($Files,$Skipped,$Current)
         if($CancellationControl){$CancellationControl.Poll()}
+        if($BackgroundControl){$BackgroundControl.Update('Discovering',$Files,-1,'');$BackgroundControl.Checkpoint(0)}
         & $updater $Progress -Completed $Files -CurrentItem $Current -Status ($text -f $Files,$Skipped)
     }.GetNewClosure()
     try{$result=[Remnexa.Scan.Inventory]::Write($roots.ToArray(),[string[]]$excluded,$ListPath,$CancellationToken,$callback)}

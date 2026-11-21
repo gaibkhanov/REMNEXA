@@ -90,6 +90,10 @@ Set-AVConfig -Values @{
 
 Die Einstellungen ändern zukünftiges Verhalten und starten nicht unmittelbar einen Scan. Prüfe vor großen Scans Pfade, Ausschlüsse, Signaturrichtlinie und Zeitlimit. Logs und Quarantäne werden gemäß Konfiguration ausgeschlossen. Das [Ablaufbeispiel](../Examples/Invoke-AntivirusWorkflow.ps1) zeigt die Modul-API.
 
+## Hintergrundscans in rc.7
+
+Schnellscans und benutzerdefinierte Scans aus dem Antivirus-Menü laufen im Hintergrund weiter. Wähle **B** oder gib **/scan** an einer anderen REMNEXA-Eingabe ein, um Status und aktuelle Befunde zu sehen, zu pausieren, fortzusetzen oder abzubrechen. **D** öffnet eine ruhige Befund-Momentaufnahme; **0** kehrt zurück, während der Scan weiterläuft. Das Beenden von REMNEXA bricht seinen Scan ab. Während einer Pause bleibt RAM belegt, Updates und konkurrierende Scans bleiben gesperrt. Die synchronen Modulbefehle behalten ihr bisheriges Verhalten. Siehe [Bedienung und Prüfung](../docs/BACKGROUND_SCANS.de.md).
+
 ## Fehlerbehebung und Lizenzen
 
 Prüfe Engine-/Signaturbereitschaft, konkrete Fehler, Berechtigungen und konfigurierte Pfade vor einem neuen Versuch. Eine Warnung zum Signaturalter ist etwas anderes als ein Startfehler der Engine. Deaktiviere vorhandene Sicherheitssoftware nicht, um REMNEXA zu erzwingen.

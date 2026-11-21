@@ -6,6 +6,13 @@ Entwicklungsänderungen sind keine veröffentlichten Releases. Dieses Dokument v
 
 ## 2.2.0 — Entwicklung, nicht veröffentlicht
 
+### Kandidat 2.2.0-rc.7
+
+- Interaktive Antivirus-Schnellscans und benutzerdefinierte Scans laufen in einem Hintergrund-Runspace, während andere REMNEXA-Werkzeuge bedienbar bleiben.
+- **B** und die globale Eingabe **/scan** öffnen Status/Befunde, Pause/Fortsetzung, Abbruch und eine ruhige Befund-Momentaufnahme; Texte in allen sechs Sprachen ergänzt.
+- Ein aktiver Scan pro Installation; Befunde bleiben beim Abbruch erhalten und der Abschluss erscheint erst nach Ergebnissammlung/Bereinigung. Das Beenden von REMNEXA bricht den Scan ab.
+- Pause/Fortsetzung und Abbruch aus der Pause mit echtem CLI-/Privat-Worker und jeweils 2.501 harmlosen Dateien geprüft. Siehe [Verhalten und Prüfgrenzen](docs/BACKGROUND_SCANS.de.md).
+
 ### Kandidat 2.2.0-rc.6
 
 - Start des eingeschränkten Workers aus einer erhöhten Hauptanwendung korrigiert: ausdrücklicher Zugriff für aktuellen Benutzer/SYSTEM auf Token-Vorgaben und Prozess-/Threadobjekte.

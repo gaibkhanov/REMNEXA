@@ -28,21 +28,24 @@ namespace Remnexa.Scan {
     public sealed class Cancellation : IDisposable {
         public readonly CancellationTokenSource Source;
         private readonly ConsoleCancelEventHandler handler;
-        public Cancellation(CancellationToken token) {
+        private readonly bool interactive;
+        public Cancellation(CancellationToken token) : this(token,true) { }
+        public Cancellation(CancellationToken token,bool interactive) {
+            this.interactive=interactive;
             Source=CancellationTokenSource.CreateLinkedTokenSource(token);
             handler=(sender,args)=>{args.Cancel=true;Source.Cancel();};
-            Console.CancelKeyPress+=handler;
+            if(interactive)Console.CancelKeyPress+=handler;
         }
         public void Poll() {
             try {
-                if(!Console.IsInputRedirected && Console.KeyAvailable) {
+                if(interactive && !Console.IsInputRedirected && Console.KeyAvailable) {
                     var key=Console.ReadKey(true).Key;
                     if(key==ConsoleKey.X || key==ConsoleKey.Escape) Source.Cancel();
                 }
             } catch(InvalidOperationException) { }
             Source.Token.ThrowIfCancellationRequested();
         }
-        public void Dispose() { Console.CancelKeyPress-=handler;Source.Dispose(); }
+        public void Dispose() { if(interactive)Console.CancelKeyPress-=handler;Source.Dispose(); }
     }
     public sealed class InventoryResult {
         public long Files, Skipped;
