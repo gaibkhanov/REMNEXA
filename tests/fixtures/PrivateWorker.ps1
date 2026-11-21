@@ -4,6 +4,10 @@ Add-Type -Path (Join-Path $PSScriptRoot '../../Antivirus/Private/WorkerTransport
 $inputStream=[Console]::OpenStandardInput();$outputStream=[Console]::OpenStandardOutput()
 $config=[Remnexa.Worker.Wire]::Read($inputStream)
 $reply=[Remnexa.Worker.Frame]::new();$reply.Kind='ready';$reply.Threads=$config.Threads;$reply.Version='fixture'
+if($config.Version -eq 'resources'){
+    Add-Type -Path (Join-Path $PSScriptRoot 'WorkerResourceProbe.cs')
+    $reply.Message=[Remnexa.Tests.WorkerResourceProbe]::Snapshot()
+}
 [Remnexa.Worker.Wire]::Write($outputStream,$reply)
 $buffer=[Collections.Generic.List[object]]::new()
 while($true){

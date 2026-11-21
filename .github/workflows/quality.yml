@@ -31,7 +31,7 @@ jobs:
     runs-on: windows-latest
     steps:
       - name: Check out source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Install pinned PowerShell test tools
         shell: pwsh
@@ -39,6 +39,18 @@ jobs:
           Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
           Install-Module -Name Pester -RequiredVersion 5.7.1 -Scope CurrentUser -Force
           Install-Module -Name PSScriptAnalyzer -RequiredVersion 1.24.0 -Scope CurrentUser -Force
+
+      - name: Probe restricted Windows worker
+        shell: pwsh
+        run: |
+          $probe = ./tools/Test-ClamAVWorkerHost.ps1 -OutputPath ./dist/ci-worker-host.json
+          $probe | ConvertTo-Json -Depth 9 | Write-Host
+          if (-not $probe.Passed) {
+            $message = 'Stage=' + $probe.Stage + '; NativeError=' + $probe.Failure.NativeErrorCode + '; ' + $probe.Failure.Message
+            $message = $message.Replace('%', '%25').Replace("`r", '%0D').Replace("`n", '%0A')
+            Write-Host "::error title=Restricted worker host probe::$message"
+            throw 'Restricted worker host probe failed.'
+          }
 
       - name: Run Pester tests
         shell: pwsh
@@ -69,12 +81,12 @@ jobs:
       - name: Build and verify source release candidate
         shell: pwsh
         run: |
-          $package = ./tools/New-RemnexaPackage.ps1 -Version '2.2.0-rc.5'
+          $package = ./tools/New-RemnexaPackage.ps1 -Version '2.2.0-rc.6'
           ./tools/Test-RemnexaPackage.ps1 -Path $package.Package -ExpectedSha256 $package.SHA256
 
       - name: Upload verified source candidate
         uses: actions/upload-artifact@v4
         with:
           name: REMNEXA-source-candidate
-          path: dist/REMNEXA-2.2.0-rc.5-source.zip*
+          path: dist/REMNEXA-2.2.0-rc.6-source.zip*
           if-no-files-found: error

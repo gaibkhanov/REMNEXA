@@ -164,6 +164,7 @@ namespace Remnexa.Worker {
         public bool Alive {get{try{return !Broken && !process.HasExited;}catch(InvalidOperationException){return false;}}}
         public Task<Frame> Ready {get;private set;}
         public string TokenMode {get;private set;}
+        public int? ExitCode {get{try{return process.HasExited?(int?)process.ExitCode:null;}catch(InvalidOperationException){return null;}}}
         public string Diagnostics {get{lock(diagnostics)return diagnostics.ToString();}}
         public long WorkingSet {get{try{process.Refresh();return process.WorkingSet64;}catch{return 0;}}}
         public Client(string executable,string script,Frame config,long memoryLimit,int cpuRate) {
@@ -221,9 +222,13 @@ namespace Remnexa.Worker {
         [StructLayout(LayoutKind.Sequential)] private struct ExtendedLimit {public BasicLimit Basic;public Io Io;public UIntPtr ProcessMemory,JobMemory,PeakProcess,PeakJob;}
         [StructLayout(LayoutKind.Sequential)] private struct CpuLimit {public uint Flags,Rate;}
         [StructLayout(LayoutKind.Sequential)] private struct Label {public IntPtr Sid;public uint Attributes;}
+        [StructLayout(LayoutKind.Sequential)] private struct SecurityAttributes {public int Size;public IntPtr Descriptor;public int Inherit;}
         [DllImport("advapi32.dll",SetLastError=true)] private static extern bool OpenProcessToken(IntPtr process,uint access,out IntPtr token);
         [DllImport("advapi32.dll",SetLastError=true)] private static extern bool CreateRestrictedToken(IntPtr token,uint flags,uint disabled,IntPtr sids,uint deleted,IntPtr privileges,uint restricted,IntPtr restrictedSids,out IntPtr result);
         [DllImport("advapi32.dll",SetLastError=true)] private static extern bool SetTokenInformation(IntPtr token,int type,ref Label value,int length);
+        [DllImport("advapi32.dll",SetLastError=true)] private static extern bool SetTokenInformation(IntPtr token,int type,ref IntPtr value,int length);
+        [DllImport("advapi32.dll",CharSet=CharSet.Unicode,SetLastError=true)] private static extern bool ConvertStringSecurityDescriptorToSecurityDescriptor(string sddl,uint revision,out IntPtr descriptor,out uint size);
+        [DllImport("advapi32.dll",SetLastError=true)] private static extern bool GetSecurityDescriptorDacl(IntPtr descriptor,out bool present,out IntPtr dacl,out bool defaulted);
         [DllImport("advapi32.dll",CharSet=CharSet.Unicode,SetLastError=true)] private static extern bool ConvertStringSidToSid(string value,out IntPtr sid);
         [DllImport("advapi32.dll")] private static extern uint GetLengthSid(IntPtr sid);
         [DllImport("advapi32.dll",SetLastError=true)] private static extern bool GetTokenInformation(IntPtr token,int type,out int value,int length,out int returned);
@@ -253,11 +258,22 @@ namespace Remnexa.Worker {
         public static Process Start(string executable,string script,IntPtr input,IntPtr output,IntPtr error,long memory,int cpu,out IntPtr ownedJob,out string tokenMode) {
             if(memory<1536L*1024*1024 || memory>4L*1024*1024*1024 || cpu<100 || cpu>10000)throw new ArgumentException("Invalid job limits.");
             Wire.SafePath(executable);Wire.SafePath(script);
-            IntPtr token=IntPtr.Zero,restricted=IntPtr.Zero,sid=IntPtr.Zero,attributes=IntPtr.Zero,handles=IntPtr.Zero,job=IntPtr.Zero;
+            IntPtr token=IntPtr.Zero,restricted=IntPtr.Zero,sid=IntPtr.Zero,attributes=IntPtr.Zero,handles=IntPtr.Zero,job=IntPtr.Zero,descriptor=IntPtr.Zero,processSecurity=IntPtr.Zero;
             ProcessInfo info=default;bool started=false;ownedJob=IntPtr.Zero;tokenMode="";
             try {
                 Check(OpenProcessToken(GetCurrentProcess(),0x0002|0x0008|0x0001|0x0080,out token));
                 Check(CreateRestrictedToken(token,0x1|0x4,0,IntPtr.Zero,0,IntPtr.Zero,0,IntPtr.Zero,out restricted));
+                // An elevated creator's default DACL can grant only SYSTEM and
+                // Administrators. LUA removes the latter from the child's usable
+                // groups. Give the user and SYSTEM explicit access to its token
+                // defaults, process and initial thread before Windows initializes it.
+                string user=WindowsIdentity.GetCurrent().User.Value;
+                Check(ConvertStringSecurityDescriptorToSecurityDescriptor("D:P(A;;GA;;;SY)(A;;GA;;;"+user+")",1,out descriptor,out _));
+                Check(GetSecurityDescriptorDacl(descriptor,out bool present,out IntPtr dacl,out _));
+                if(!present||dacl==IntPtr.Zero)throw new InvalidOperationException("Worker security descriptor has no DACL.");
+                Check(SetTokenInformation(restricted,6,ref dacl,IntPtr.Size));
+                processSecurity=Marshal.AllocHGlobal(Marshal.SizeOf<SecurityAttributes>());
+                Marshal.StructureToPtr(new SecurityAttributes{Size=Marshal.SizeOf<SecurityAttributes>(),Descriptor=descriptor},processSecurity,false);
                 Check(ConvertStringSidToSid("S-1-16-8192",out sid));
                 Label label=new Label{Sid=sid,Attributes=0x20};Check(SetTokenInformation(restricted,25,ref label,Marshal.SizeOf<Label>()+(int)GetLengthSid(sid)));
                 UIntPtr size=UIntPtr.Zero;InitializeProcThreadAttributeList(IntPtr.Zero,1,0,ref size);
@@ -267,13 +283,13 @@ namespace Remnexa.Worker {
                 StartupEx startup=new StartupEx{Startup=new Startup{Size=Marshal.SizeOf<StartupEx>(),Flags=0x100,Input=input,Output=output,Error=error},Attributes=attributes};
                 string command="\""+executable+"\" -NoLogo -NoProfile -NonInteractive -File \""+script+"\"";
                 uint flags=0x08000000|0x00080000|0x4;
-                started=CreateProcessAsUser(restricted,executable,new StringBuilder(command),IntPtr.Zero,IntPtr.Zero,true,flags,IntPtr.Zero,Path.GetDirectoryName(script),ref startup,out info);
+                started=CreateProcessAsUser(restricted,executable,new StringBuilder(command),processSecurity,processSecurity,true,flags,IntPtr.Zero,Path.GetDirectoryName(script),ref startup,out info);
                 if(started)tokenMode="restricted";
                 else {
                     int failure=Marshal.GetLastWin32Error();
                     // Standard-user fallback never inherits an elevated token.
                     if(Elevated(GetCurrentProcess()))throw new Win32Exception(failure,"Restricted launch failed; elevated fallback refused.");
-                    Check(CreateProcess(executable,new StringBuilder(command),IntPtr.Zero,IntPtr.Zero,true,flags,IntPtr.Zero,Path.GetDirectoryName(script),ref startup,out info));
+                    Check(CreateProcess(executable,new StringBuilder(command),processSecurity,processSecurity,true,flags,IntPtr.Zero,Path.GetDirectoryName(script),ref startup,out info));
                     started=true;tokenMode="standard-user";
                 }
                 if(Elevated(info.Process))throw new InvalidOperationException("Elevated scan worker refused.");
@@ -288,6 +304,7 @@ namespace Remnexa.Worker {
                 if(info.Thread!=IntPtr.Zero)CloseHandle(info.Thread);if(info.Process!=IntPtr.Zero)CloseHandle(info.Process);
                 if(job!=IntPtr.Zero)CloseHandle(job);if(attributes!=IntPtr.Zero){DeleteProcThreadAttributeList(attributes);Marshal.FreeHGlobal(attributes);}
                 if(handles!=IntPtr.Zero)Marshal.FreeHGlobal(handles);if(sid!=IntPtr.Zero)LocalFree(sid);if(restricted!=IntPtr.Zero)CloseHandle(restricted);if(token!=IntPtr.Zero)CloseHandle(token);
+                if(processSecurity!=IntPtr.Zero)Marshal.FreeHGlobal(processSecurity);if(descriptor!=IntPtr.Zero)LocalFree(descriptor);
             }
         }
     }
