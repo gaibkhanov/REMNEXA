@@ -2,6 +2,8 @@
 
 # Private wiederverwendbare Scan-Engine — 2.2.0-rc.5
 
+Historischer rc.5-Bericht. Der [rc.6-Nachfolger](RELEASE_2.2.0_RC6.de.md) korrigiert den Start aus einer erhöhten Hauptanwendung und dokumentiert erweiterte Speicher-/Archivtests sowie den aktuellen CI-Status.
+
 Entwicklungskandidat auf `feature/clamav-private-worker`; diese Änderung veröffentlicht kein stabiles Release. Der [rc.4-Scanbericht](CLAMAV_SCAN_PERFORMANCE.de.md) beschreibt den früheren CLI-Scanpfad und bleibt als historischer Bericht erhalten.
 
 ## Ausführung

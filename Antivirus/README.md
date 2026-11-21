@@ -71,6 +71,8 @@ Do not use `-Force` as a workaround: it skips the module's confirmation, not its
 
 ## Configuration
 
+Candidate rc.6 fixes restricted launch from an elevated application and adds constrained-memory/archive checks. See [current worker validation](../docs/RELEASE_2.2.0_RC6.md) for results and remaining VM/HDD limits.
+
 Candidate rc.5 can keep a native ClamAV 1.5.4 engine loaded between scans, using private inherited pipes and bounded native threads. `ScanBackend` accepts `Auto` (default), `ClamScan` or `PrivateWorker`; `ScanEngineIdleSeconds` defaults to 60. No daemon port or service is opened. See [private engine, fallback and license details](../docs/PRIVATE_SCAN_ENGINE.md).
 
 Candidate rc.4 adds **P** in the Antivirus menu for Eco/Balanced/Fast process priorities. During a scan, **X**, **Esc** or **Ctrl+C** cancels it and reports incomplete coverage. One REMNEXA scan/update at a time is allowed per configured installation. Engine limit warnings are visible and never quarantined as malware. See [performance behavior and benchmark limits](../docs/CLAMAV_SCAN_PERFORMANCE.md).

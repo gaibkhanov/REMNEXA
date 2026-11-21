@@ -6,6 +6,14 @@ Development changes are not published release claims. Existing release artifacts
 
 ## 2.2.0 — development, not released
 
+### Candidate 2.2.0-rc.6
+
+- Fix restricted worker startup from an elevated parent by explicitly preserving current-user/SYSTEM access to token defaults and process/thread objects.
+- Verify actual Windows CPU/memory/process limits and full-signature scans under a 1.5 GiB process limit, with simulated low-memory admission boundaries.
+- Compare eleven harmless native/CLI fixtures; check nested ZIP, GZip, TAR, size limits, sharing errors, reuse and signature-change reload without changing installed databases.
+- Add CI host diagnostics, isolate test reports under `dist/`, and select one Git executable when several PATH entries match during source packaging.
+- See [validation records and missing VM/HDD coverage](docs/RELEASE_2.2.0_RC6.md). No stable release is published.
+
 ### Candidate 2.2.0-rc.5
 
 - Add a reusable ClamAV 1.5.4 native engine with inherited private pipes instead of an unauthenticated TCP daemon. Engine/signature updates invalidate and stop the owned cache.

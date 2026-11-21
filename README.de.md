@@ -8,7 +8,7 @@ Ein kostenloses Open-Source-Werkzeug für die Deinstallation von Anwendungen, Au
 
 **Windows 10 / 11 · PowerShell 7.5+ · Open Source · Sechs Oberflächensprachen**
 
-> **Aktueller Kandidat: 2.2.0-rc.5**, verfügbar im [Kandidatenbranch](https://github.com/gaibkhanov/REMNEXA/tree/feature/clamav-private-worker). Dies ist kein stabiles Release. Beachte [Kandidatenbericht und Paketanleitung](docs/PRIVATE_SCAN_ENGINE.de.md). Der Standardbranch kann eine ältere Version enthalten.
+> **Aktueller Kandidat: 2.2.0-rc.6**, verfügbar im [Kandidatenbranch](https://github.com/gaibkhanov/REMNEXA/tree/fix/clamav-worker-validation). Dies ist kein stabiles Release. Beachte [Kandidatenbericht und Paketanleitung](docs/RELEASE_2.2.0_RC6.de.md). Der Standardbranch kann eine ältere Version enthalten.
 
 ## Funktionen
 
@@ -73,7 +73,7 @@ Dienste- und Antivirus-Prüfungen sind Momentaufnahmen. Ein gestoppter Dienst mi
 
 ## Neu in 2.2.0
 
-Kandidat rc.5 ergänzt eine wiederverwendbare native ClamAV-1.5.4-Engine in einem separaten Prozess mit privaten Pipes, begrenzten Threads, CPU-/Speicherlimits und Leerlaufende. Der CLI-Scanpfad bleibt verfügbar. **P** wählt Eco/Balanced/Fast; **X**, **Esc** oder **Strg+C** bricht einen Scan ab. Bestätigte U/I-Updates und bestehende Quarantänekontrollen bleiben erhalten. Siehe [Verhalten, Messungen und Prüfgrenzen](docs/PRIVATE_SCAN_ENGINE.de.md).
+Kandidat rc.6 korrigiert den nativen Worker-Start aus einer erhöhten Anwendung und erweitert Prüfungen realer Job-Grenzen, knappen Speichers, von Archiven und Signatur-Neuladen. Wiederverwendbare ClamAV-1.5.4-Engine, CLI-Fallback, Eco/Balanced/Fast und Scanabbruch bleiben verfügbar. Bestehende Update- und Quarantänekontrollen bleiben erhalten. Siehe [Prüfungen und verbleibende Grenzen](docs/RELEASE_2.2.0_RC6.de.md).
 
 - HTTPS- und SHA-256-Prüfung unterstützter ClamAV-Downloads; gestufte Installation und Konfigurationswiederherstellung.
 - Zusätzliche Prüfungen verknüpfter Pfade und unterstützter Datenschutzsicherungen.
@@ -83,7 +83,7 @@ Kandidat rc.5 ergänzt eine wiederverwendbare native ClamAV-1.5.4-Engine in eine
 - Seitenwechsel nur bei vorhandenen Seiten; genau eine sichtbare Beenden-Option je Eingabe.
 - Modulare Kernbausteine, externe Übersetzungen und eine rein lesende Systemübersicht.
 
-Aktuelles Verhalten und verbleibende Grenzen stehen im [Bericht zur privaten Engine](docs/PRIVATE_SCAN_ENGINE.de.md). Frühere Prüfergebnisse bleiben im historischen [Entwicklungsbericht](docs/VERSION_2.2.0.de.md) dokumentiert.
+Aktuelles Verhalten und verbleibende Grenzen stehen im [Bericht zur privaten Engine](docs/RELEASE_2.2.0_RC6.de.md). Frühere Prüfergebnisse bleiben im historischen [Entwicklungsbericht](docs/VERSION_2.2.0.de.md) dokumentiert.
 
 ## Dokumentation
 

@@ -25,7 +25,7 @@ Anwendungsnamen, registrierte Deinstallationsbefehle, Dateimetadaten, herunterge
 
 Windows muss einen neuen Wiederherstellungspunkt mit eindeutiger Beschreibung bestätigen. Fehler oder Frequenzsperren gelten nicht als Erfolg. Unterstützte interaktive Abläufe erlauben ausdrücklich bestätigtes Fortfahren ohne neuen Punkt; nicht interaktiv müssen Schutzbedingungen erfüllt werden oder der Ablauf stoppen.
 
-Die optionale native Scan-Engine nutzt private vererbte Pipes, einen nicht erhöhten Worker, einen Versuch mit eingeschränktem Token sowie Job-Limits und Beenden beim Ende des Besitzers. Sie öffnet keinen Daemon-TCP-Zugang. Dies ist keine vollständige Sandbox gegen native Sicherheitslücken. Der Start aus einer erhöhten Hauptanwendung und weitere Windows-Konfigurationen benötigen eigene Tests; siehe [Sicherheitsgrenzen der privaten Engine](PRIVATE_SCAN_ENGINE.de.md).
+Die optionale native Scan-Engine nutzt private vererbte Pipes, einen nicht erhöhten Worker, einen Versuch mit eingeschränktem Token sowie Job-Limits und Beenden beim Ende des Besitzers. Sie öffnet keinen Daemon-TCP-Zugang. Dies ist keine vollständige Sandbox gegen native Sicherheitslücken. Tests mit normaler und erhöhter Hauptanwendung bestanden; VM-/HDD- und weitere Windows-Konfigurationen bleiben offen. Siehe [Worker-Prüfung](RELEASE_2.2.0_RC6.de.md).
 
 ## KI-Grenze
 

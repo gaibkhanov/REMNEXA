@@ -6,6 +6,14 @@ Entwicklungsänderungen sind keine veröffentlichten Releases. Dieses Dokument v
 
 ## 2.2.0 — Entwicklung, nicht veröffentlicht
 
+### Kandidat 2.2.0-rc.6
+
+- Start des eingeschränkten Workers aus einer erhöhten Hauptanwendung korrigiert: ausdrücklicher Zugriff für aktuellen Benutzer/SYSTEM auf Token-Vorgaben und Prozess-/Threadobjekte.
+- Echte Windows-CPU-/Speicher-/Prozesslimits und Scans mit vollständigen Signaturen unter 1,5-GiB-Prozessgrenze geprüft; Speicherfreigabegrenzen werden gezielt simuliert.
+- Elf harmlose Fälle zwischen nativem und CLI-Scan verglichen: verschachteltes ZIP, GZip, TAR, Größenlimits, Dateisperren, Wiederverwendung und Neuladen geänderter Signaturen ohne Änderung installierter Datenbanken.
+- CI-Hostdiagnosen, Testberichte unter `dist/` und Auswahl genau eines Git-Programms bei mehreren PATH-Treffern für die Quellpaketierung ergänzt.
+- Siehe [Prüfprotokolle und fehlende VM-/HDD-Abdeckung](docs/RELEASE_2.2.0_RC6.de.md). Kein stabiles Release veröffentlicht.
+
 ### Kandidat 2.2.0-rc.5
 
 - Wiederverwendbare native ClamAV-1.5.4-Engine mit vererbten privaten Pipes statt eines nicht authentifizierten TCP-Daemons. Engine-/Signaturupdates beenden den eigenen Cache und machen ihn ungültig.

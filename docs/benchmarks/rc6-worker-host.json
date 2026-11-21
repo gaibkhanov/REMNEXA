@@ -1,0 +1,52 @@
+{
+  "StandardParent": {
+    "Passed": true,
+    "ParentElevated": false,
+    "Runtime": "7.6.9",
+    "Stage": "Completed",
+    "TokenMode": "restricted",
+    "WorkerStopped": true,
+    "NativeTests": null,
+    "Failure": null
+  },
+  "ElevatedParent": {
+    "Passed": true,
+    "ParentElevated": true,
+    "Runtime": "7.6.9",
+    "Stage": "Completed",
+    "TokenMode": "restricted",
+    "WorkerStopped": true,
+    "NativeTests": {
+      "Passed": true,
+      "Engine": "1.5.4",
+      "TokenMode": "restricted",
+      "Threads": 2,
+      "Signatures": 1,
+      "InitializationSeconds": 2.1721229,
+      "IdleExitObserved": true,
+      "TcpConnections": 0,
+      "PublicStartupCancellationObserved": true,
+      "PrivateTemporaryAclVerified": true,
+      "Dataset": "Isolated harmless custom HDB, matching file and ZIP, clean Unicode file, empty file",
+      "Passes": [
+        {
+          "Iteration": 1,
+          "Seconds": 0.1216908,
+          "Files": 4,
+          "Detections": 2,
+          "Clean": 2,
+          "SameProcess": true
+        },
+        {
+          "Iteration": 2,
+          "Seconds": 0.0623099,
+          "Files": 4,
+          "Detections": 2,
+          "Clean": 2,
+          "SameProcess": true
+        }
+      ]
+    },
+    "Failure": null
+  }
+}

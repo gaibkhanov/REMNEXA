@@ -71,6 +71,8 @@ Normale Scans melden Funde. `-Quarantine` erlaubt ausdrücklich das Verschieben 
 
 ## Konfiguration
 
+Kandidat rc.6 korrigiert den eingeschränkten Start aus einer erhöhten Anwendung und ergänzt Speicher-/Archivprüfungen. Siehe [aktuelle Worker-Prüfung](../docs/RELEASE_2.2.0_RC6.de.md) für Ergebnisse und verbleibende VM-/HDD-Grenzen.
+
 Kandidat rc.5 kann eine native ClamAV-1.5.4-Engine zwischen Scans geladen halten, mit vererbten privaten Pipes und begrenzten nativen Threads. `ScanBackend` akzeptiert `Auto` (Standard), `ClamScan` oder `PrivateWorker`; `ScanEngineIdleSeconds` ist standardmäßig 60. Kein Daemon-Port oder Dienst wird geöffnet. Siehe [private Engine, Fallback und Lizenzdetails](../docs/PRIVATE_SCAN_ENGINE.de.md).
 
 Kandidat rc.4 ergänzt **P** im Antivirus-Menü für Eco/Balanced/Fast-Prozessprioritäten. Während eines Scans brechen **X**, **Esc** oder **Strg+C** den Vorgang mit unvollständiger Abdeckung ab. Je konfigurierter Installation läuft höchstens ein REMNEXA-Scan/Update. Engine-Limitwarnungen sind sichtbar und werden nie als Malware in Quarantäne verschoben. Siehe [Verhalten und Benchmark-Grenzen](../docs/CLAMAV_SCAN_PERFORMANCE.de.md).

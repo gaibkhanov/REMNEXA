@@ -1,0 +1,123 @@
+{
+  "Passed": true,
+  "FixtureCount": 11,
+  "CliAndNativeParity": true,
+  "WarmEngineReused": true,
+  "SignatureChangeReloaded": true,
+  "UnreadableFileReportedByBoth": true,
+  "QuarantineRequested": false,
+  "InstalledDatabasesChanged": false,
+  "RealMalwareUsed": false,
+  "Cases": [
+    {
+      "Backend": "Private",
+      "Fixture": "clean.txt",
+      "Status": "Clean"
+    },
+    {
+      "Backend": "Private",
+      "Fixture": "empty.dat",
+      "Status": "Clean"
+    },
+    {
+      "Backend": "Private",
+      "Fixture": "gzip-match.gz",
+      "Status": "Infected"
+    },
+    {
+      "Backend": "Private",
+      "Fixture": "limit.dat",
+      "Status": "LimitExceeded"
+    },
+    {
+      "Backend": "Private",
+      "Fixture": "match.dat",
+      "Status": "Infected"
+    },
+    {
+      "Backend": "Private",
+      "Fixture": "nested-match.zip",
+      "Status": "Infected"
+    },
+    {
+      "Backend": "Private",
+      "Fixture": "random.dat",
+      "Status": "Clean"
+    },
+    {
+      "Backend": "Private",
+      "Fixture": "tar-match.tar",
+      "Status": "Infected"
+    },
+    {
+      "Backend": "Private",
+      "Fixture": "Unicode-漢字-ü.txt",
+      "Status": "Clean"
+    },
+    {
+      "Backend": "Private",
+      "Fixture": "zip-clean.zip",
+      "Status": "Clean"
+    },
+    {
+      "Backend": "Private",
+      "Fixture": "zip-match.zip",
+      "Status": "Infected"
+    },
+    {
+      "Backend": "CLI",
+      "Fixture": "clean.txt",
+      "Status": "Clean"
+    },
+    {
+      "Backend": "CLI",
+      "Fixture": "empty.dat",
+      "Status": "Clean"
+    },
+    {
+      "Backend": "CLI",
+      "Fixture": "gzip-match.gz",
+      "Status": "Infected"
+    },
+    {
+      "Backend": "CLI",
+      "Fixture": "limit.dat",
+      "Status": "LimitExceeded"
+    },
+    {
+      "Backend": "CLI",
+      "Fixture": "match.dat",
+      "Status": "Infected"
+    },
+    {
+      "Backend": "CLI",
+      "Fixture": "nested-match.zip",
+      "Status": "Infected"
+    },
+    {
+      "Backend": "CLI",
+      "Fixture": "random.dat",
+      "Status": "Clean"
+    },
+    {
+      "Backend": "CLI",
+      "Fixture": "tar-match.tar",
+      "Status": "Infected"
+    },
+    {
+      "Backend": "CLI",
+      "Fixture": "Unicode-漢字-ü.txt",
+      "Status": "Clean"
+    },
+    {
+      "Backend": "CLI",
+      "Fixture": "zip-clean.zip",
+      "Status": "Clean"
+    },
+    {
+      "Backend": "CLI",
+      "Fixture": "zip-match.zip",
+      "Status": "Infected"
+    }
+  ]
+}

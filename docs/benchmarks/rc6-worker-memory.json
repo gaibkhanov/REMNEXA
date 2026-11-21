@@ -1,0 +1,15 @@
+{
+  "Passed": true,
+  "TestKind": "Simulated available-memory snapshots plus real Windows job limits and full installed signatures",
+  "IsEightGiBVm": false,
+  "HostMemoryConstrained": false,
+  "ColdBelowTwoGiBRefused": true,
+  "ColdAtTwoGiBComplete": true,
+  "Threads": 1,
+  "JobMemoryLimitBytes": 1610612736,
+  "PeakWorkingSetBytes": 1178931200,
+  "PrivateBytesAfterColdScan": 1103081472,
+  "WarmAt512MiBComplete": true,
+  "WarmBelow512MiBRefused": true,
+  "OwnedWorkerStopped": true
+}

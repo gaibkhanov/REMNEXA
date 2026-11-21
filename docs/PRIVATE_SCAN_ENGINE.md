@@ -2,6 +2,8 @@
 
 # Private reusable scan engine — 2.2.0-rc.5
 
+Historical rc.5 report. The [rc.6 follow-up](RELEASE_2.2.0_RC6.md) fixes elevated-parent launch and records expanded memory/archive validation and current CI status.
+
 Development candidate on `feature/clamav-private-worker`; no stable release is published by this change. The [rc.4 scan report](CLAMAV_SCAN_PERFORMANCE.md) describes the earlier CLI backend and remains historical.
 
 ## What runs
