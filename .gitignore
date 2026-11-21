@@ -5,7 +5,7 @@
 /tools/*.nupkg
 /FILES-SHA256.csv
 /COPY-PROVENANCE.csv
-/TestResults.xml
+/[Tt]est[Rr]esults.xml
 /dist/
 /.Backup-*.partial-*/
 *.log

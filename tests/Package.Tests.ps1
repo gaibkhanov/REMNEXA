@@ -56,6 +56,15 @@ Describe 'REMNEXA source package integrity' {
         if (-not $rejected -or (Get-FileHash -LiteralPath $result.Package -Algorithm SHA256).Hash -ne $result.SHA256) { throw 'Existing package was not protected.' }
     }
 
+    It 'ignores CI test reports even when Git compares filename case strictly' {
+        [IO.File]::WriteAllText((Join-Path $script:packageSource '.gitignore'),[IO.File]::ReadAllText((Join-Path $script:packageProject '.gitignore')))
+        & $script:packageGit -C $script:packageSource config core.ignorecase false
+        foreach($name in @('testResults.xml','TestResults.xml','dist/pester-results.xml')){
+            & $script:packageGit -C $script:packageSource check-ignore --quiet -- $name
+            if($LASTEXITCODE -ne 0){throw ('Generated test report is not ignored: '+$name)}
+        }
+    }
+
     It 'rejects dirty sources and a mismatched application version' {
         $rejected = $false
         try { & $script:packageBuilder -SourcePath $script:packageSource -OutputDirectory $script:packageOutput -Version '9.0.0' -GitPath $script:packageGit | Out-Null } catch { $rejected = $true }
