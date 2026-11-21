@@ -4,6 +4,10 @@
 
 REMNEXA integrates ClamAV for local, on-demand scanning. It is not a resident protection service or a replacement for Microsoft Defender or another antivirus. Review the [user guide](../docs/USER_GUIDE.md) and [security model](../docs/SECURITY_MODEL.md).
 
+## Independent scans and application exit
+
+Candidate rc.8 starts interactive scans in their own window. REMNEXA remains usable and offers **continue scanning**, **cancel scan**, or **return to application** on exit. The scan window supports pause/resume/cancel; results are saved locally. See [usage and verified limits](../docs/INDEPENDENT_SCANS.md).
+
 ## Components and requirements
 
 The source contains the PowerShell integration, not ClamAV executables or signature databases. Setup needs a supported Windows ClamAV package, internet access and suitable permissions. The application explains elevation before opening its Antivirus workspace. API users must provide elevation where required for system scan targets or installation paths.

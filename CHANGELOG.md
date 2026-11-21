@@ -6,6 +6,14 @@ Development changes are not published release claims. Existing release artifacts
 
 ## 2.2.0 — development, not released
 
+### Candidate 2.2.0-rc.8
+
+- Run interactive scans in an independent PowerShell window so the main application can exit while scanning continues.
+- Offer continue/cancel/back when exiting with an active scan; resume paused scans before confirmed continuation and preserve cancellation evidence.
+- Add same-user/elevation local pipe controls, atomic private status/results, re-opening the latest session and owned CLI process cleanup when the scan host exits.
+- Retain native cache reuse while attached, release it after detached completion, and translate all new controls into six languages.
+- Verify creator-process exit with both real CLI and private-worker backends on 2,501 harmless files each. See [usage and validation limits](docs/INDEPENDENT_SCANS.md). No stable release is published.
+
 ### Candidate 2.2.0-rc.7
 
 - Run interactive Antivirus quick/custom scans in a background runspace while other REMNEXA tools remain usable.

@@ -1,5 +1,7 @@
 [English](BACKGROUND_SCANS.md) | [Deutsch](BACKGROUND_SCANS.de.md)
 
+> Historical rc.7 report. The current [rc.8 scan](INDEPENDENT_SCANS.md) offers continue/cancel/back on exit and can run independently.
+
 # Background antivirus scans — 2.2.0-rc.7
 
 Development candidate on `feature/antivirus-background-scans`; no stable release is published by this change. Based on the [rc.6 worker fixes](RELEASE_2.2.0_RC6.md).

@@ -6,7 +6,7 @@ Dokumentation der **Entwicklungsversion 2.2.0**. Jede Markdown-Anleitung hat ein
 
 ## Für Anwender
 
-- [Aktueller Kandidat: 2.2.0-rc.7 mit Hintergrundscans](BACKGROUND_SCANS.de.md): REMNEXA weiter nutzen, pausieren/fortsetzen/abbrechen und Befunde ansehen.
+- [Aktueller Kandidat: 2.2.0-rc.8 unabhängige Scans](INDEPENDENT_SCANS.de.md): REMNEXA beenden und Scan fortsetzen, abbrechen oder zur Anwendung zurückkehren.
 
 - [Vorheriger Kandidat: 2.2.0-rc.6](RELEASE_2.2.0_RC6.de.md): Änderungen, Prüfsummen, Paketierung und Prüfgrenzen.
 

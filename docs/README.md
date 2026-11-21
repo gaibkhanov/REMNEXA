@@ -6,7 +6,7 @@ Documentation for the **2.2.0 development build**. Each Markdown guide has an En
 
 ## For users
 
-- [Current candidate: 2.2.0-rc.7 background scans](BACKGROUND_SCANS.md): continue using REMNEXA, pause/resume/cancel and inspect live findings.
+- [Current candidate: 2.2.0-rc.8 independent scans](INDEPENDENT_SCANS.md): exit REMNEXA and continue scanning, cancel, or return to the application.
 
 - [Previous candidate: 2.2.0-rc.6](RELEASE_2.2.0_RC6.md): changes, checksums, packaging and validation limits.
 

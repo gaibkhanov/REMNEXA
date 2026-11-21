@@ -1,0 +1,32 @@
+{
+  "Passed": true,
+  "TimeUtc": "2026-11-21T17:07:05.9377491+00:00",
+  "HarmlessCustomSignatures": true,
+  "InstalledDatabasesChanged": false,
+  "Backends": [
+    {
+      "Backend": "ClamScan",
+      "CreatorExited": true,
+      "ScanActiveAfterCreatorExit": true,
+      "FilesAfterCreatorExit": 501,
+      "FilesCompleted": 2501,
+      "Findings": 1,
+      "CoverageComplete": true,
+      "ReportPersisted": true,
+      "PausedScanResumedBeforeDetach": true,
+      "NoAutomaticQuarantine": true
+    },
+    {
+      "Backend": "PrivateWorker",
+      "CreatorExited": true,
+      "ScanActiveAfterCreatorExit": true,
+      "FilesAfterCreatorExit": 434,
+      "FilesCompleted": 2501,
+      "Findings": 1,
+      "CoverageComplete": true,
+      "ReportPersisted": true,
+      "PausedScanResumedBeforeDetach": true,
+      "NoAutomaticQuarantine": true
+    }
+  ]
+}

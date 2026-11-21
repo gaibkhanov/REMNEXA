@@ -359,7 +359,7 @@
   "AVWorkerReuse": "Réutilisation du moteur local déjà chargé.",
   "AVWorkerFallback": "Le moteur privé est indisponible. Cette analyse utilise clamscan ; aucun port réseau ouvert.",
   "AVBackgroundTitle": "Gestion des analyses",
-  "AVBackgroundStarted": "Analyse lancée en arrière-plan. Tu peux continuer à utiliser REMNEXA. /scan ouvre le gestionnaire. Quitter REMNEXA annule l'analyse.",
+  "AVBackgroundStarted": "Analyse lancée dans sa propre fenêtre. Tu peux continuer à utiliser REMNEXA. /scan ouvre les commandes. À la fermeture, choisis de continuer ou d’annuler l’analyse.",
   "AVBackgroundNone": "Aucune analyse disponible.",
   "AVBackgroundSummary": "Analyse : {0} | Fichiers {1}/{2} | {3} | Détections : {4} | /scan : détails et commandes",
   "AVBackgroundDetail": "Mode : {0} | Phase : {1} | Durée : {2} | Moyenne : {3} fichiers/s",
@@ -383,5 +383,17 @@
   "AVBackgroundPhaseLoading": "Chargement du moteur",
   "AVBackgroundPhaseScanning": "Analyse",
   "AVBackgroundPhaseEvaluating": "Évaluation des résultats",
-  "AVBackgroundAllFindings": "Afficher toutes les détections actuelles (instantané)"
+  "AVBackgroundAllFindings": "Afficher toutes les détections actuelles (instantané)",
+  "AVExitQuestion": "Une analyse antivirus est en cours. Que doit-il se passer à la fermeture de REMNEXA ?",
+  "AVExitContinue": "Continuer l’analyse et fermer uniquement REMNEXA",
+  "AVExitCancel": "Annuler l’analyse et fermer REMNEXA",
+  "AVExitBack": "Revenir à l’application",
+  "AVExitContinues": "REMNEXA se ferme. L’analyse continue dans sa propre fenêtre ; les résultats seront enregistrés.",
+  "AVExitInvalid": "Choisis 1, 2 ou 0.",
+  "AVSessionUnavailable": "Le contrôleur de l’analyse est indisponible. Les résultats enregistrés sont conservés.",
+  "AVSessionCleanupPending": "L’annulation n’est pas encore confirmée. REMNEXA reste ouvert.",
+  "AVSessionWindowTitle": "REMNEXA Antivirus – analyse indépendante",
+  "AVSessionWindowHint": "Cette fenêtre fonctionne indépendamment de REMNEXA. La fermer arrête l’analyse.",
+  "AVSessionReportSaved": "Résultats enregistrés : {0}",
+  "AVSessionSummary": "Analyse : {0} | Fichiers {1}/{2} | {3} | Détections : {4}"
 }

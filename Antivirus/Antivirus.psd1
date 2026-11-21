@@ -1,6 +1,6 @@
 @{
     RootModule        = 'Antivirus.psm1'
-    ModuleVersion     = '1.5.0'
+    ModuleVersion     = '1.6.0'
     GUID              = 'f278a362-25f0-4704-ae32-2a99692a9f65'
     Author            = 'REMNEXA contributors'
     CompanyName       = 'Independent'
@@ -18,6 +18,7 @@
         'Get-ClamAVScanEngineState','Stop-ClamAVScanEngine',
         'Invoke-ClamAVScan',
         'Start-ClamAVBackgroundScan','Get-ClamAVBackgroundScan','Set-ClamAVBackgroundScan','Stop-ClamAVBackgroundScan',
+        'Disconnect-ClamAVBackgroundScan',
         'Invoke-ClamAVTargetedScan',
         'Get-ClamAVScanResult',
         'Get-ClamAVQuarantine',

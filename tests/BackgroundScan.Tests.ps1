@@ -16,7 +16,7 @@ Describe 'ClamAV nonblocking scan management' {
         $script:bgConfig=Join-Path $script:bgTemp 'config.json'
         $config|ConvertTo-Json -Depth 8|Set-Content -LiteralPath $script:bgConfig -Encoding utf8
         # Only this parent module routes to the isolated module copy, never production configuration.
-        & $script:bgModule {param($Root)$script:AVModuleRoot=Join-Path $Root 'Antivirus'} $script:bgTemp
+        & $script:bgModule {param($Root)$script:AVUseLocalBackground=$true;$script:AVModuleRoot=Join-Path $Root 'Antivirus'} $script:bgTemp
         function Wait-BackgroundState {
             param([scriptblock]$Predicate,[int]$Seconds=20)
             $timer=[Diagnostics.Stopwatch]::StartNew()

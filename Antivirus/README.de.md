@@ -4,6 +4,10 @@
 
 REMNEXA bindet ClamAV für lokale Prüfungen bei Bedarf ein. Es bietet keinen residenten Schutzdienst und ersetzt weder Microsoft Defender noch einen anderen Antivirus. Beachte [Benutzerhandbuch](../docs/USER_GUIDE.de.md) und [Sicherheitsmodell](../docs/SECURITY_MODEL.de.md).
 
+## Unabhängige Scans und Beenden
+
+Kandidat rc.8 startet interaktive Scans im eigenen Fenster. REMNEXA bleibt bedienbar und kann mit der Wahl **Scan fortsetzen**, **Scan abbrechen** oder **Zur Anwendung zurückkehren** beendet werden. Das Scanfenster unterstützt Pause/Fortsetzen/Abbrechen; Ergebnisse werden lokal gespeichert. Siehe [Bedienung und geprüfte Grenzen](../docs/INDEPENDENT_SCANS.de.md).
+
 ## Bestandteile und Voraussetzungen
 
 Der Quellcode enthält die PowerShell-Anbindung, nicht ClamAV-Programme oder Signaturdatenbanken. Die Einrichtung benötigt ein unterstütztes Windows-ClamAV-Paket, Internet und passende Berechtigungen. Die Anwendung erklärt die Rechteerhöhung vor Öffnen des Antivirus-Bereichs. Bei Modulaufrufen müssen erforderliche Rechte für Systemziele oder Installationspfade bereitstehen.

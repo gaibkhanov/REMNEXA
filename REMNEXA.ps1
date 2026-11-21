@@ -41,10 +41,11 @@ Import-Module -Name (Join-Path $PSScriptRoot 'Core\NativeProcess.psd1') -ErrorAc
 Import-Module -Name (Join-Path $PSScriptRoot 'Core\SecurityAssessment.psd1') -Force -ErrorAction Stop
 
 $script:BrandName = 'REMNEXA'
-$script:CleanerVersion = '2.2.0-rc.7'
+$script:CleanerVersion = '2.2.0-rc.8'
 $script:OperationProgress = $null
 $script:RestartRequired = $false
 $script:ExitRequested = $false
+$script:ExitScanDecision = ''
 $script:LastRunLogPath = ''
 $script:LastRunSummary = $null
 $script:LastOperationResult = $null
@@ -154,7 +155,8 @@ function Read-RemnexaInput {
     param(
         [Parameter(Position = 0)][AllowEmptyString()][string]$Prompt = '',
         [switch]$ExitOptionAlreadyShown,
-        [switch]$ScanManagerContext
+        [switch]$ScanManagerContext,
+        [switch]$ExitDecisionContext
     )
 
     # The caller still handles its existing zero choice. Keep x/exit as quiet
@@ -168,17 +170,53 @@ function Read-RemnexaInput {
             Show-AVBackgroundManager
             continue
         }
+        if($answer -and $answer.Trim() -in @('x','X','exit','EXIT')) {
+            if($ExitDecisionContext){$answer='0';break}
+            Stop-RemnexaApplication
+            continue
+        }
+        if($answer -and $answer.Trim() -eq '0' -and $ExitOptionAlreadyShown -and -not $ScanManagerContext -and (Get-Command Confirm-RemnexaExit -ErrorAction SilentlyContinue)) {
+            if(-not (Confirm-RemnexaExit)){continue}
+        }
         break
     }
     if (Get-Command Resume-RemnexaProgress -ErrorAction SilentlyContinue) { Resume-RemnexaProgress }
     if ($null -eq $answer) { return '' }
-    if ($answer.Trim() -ieq 'x' -or $answer.Trim() -ieq 'exit') {
-        Stop-RemnexaApplication
-    }
     return $answer
 }
 
+function Confirm-RemnexaExit {
+    $decision=Get-Variable -Name ExitScanDecision -Scope Script -ErrorAction SilentlyContinue
+    if($decision -and $decision.Value -in @('Continue','Cancel')){return $true}
+    if(-not(Get-Command Get-ClamAVBackgroundScan -ErrorAction SilentlyContinue)){return $true}
+    $scan=Get-ClamAVBackgroundScan
+    if(-not $scan -or $scan.State -notin @('Starting','Running','Pausing','Paused','Cancelling')){return $true}
+    Write-Host (T 'AVExitQuestion') -ForegroundColor Yellow
+    if($scan.State -ne 'Cancelling'){Write-Host ('  [1] '+(T 'AVExitContinue'))}
+    Write-Host ('  [2] '+(T 'AVExitCancel'))
+    Write-Host ('  [0] '+(T 'AVExitBack'))
+    while($true) {
+        $answer=(Read-RemnexaInput (T 'SelectPrompt') -ExitOptionAlreadyShown -ScanManagerContext -ExitDecisionContext).Trim()
+        if($answer -eq '0'){return $false}
+        try {
+            if($answer -eq '1' -and $scan.State -ne 'Cancelling') {
+                Disconnect-ClamAVBackgroundScan -Resume
+                $script:ExitScanDecision='Continue'
+                Write-Status (T 'AVExitContinues') 'Success'
+                return $true
+            }
+            if($answer -eq '2') {
+                Stop-ClamAVBackgroundScan
+                $script:ExitScanDecision='Cancel'
+                return $true
+            }
+        }catch{Write-Status (T 'ErrorPrefix' @($_.Exception.Message)) 'Error';return $false}
+        Write-Status (T 'AVExitInvalid') 'Warning'
+    }
+}
+
 function Stop-RemnexaApplication {
+    if((Get-Command Confirm-RemnexaExit -ErrorAction SilentlyContinue) -and -not (Confirm-RemnexaExit)){return}
     $script:ExitRequested = $true
     try {
         if(Get-Command Stop-ClamAVUpdateCheck -ErrorAction SilentlyContinue) { Stop-ClamAVUpdateCheck }
@@ -3739,7 +3777,7 @@ function Invoke-RemnexaSelfTest {
         $checks.Add([PSCustomObject]@{ Name = $Name; Passed = $Passed; Details = $Details })
     }
 
-    & $addCheck 'Brand' ($script:BrandName -eq 'REMNEXA' -and $script:CleanerVersion -eq '2.2.0-rc.7') "$($script:BrandName) $($script:CleanerVersion)"
+    & $addCheck 'Brand' ($script:BrandName -eq 'REMNEXA' -and $script:CleanerVersion -eq '2.2.0-rc.8') "$($script:BrandName) $($script:CleanerVersion)"
     $translationProblems = @(
         foreach ($key in $script:Texts.Keys) {
             $translations = @($script:Texts[$key])
@@ -4090,7 +4128,10 @@ try {
         if (-not $selfTestResult.Passed) { $scriptExitCode = 1 }
     }
     else {
-        Main
+        do {
+            Main
+            $exitConfirmed=if($script:InteractiveSession){Confirm-RemnexaExit}else{$true}
+        }while(-not $exitConfirmed)
     }
 }
 catch {
@@ -4099,7 +4140,7 @@ catch {
     $scriptExitCode = 1
 }
 finally {
-    if(Get-Command Stop-ClamAVBackgroundScan -ErrorAction SilentlyContinue) { try { Stop-ClamAVBackgroundScan } catch { Write-Warning $_.Exception.Message } }
+    if(Get-Command Disconnect-ClamAVBackgroundScan -ErrorAction SilentlyContinue) { try { Disconnect-ClamAVBackgroundScan -OnlyOwned } catch { Write-Warning $_.Exception.Message } }
     if(Get-Command Stop-ClamAVUpdateCheck -ErrorAction SilentlyContinue) { try { Stop-ClamAVUpdateCheck } catch { Write-Verbose 'Antivirus metadata worker cleanup failed.' } }
     if(Get-Command Stop-ClamAVScanEngine -ErrorAction SilentlyContinue) { try { Stop-ClamAVScanEngine } catch { Write-Verbose 'Antivirus scan worker cleanup failed.' } }
 }

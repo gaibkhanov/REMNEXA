@@ -36,6 +36,7 @@ Describe 'REMNEXA conditional pagination and exit options' {
                 return $script:Inputs.Dequeue()
             }
             function Clear-RemnexaScreen { }
+            function Confirm-RemnexaExit { return $true }
             function Show-BrandHeader { }
             function Start-Sleep { param($Milliseconds) }
             function Get-OptionalPropertyValue { param($InputObject, $PropertyName) return '' }
@@ -185,6 +186,7 @@ Describe 'REMNEXA conditional pagination and exit options' {
             'Read-ExplicitConfirmation'=1; 'Invoke-PrivacyMenu'=1; 'Invoke-LogCleanupMenu'=1
             'Read-RemovalConfirmation'=1; 'Read-AppxRemovalScope'=1; 'Invoke-RemovalOperationCore'=1
             'Show-AVBackgroundManager'=2
+            'Confirm-RemnexaExit'=1
         }
         $found=@{}
         foreach($command in $ast.FindAll({param($node) $node -is [Management.Automation.Language.CommandAst] -and $node.GetCommandName() -eq 'Read-RemnexaInput'},$true)) {
@@ -194,6 +196,7 @@ Describe 'REMNEXA conditional pagination and exit options' {
             while($null -ne $owner -and $owner -isnot [Management.Automation.Language.FunctionDefinitionAst]){$owner=$owner.Parent}
             if ($owner.Name -notin $expected.Keys) { throw "Exit option hidden in unexpected context: $($owner.Name)" }
             if($owner.Name -eq 'Show-AVBackgroundManager' -and @([regex]::Matches($owner.Extent.Text,'\[X\].*ExitApplication')).Count -ne 2){throw 'The scan manager must explicitly show exit in both views.'}
+            if($owner.Name -eq 'Confirm-RemnexaExit' -and $command.Extent.Text -notmatch 'ExitDecisionContext'){throw 'An exit decision must not recurse through the exit wrapper.'}
             $found[$owner.Name]++
         }
         foreach($name in $expected.Keys) { if($found[$name] -ne $expected[$name]) { throw "Wrong zero-exit prompt coverage in $name." } }

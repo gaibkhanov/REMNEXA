@@ -359,7 +359,7 @@
   "AVWorkerReuse": "Reusing the already loaded local scan engine.",
   "AVWorkerFallback": "The private scan engine is currently unavailable. This scan uses clamscan; no network port is opened.",
   "AVBackgroundTitle": "Scan manager",
-  "AVBackgroundStarted": "Scan started in the background. You can keep using REMNEXA. /scan opens the scan manager. Exiting REMNEXA cancels the scan.",
+  "AVBackgroundStarted": "Scan started in its own window. You can keep using REMNEXA. /scan opens the controls. On exit, choose whether the scan continues or is cancelled.",
   "AVBackgroundNone": "No scan available.",
   "AVBackgroundSummary": "Scan: {0} | Files {1}/{2} | {3} | Findings: {4} | /scan: details and controls",
   "AVBackgroundDetail": "Mode: {0} | Phase: {1} | Time: {2} | Average: {3} files/s",
@@ -383,5 +383,17 @@
   "AVBackgroundPhaseLoading": "Loading engine",
   "AVBackgroundPhaseScanning": "Scanning",
   "AVBackgroundPhaseEvaluating": "Evaluating results",
-  "AVBackgroundAllFindings": "Show all findings so far (snapshot)"
+  "AVBackgroundAllFindings": "Show all findings so far (snapshot)",
+  "AVExitQuestion": "An antivirus scan is still running. What should happen when REMNEXA exits?",
+  "AVExitContinue": "Continue the scan and exit REMNEXA only",
+  "AVExitCancel": "Cancel the scan and exit REMNEXA",
+  "AVExitBack": "Return to the application",
+  "AVExitContinues": "REMNEXA is closing. The scan continues in its own window; results will be saved.",
+  "AVExitInvalid": "Please select 1, 2 or 0.",
+  "AVSessionUnavailable": "The scan controller is unavailable. Saved results are preserved.",
+  "AVSessionCleanupPending": "Scan cancellation is not confirmed yet. REMNEXA remains open.",
+  "AVSessionWindowTitle": "REMNEXA Antivirus – independent scan",
+  "AVSessionWindowHint": "This scan window works independently of REMNEXA. Closing this window stops the scanner.",
+  "AVSessionReportSaved": "Results saved: {0}",
+  "AVSessionSummary": "Scan: {0} | Files {1}/{2} | {3} | Findings: {4}"
 }

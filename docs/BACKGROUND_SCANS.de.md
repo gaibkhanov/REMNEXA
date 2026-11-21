@@ -1,5 +1,7 @@
 [English](BACKGROUND_SCANS.md) | [Deutsch](BACKGROUND_SCANS.de.md)
 
+> Historischer rc.7-Bericht. Der aktuelle [rc.8-Scan](INDEPENDENT_SCANS.de.md) bietet beim Beenden Fortsetzen/Abbrechen/Zurück und kann unabhängig weiterlaufen.
+
 # Antivirus-Scans im Hintergrund — 2.2.0-rc.7
 
 Entwicklungskandidat auf `feature/antivirus-background-scans`; diese Änderung veröffentlicht kein stabiles Release. Grundlage sind die [Worker-Korrekturen aus rc.6](RELEASE_2.2.0_RC6.de.md).

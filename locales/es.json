@@ -359,7 +359,7 @@
   "AVWorkerReuse": "Se reutiliza el motor local ya cargado.",
   "AVWorkerFallback": "El motor privado no está disponible. Este análisis usa clamscan; no se abre ningún puerto de red.",
   "AVBackgroundTitle": "Gestor de análisis",
-  "AVBackgroundStarted": "Análisis iniciado en segundo plano. Puedes seguir usando REMNEXA. /scan abre el gestor. Salir de REMNEXA cancela el análisis.",
+  "AVBackgroundStarted": "Análisis iniciado en su propia ventana. Puedes seguir usando REMNEXA. /scan abre los controles. Al salir, elige si continúa o se cancela.",
   "AVBackgroundNone": "No hay análisis disponible.",
   "AVBackgroundSummary": "Análisis: {0} | Archivos {1}/{2} | {3} | Detecciones: {4} | /scan: detalles y controles",
   "AVBackgroundDetail": "Modo: {0} | Fase: {1} | Tiempo: {2} | Media: {3} archivos/s",
@@ -383,5 +383,17 @@
   "AVBackgroundPhaseLoading": "Cargando motor",
   "AVBackgroundPhaseScanning": "Analizando",
   "AVBackgroundPhaseEvaluating": "Evaluando resultados",
-  "AVBackgroundAllFindings": "Mostrar todas las detecciones actuales (instantánea)"
+  "AVBackgroundAllFindings": "Mostrar todas las detecciones actuales (instantánea)",
+  "AVExitQuestion": "Hay un análisis antivirus en curso. ¿Qué debe ocurrir al salir de REMNEXA?",
+  "AVExitContinue": "Continuar el análisis y cerrar solo REMNEXA",
+  "AVExitCancel": "Cancelar el análisis y cerrar REMNEXA",
+  "AVExitBack": "Volver a la aplicación",
+  "AVExitContinues": "REMNEXA se cierra. El análisis continúa en su propia ventana; los resultados se guardarán.",
+  "AVExitInvalid": "Selecciona 1, 2 o 0.",
+  "AVSessionUnavailable": "El controlador del análisis no está disponible. Los resultados guardados se conservan.",
+  "AVSessionCleanupPending": "La cancelación aún no está confirmada. REMNEXA permanece abierto.",
+  "AVSessionWindowTitle": "REMNEXA Antivirus – análisis independiente",
+  "AVSessionWindowHint": "Esta ventana funciona independientemente de REMNEXA. Cerrarla detiene el análisis.",
+  "AVSessionReportSaved": "Resultados guardados: {0}",
+  "AVSessionSummary": "Análisis: {0} | Archivos {1}/{2} | {3} | Detecciones: {4}"
 }

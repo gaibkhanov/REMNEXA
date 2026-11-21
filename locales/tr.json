@@ -359,7 +359,7 @@
   "AVWorkerReuse": "Önceden yüklenen yerel tarama motoru yeniden kullanılıyor.",
   "AVWorkerFallback": "Özel tarama motoru kullanılamıyor. Bu tarama clamscan kullanır; ağ bağlantı noktası açılmaz.",
   "AVBackgroundTitle": "Tarama yöneticisi",
-  "AVBackgroundStarted": "Tarama arka planda başlatıldı. REMNEXA'yı kullanmaya devam edebilirsin. /scan yöneticiyi açar. REMNEXA'dan çıkmak taramayı iptal eder.",
+  "AVBackgroundStarted": "Tarama kendi penceresinde başladı. REMNEXA’yı kullanmaya devam edebilirsin. /scan denetimleri açar. Çıkışta taramanın sürmesini veya iptalini seç.",
   "AVBackgroundNone": "Tarama yok.",
   "AVBackgroundSummary": "Tarama: {0} | Dosyalar {1}/{2} | {3} | Bulgular: {4} | /scan: ayrıntılar ve kontroller",
   "AVBackgroundDetail": "Mod: {0} | Aşama: {1} | Süre: {2} | Ortalama: {3} dosya/sn",
@@ -383,5 +383,17 @@
   "AVBackgroundPhaseLoading": "Motor yükleniyor",
   "AVBackgroundPhaseScanning": "Taranıyor",
   "AVBackgroundPhaseEvaluating": "Sonuçlar değerlendiriliyor",
-  "AVBackgroundAllFindings": "Şimdiye kadarki tüm bulguları göster (anlık görüntü)"
+  "AVBackgroundAllFindings": "Şimdiye kadarki tüm bulguları göster (anlık görüntü)",
+  "AVExitQuestion": "Antivirüs taraması hâlâ çalışıyor. REMNEXA kapanırken ne yapılsın?",
+  "AVExitContinue": "Taramayı sürdür ve yalnızca REMNEXA’yı kapat",
+  "AVExitCancel": "Taramayı iptal et ve REMNEXA’yı kapat",
+  "AVExitBack": "Uygulamaya dön",
+  "AVExitContinues": "REMNEXA kapanıyor. Tarama kendi penceresinde sürüyor; sonuçlar kaydedilecek.",
+  "AVExitInvalid": "Lütfen 1, 2 veya 0 seç.",
+  "AVSessionUnavailable": "Tarama denetleyicisine erişilemiyor. Kaydedilen sonuçlar korunuyor.",
+  "AVSessionCleanupPending": "Tarama iptali henüz doğrulanmadı. REMNEXA açık kalıyor.",
+  "AVSessionWindowTitle": "REMNEXA Antivirus – bağımsız tarama",
+  "AVSessionWindowHint": "Bu pencere REMNEXA’dan bağımsız çalışır. Bu pencereyi kapatmak taramayı durdurur.",
+  "AVSessionReportSaved": "Sonuçlar kaydedildi: {0}",
+  "AVSessionSummary": "Tarama: {0} | Dosyalar {1}/{2} | {3} | Bulgular: {4}"
 }

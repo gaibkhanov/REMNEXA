@@ -11,7 +11,10 @@ $script:AVUpdateWorker = $null
 $script:AVPrivateWorker = $null
 $script:AVPrivateFailure = $null
 $script:AVBackgroundScan = $null
-$ExecutionContext.SessionState.Module.OnRemove = { Stop-ClamAVBackgroundScan;if($script:AVBackgroundScan){$script:AVBackgroundScan.Control.Dispose()};try{Stop-ClamAVUpdateCheck}finally{Stop-ClamAVScanEngine} }
+$script:AVUseLocalBackground = $false
+$script:AVIndependentSession = $null
+$script:AVScanHostWindowStyle = 'Normal'
+$ExecutionContext.SessionState.Module.OnRemove = { if($script:AVUseLocalBackground){Stop-ClamAVBackgroundScan}else{Disconnect-ClamAVBackgroundScan -OnlyOwned};if($script:AVBackgroundScan){$script:AVBackgroundScan.Control.Dispose()};try{Stop-ClamAVUpdateCheck}finally{Stop-ClamAVScanEngine} }
 
 foreach ($folder in @('Private', 'Public')) {
     $folderPath = Join-Path $PSScriptRoot $folder
@@ -31,6 +34,7 @@ Export-ModuleMember -Function @(
     'Get-ClamAVScanEngineState','Stop-ClamAVScanEngine',
     'Invoke-ClamAVScan',
     'Start-ClamAVBackgroundScan','Get-ClamAVBackgroundScan','Set-ClamAVBackgroundScan','Stop-ClamAVBackgroundScan',
+    'Disconnect-ClamAVBackgroundScan',
     'Invoke-ClamAVTargetedScan',
     'Get-ClamAVScanResult',
     'Get-ClamAVQuarantine',

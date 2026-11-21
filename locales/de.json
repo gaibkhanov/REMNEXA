@@ -359,7 +359,7 @@
   "AVWorkerReuse": "Die bereits geladene lokale Scan-Engine wird wiederverwendet.",
   "AVWorkerFallback": "Die private Scan-Engine ist derzeit nicht verfügbar. Dieser Scan verwendet clamscan; es wird kein Netzwerkport geöffnet.",
   "AVBackgroundTitle": "Scanverwaltung",
-  "AVBackgroundStarted": "Scan im Hintergrund gestartet. Du kannst REMNEXA weiter nutzen. /scan öffnet die Scanverwaltung. Beim Beenden von REMNEXA wird der Scan abgebrochen.",
+  "AVBackgroundStarted": "Scan im eigenen Fenster gestartet. REMNEXA bleibt nutzbar. /scan öffnet die Steuerung. Beim Beenden entscheidest du, ob der Scan weiterläuft oder abgebrochen wird.",
   "AVBackgroundNone": "Kein Scan vorhanden.",
   "AVBackgroundSummary": "Scan: {0} | Dateien {1}/{2} | {3} | Funde: {4} | /scan: Details und Steuerung",
   "AVBackgroundDetail": "Modus: {0} | Phase: {1} | Zeit: {2} | Durchschnitt: {3} Dateien/s",
@@ -383,5 +383,17 @@
   "AVBackgroundPhaseLoading": "Engine wird geladen",
   "AVBackgroundPhaseScanning": "Virensuche",
   "AVBackgroundPhaseEvaluating": "Ergebnisse werden ausgewertet",
-  "AVBackgroundAllFindings": "Alle bisherigen Befunde anzeigen (Momentaufnahme)"
+  "AVBackgroundAllFindings": "Alle bisherigen Befunde anzeigen (Momentaufnahme)",
+  "AVExitQuestion": "Ein Antivirus-Scan läuft noch. Was soll beim Beenden von REMNEXA passieren?",
+  "AVExitContinue": "Scan fortsetzen und nur REMNEXA beenden",
+  "AVExitCancel": "Scan abbrechen und REMNEXA beenden",
+  "AVExitBack": "Zur Anwendung zurückkehren",
+  "AVExitContinues": "REMNEXA wird beendet. Der Scan läuft in seinem eigenen Fenster weiter; Ergebnisse werden gespeichert.",
+  "AVExitInvalid": "Bitte 1, 2 oder 0 wählen.",
+  "AVSessionUnavailable": "Die Scansteuerung ist nicht erreichbar. Gespeicherte Ergebnisse bleiben erhalten.",
+  "AVSessionCleanupPending": "Der Scanabbruch ist noch nicht bestätigt. REMNEXA bleibt geöffnet.",
+  "AVSessionWindowTitle": "REMNEXA Antivirus – unabhängiger Scan",
+  "AVSessionWindowHint": "Dieses Scanfenster arbeitet unabhängig von REMNEXA. Schließen dieses Fensters beendet den Scanner.",
+  "AVSessionReportSaved": "Ergebnis gespeichert: {0}",
+  "AVSessionSummary": "Scan: {0} | Dateien {1}/{2} | {3} | Funde: {4}"
 }

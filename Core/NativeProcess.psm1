@@ -124,11 +124,13 @@ function Invoke-RemnexaObservedProcess {
     $output = @{ Stdout=[Text.StringBuilder]::new(); Stderr=[Text.StringBuilder]::new() }
     $captured = 0
     $lastHeartbeat = [long]-1000
+    $ownership=$null
     $pauseBaseline=if($PauseControl){$PauseControl.PausedSeconds}else{0}
     try {
         $CancellationToken.ThrowIfCancellationRequested()
         $started = $process.Start()
         if (-not $started) { throw 'The native process could not start.' }
+        if($PauseControl){$ownership=$PauseControl.OwnProcess($process)}
         try { $process.PriorityClass=[Diagnostics.ProcessPriorityClass]::$ProcessPriority } catch { Write-Verbose $_.Exception.Message }
         $readers = @{ Stdout=$process.StandardOutput; Stderr=$process.StandardError }
         $pending = @{ Stdout=$readers.Stdout.ReadLineAsync(); Stderr=$readers.Stderr.ReadLineAsync() }
@@ -176,6 +178,7 @@ function Invoke-RemnexaObservedProcess {
             catch { $cleanupFailure=$_.Exception }
         }
         $process.Dispose()
+        if($ownership){$ownership.Dispose()}
         if($cleanupFailure){
             $failure=[InvalidOperationException]::new('Native process cleanup could not be confirmed.',$cleanupFailure)
             $failure.Data['NativeCleanupFailed']=$true

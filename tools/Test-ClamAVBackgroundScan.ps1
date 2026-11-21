@@ -14,6 +14,7 @@ function Wait-ScanState {
 try {
     Import-Module (Join-Path $ProjectRoot 'Antivirus/Antivirus.psd1') -Force
     $module=Get-Module Antivirus
+    & $module {$script:AVUseLocalBackground=$true}
     $config=Get-AVConfig
     $status=Get-ClamAVStatus
     if(-not $status.Installed){throw 'Install ClamAV before running the real-backend test.'}

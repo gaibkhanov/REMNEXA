@@ -10,6 +10,7 @@ function Receive-AVBackgroundScan {
 function Get-ClamAVBackgroundScan {
     [CmdletBinding()]
     param([switch]$IncludeResults)
+    if(-not $script:AVUseLocalBackground){return Get-AVIndependentScan -IncludeResults:$IncludeResults}
     Receive-AVBackgroundScan
     if(-not $script:AVBackgroundScan){return $null}
     $snapshot=$script:AVBackgroundScan.Control.Snapshot()
@@ -24,6 +25,7 @@ function Start-ClamAVBackgroundScan {
     [CmdletBinding()]
     param([ValidateSet('Quick','Full','Custom')][string]$ScanType='Quick',[string[]]$Path=@(),
         [string]$ConfigPath=$script:AVConfigPath,[ValidateSet('de','en','es','fr','ru','tr')][string]$Language='de')
+    if(-not $script:AVUseLocalBackground){return Start-AVIndependentScan -ScanType $ScanType -Path $Path -ConfigPath $ConfigPath -Language $Language}
     Receive-AVBackgroundScan
     if($script:AVBackgroundScan -and -not $script:AVBackgroundScan.Received){throw (Get-RemnexaProgressText 'AVScanBusy')}
     if($ScanType -eq 'Custom' -and -not $Path.Count){throw 'Custom scan requires a path.'}
@@ -43,7 +45,7 @@ function Start-ClamAVBackgroundScan {
         $ErrorActionPreference='Stop'
         try {
             $module=Import-Module $ModulePath -PassThru -ErrorAction Stop
-            & $module {param($ConfigPath,$Locale)$script:AVConfigPath=$ConfigPath;Set-RemnexaProgressLanguage $Locale;Set-RemnexaProgressRendering $false} $Config $LanguageCode
+            & $module {param($ConfigPath,$Locale)$script:AVUseLocalBackground=$true;$script:AVConfigPath=$ConfigPath;Set-RemnexaProgressLanguage $Locale;Set-RemnexaProgressRendering $false} $Config $LanguageCode
             $rows=@(Invoke-ClamAVScan -ScanType $Type -Path $Targets -ConfigPath $Config -BackgroundControl $Control -CancellationToken $Control.Cancellation.Token)
             $outcome=if(@($rows|Where-Object Status -eq 'Cancelled').Count){'Cancelled'}elseif(@($rows|Where-Object { -not $_.CoverageComplete -or $_.Severity -ne 'None' }).Count){'Warning'}else{'Completed'}
             $Control.Finish($outcome,'')
@@ -64,6 +66,7 @@ function Start-ClamAVBackgroundScan {
 function Set-ClamAVBackgroundScan {
     [CmdletBinding()]
     param([Parameter(Mandatory)][ValidateSet('Pause','Resume','Cancel')][string]$Action)
+    if(-not $script:AVUseLocalBackground){$session=Find-AVIndependentSession;if($session){Send-AVSessionCommand $session $Action};return}
     Receive-AVBackgroundScan
     if(-not $script:AVBackgroundScan -or $script:AVBackgroundScan.Received){return}
     switch($Action){'Pause'{$script:AVBackgroundScan.Control.Pause()};'Resume'{$script:AVBackgroundScan.Control.Resume()};'Cancel'{$script:AVBackgroundScan.Control.Cancel()}}
@@ -72,6 +75,7 @@ function Set-ClamAVBackgroundScan {
 function Stop-ClamAVBackgroundScan {
     [CmdletBinding()]
     param()
+    if(-not $script:AVUseLocalBackground){Stop-AVIndependentScan;Stop-AVIndependentIdleEngine;return}
     if(-not $script:AVBackgroundScan){return}
     $job=$script:AVBackgroundScan
     if(-not $job.Received) {
@@ -86,6 +90,7 @@ function Stop-ClamAVBackgroundScan {
 }
 
 function Stop-AVBackgroundIdleEngine {
+    if(-not $script:AVUseLocalBackground){Stop-AVIndependentIdleEngine;return}
     # Keep completed results, but release a cached engine before foreground
     # scans/updates so only one signature database is resident per application.
     Receive-AVBackgroundScan
@@ -97,4 +102,25 @@ function Stop-AVBackgroundIdleEngine {
         [void]$cleanup.Invoke()
         if($cleanup.HadErrors){throw $cleanup.Streams.Error[0]}
     }finally{$cleanup.Dispose();$job.Runspace.Dispose();$job.RunspaceDisposed=$true}
+}
+
+function Disconnect-ClamAVBackgroundScan {
+    [CmdletBinding()]
+    param([switch]$Resume,[switch]$OnlyOwned)
+    if($script:AVUseLocalBackground){throw 'A local scan runspace cannot be detached from its owning process.'}
+    $session=Find-AVIndependentSession
+    if($OnlyOwned -and $session -and -not $session.Owned){return}
+    if(-not $session -or $session.Detached -or -not(Test-AVSessionAlive $session)){return}
+    if($Resume){
+        Send-AVSessionCommand $session Resume
+        $watch=[Diagnostics.Stopwatch]::StartNew()
+        do{
+            $scan=Get-AVIndependentScan
+            if(-not $scan -or $scan.State -notin @('Pausing','Paused')){break}
+            Start-Sleep -Milliseconds 50
+        }while($watch.Elapsed.TotalSeconds -lt 5)
+        if($scan -and $scan.State -in @('Pausing','Paused')){throw (Get-RemnexaProgressText 'AVSessionCleanupPending')}
+    }
+    Send-AVSessionCommand $session Detach
+    $session.Detached=$true
 }

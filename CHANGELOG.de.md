@@ -6,6 +6,14 @@ Entwicklungsänderungen sind keine veröffentlichten Releases. Dieses Dokument v
 
 ## 2.2.0 — Entwicklung, nicht veröffentlicht
 
+### Kandidat 2.2.0-rc.8
+
+- Interaktive Scans laufen im unabhängigen PowerShell-Fenster; die Hauptanwendung kann beendet werden, während der Scan weiterläuft.
+- Fortsetzen/Abbrechen/Zurück beim Beenden mit aktivem Scan; pausierte Scans vor bestätigtem Fortsetzen wieder aufnehmen und Befunde beim Abbruch erhalten.
+- Lokale Pipe-Steuerung für denselben Benutzer/dieselbe Berechtigungsstufe, atomare private Status-/Ergebnisdateien, erneuter Zugriff auf die jüngste Sitzung und Bereinigung eigener CLI-Prozesse beim Ende des Scanhosts.
+- Nativen Cache bei verbundener Anwendung wiederverwenden, nach getrenntem Abschluss freigeben und neue Bedienelemente in sechs Sprachen übersetzen.
+- Ende des erzeugenden Prozesses mit echtem CLI-/Privat-Worker und jeweils 2.501 harmlosen Dateien geprüft. Siehe [Bedienung und Prüfgrenzen](docs/INDEPENDENT_SCANS.de.md). Kein stabiles Release veröffentlicht.
+
 ### Kandidat 2.2.0-rc.7
 
 - Interaktive Antivirus-Schnellscans und benutzerdefinierte Scans laufen in einem Hintergrund-Runspace, während andere REMNEXA-Werkzeuge bedienbar bleiben.

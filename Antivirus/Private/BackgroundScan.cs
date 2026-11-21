@@ -38,6 +38,7 @@ namespace Remnexa.Scan {
             lock(sync){if(finding)findings++;if(evidence.Count<1000)evidence.Add(line);else omitted++;}
         }
         public void ObserveScanner(int pid){lock(sync){scannerProcessId=pid;}}
+        public IDisposable OwnProcess(Process process){return new OwnedScannerJob(process);}
         public void Finish(string outcome,string message) {lock(sync){state=outcome;error=message;pause=false;clock.Stop();Monitor.PulseAll(sync);}}
         public ScanSnapshot Snapshot() {
             lock(sync){return new ScanSnapshot{State=state,Phase=phase,Mode=mode,Files=files,Total=total,Findings=findings,Omitted=omitted,Error=error,ScannerProcessId=scannerProcessId,
@@ -57,6 +58,27 @@ namespace Remnexa.Scan {
             Cancellation.Token.ThrowIfCancellationRequested();
         }
         public void Dispose(){Cancellation.Dispose();}
+    }
+    // CLI scans also die with their independent scan host, even when its console
+    // is forcibly closed and PowerShell cannot execute finally blocks.
+    internal sealed class OwnedScannerJob : IDisposable {
+        [StructLayout(LayoutKind.Sequential)] private struct Basic {public long ProcessTime,JobTime;public uint Flags;public UIntPtr Minimum,Maximum;public uint Active;public UIntPtr Affinity;public uint Priority,Scheduling;}
+        [StructLayout(LayoutKind.Sequential)] private struct Io {public ulong Read,Write,Other,ReadBytes,WriteBytes,OtherBytes;}
+        [StructLayout(LayoutKind.Sequential)] private struct Limits {public Basic Basic;public Io Io;public UIntPtr ProcessMemory,JobMemory,PeakProcess,PeakJob;}
+        [DllImport("kernel32.dll",SetLastError=true)] private static extern IntPtr CreateJobObject(IntPtr security,string name);
+        [DllImport("kernel32.dll",SetLastError=true)] private static extern bool SetInformationJobObject(IntPtr job,int type,ref Limits data,uint length);
+        [DllImport("kernel32.dll",SetLastError=true)] private static extern bool AssignProcessToJobObject(IntPtr job,IntPtr process);
+        [DllImport("kernel32.dll")] private static extern bool CloseHandle(IntPtr handle);
+        private IntPtr job;
+        public OwnedScannerJob(Process process) {
+            if(process.Id==Environment.ProcessId)throw new InvalidOperationException("Cannot own the application host.");
+            job=CreateJobObject(IntPtr.Zero,null);if(job==IntPtr.Zero)throw new Win32Exception(Marshal.GetLastWin32Error());
+            try{var limits=new Limits();limits.Basic.Flags=0x2000;
+                if(!SetInformationJobObject(job,9,ref limits,(uint)Marshal.SizeOf<Limits>())||!AssignProcessToJobObject(job,process.Handle))throw new Win32Exception(Marshal.GetLastWin32Error());
+            }catch{Dispose();throw;}
+        }
+        public void Dispose(){var handle=Interlocked.Exchange(ref job,IntPtr.Zero);if(handle!=IntPtr.Zero)CloseHandle(handle);GC.SuppressFinalize(this);}
+        ~OwnedScannerJob(){Dispose();}
     }
     internal sealed class SuspendedScanner : IDisposable {
         [DllImport("kernel32.dll",SetLastError=true)] private static extern IntPtr OpenThread(uint rights,bool inherit,uint id);

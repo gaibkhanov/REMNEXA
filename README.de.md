@@ -8,7 +8,7 @@ Ein kostenloses Open-Source-Werkzeug für die Deinstallation von Anwendungen, Au
 
 **Windows 10 / 11 · PowerShell 7.5+ · Open Source · Sechs Oberflächensprachen**
 
-> **Aktueller Kandidat: 2.2.0-rc.7**, verfügbar im [Kandidatenbranch](https://github.com/gaibkhanov/REMNEXA/tree/feature/antivirus-background-scans). Dies ist kein stabiles Release. Beachte [Kandidatenbericht und Paketanleitung](docs/BACKGROUND_SCANS.de.md). Der Standardbranch kann eine ältere Version enthalten.
+> **Aktueller Kandidat: 2.2.0-rc.8**, verfügbar im [Kandidatenbranch](https://github.com/gaibkhanov/REMNEXA/tree/feature/independent-antivirus-session). Dies ist kein stabiles Release. Beachte [Kandidatenbericht und Paketanleitung](docs/INDEPENDENT_SCANS.de.md). Der Standardbranch kann eine ältere Version enthalten.
 
 ## Funktionen
 
@@ -29,6 +29,8 @@ Unterstützte Autostart-Einträge prüfen und verwalten, einschließlich Sicheru
 Die Systemübersicht liest ausschließlich Daten. Die aktuelle Oberfläche läuft im Terminal; ein grafisches Dashboard ist geplant.
 
 ### Optionale ClamAV-Prüfung
+
+Scans laufen im eigenen Fenster. Nutze REMNEXA weiter oder beende es und lasse den Scan unabhängig fertiglaufen. Pause, Fortsetzung, Abbruch und Befunde sind im Scanmanager oder Scanfenster erreichbar. Siehe [Anleitung zum unabhängigen Scan](docs/INDEPENDENT_SCANS.de.md).
 
 Lokale Prüfungen bei Bedarf ausführen, Signaturen aktualisieren und Funde ansehen. Unterstützte Quarantäne- und Wiederherstellungsvorgänge müssen bewusst ausgewählt werden. Ersteinrichtung und Signaturupdates benötigen Internet; mit installierter Engine und vorhandenen Signaturen sind Scans offline möglich.
 
@@ -73,7 +75,7 @@ Dienste- und Antivirus-Prüfungen sind Momentaufnahmen. Ein gestoppter Dienst mi
 
 ## Neu in 2.2.0
 
-Kandidat rc.6 korrigiert den nativen Worker-Start aus einer erhöhten Anwendung und erweitert Prüfungen realer Job-Grenzen, knappen Speichers, von Archiven und Signatur-Neuladen. Wiederverwendbare ClamAV-1.5.4-Engine, CLI-Fallback, Eco/Balanced/Fast und Scanabbruch bleiben verfügbar. Bestehende Update- und Quarantänekontrollen bleiben erhalten. Siehe [Prüfungen und verbleibende Grenzen](docs/BACKGROUND_SCANS.de.md).
+Kandidat rc.8 ergänzt unabhängige Scanfenster und Fortsetzen/Abbrechen/Zurück beim Beenden von REMNEXA. Der frühere Kandidat rc.6 korrigiert den nativen Worker-Start aus einer erhöhten Anwendung und erweitert Prüfungen realer Job-Grenzen, knappen Speichers, von Archiven und Signatur-Neuladen. Wiederverwendbare ClamAV-1.5.4-Engine, CLI-Fallback, Eco/Balanced/Fast und Scanabbruch bleiben verfügbar. Bestehende Update- und Quarantänekontrollen bleiben erhalten. Siehe [Prüfungen und verbleibende Grenzen](docs/INDEPENDENT_SCANS.de.md).
 
 - HTTPS- und SHA-256-Prüfung unterstützter ClamAV-Downloads; gestufte Installation und Konfigurationswiederherstellung.
 - Zusätzliche Prüfungen verknüpfter Pfade und unterstützter Datenschutzsicherungen.
@@ -83,7 +85,7 @@ Kandidat rc.6 korrigiert den nativen Worker-Start aus einer erhöhten Anwendung 
 - Seitenwechsel nur bei vorhandenen Seiten; genau eine sichtbare Beenden-Option je Eingabe.
 - Modulare Kernbausteine, externe Übersetzungen und eine rein lesende Systemübersicht.
 
-Aktuelles Verhalten und verbleibende Grenzen stehen im [Bericht zur privaten Engine](docs/BACKGROUND_SCANS.de.md). Frühere Prüfergebnisse bleiben im historischen [Entwicklungsbericht](docs/VERSION_2.2.0.de.md) dokumentiert.
+Aktuelles Verhalten und verbleibende Grenzen stehen im [Bericht zur privaten Engine](docs/INDEPENDENT_SCANS.de.md). Frühere Prüfergebnisse bleiben im historischen [Entwicklungsbericht](docs/VERSION_2.2.0.de.md) dokumentiert.
 
 ## Dokumentation
 
