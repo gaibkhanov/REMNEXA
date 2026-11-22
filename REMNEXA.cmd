@@ -1,26 +1,18 @@
 @echo off
 setlocal
-title REMNEXA
+rem Source compatibility entry. End-user packages expose REMNEXA.exe only.
+if exist "%~dp0REMNEXA.exe" goto run_exe
 set "APP_PWSH=%~dp0runtime\pwsh.exe"
-
 if exist "%APP_PWSH%" goto run_remnexa
 where.exe pwsh.exe >nul 2>nul
 if errorlevel 1 goto runtime_missing
 set "APP_PWSH=pwsh.exe"
-
 :run_remnexa
-
-"%APP_PWSH%" -NoLogo -NoProfile -ExecutionPolicy Bypass -File "%~dp0REMNEXA.ps1" -WorkspaceMode Home
+"%APP_PWSH%" -NoLogo -NoProfile -File "%~dp0REMNEXA.ps1" %*
 exit /b %errorlevel%
-
+:run_exe
+"%~dp0REMNEXA.exe" %*
+exit /b %errorlevel%
 :runtime_missing
-echo PowerShell 7.5 oder neuer fehlt. Bitte portable Laufzeit mitliefern
-echo oder PowerShell 7.5+ installieren und pwsh.exe zum PATH hinzufuegen.
-echo.
-echo Bitte den kompletten REMNEXA-Ordner kopieren, einschliesslich runtime.
-
-:wait_for_exit
-set "APP_COMMAND="
-set /p "APP_COMMAND=Zum Beenden exit eingeben: "
-if /i not "%APP_COMMAND%"=="exit" goto wait_for_exit
-exit /b 1
+echo PowerShell 7.5+ fehlt / PowerShell 7.5+ is required.
+exit /b 10

@@ -92,7 +92,7 @@ Set-AVConfig -Values @{
 }
 ```
 
-Die Einstellungen ändern zukünftiges Verhalten und starten nicht unmittelbar einen Scan. Prüfe vor großen Scans Pfade, Ausschlüsse, Signaturrichtlinie und Zeitlimit. Logs und Quarantäne werden gemäß Konfiguration ausgeschlossen. Das [Ablaufbeispiel](../Examples/Invoke-AntivirusWorkflow.ps1) zeigt die Modul-API.
+Die Einstellungen ändern zukünftiges Verhalten und starten nicht unmittelbar einen Scan. Prüfe vor großen Scans Pfade, Ausschlüsse, Signaturrichtlinie und Zeitlimit. Logs und Quarantäne werden gemäß Konfiguration ausgeschlossen. Das [Ablaufbeispiel](../examples/Invoke-AntivirusWorkflow.ps1) zeigt die Modul-API.
 
 ## Hintergrundscans
 

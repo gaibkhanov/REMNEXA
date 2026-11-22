@@ -13,7 +13,7 @@
 | `Core/` | Sprachen, Einstellungen, Logging, Prozesse, Rechte, Ergebnisse, Systemdaten, Pfadschutz, Menüs und Sicherheitsbewertung. |
 | `locales/` | Sechs JSON-Sprachressourcen; je 282 Schlüssel im dokumentierten Stand. |
 | `Antivirus/` | Optionale ClamAV-Einrichtung, Scans, Signaturen und Quarantäne. |
-| `config/`, `assets/`, `Examples/` | Standardkonfiguration, Grafiken und Aufrufbeispiele. |
+| `config/`, `assets/`, `examples/` | Standardkonfiguration, Grafiken und Aufrufbeispiele. |
 | `tests/`, `tools/`, `.github/workflows/` | Regressionstests, lokale Prüfungen, Sicherungswerkzeug und CI-Konfiguration. |
 
 Der Konsolendispatcher bleibt umfangreich. Kompatibilitätswrapper erhalten bisherige Aufrufe, während einzelne Aufgaben in Module wandern. Eine vollständige grafische Anwendung oder allgemeine Aufgabenverwaltung fehlt.

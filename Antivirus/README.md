@@ -92,7 +92,7 @@ Set-AVConfig -Values @{
 }
 ```
 
-These settings change future behavior; they do not run a scan immediately. Check configured paths, exclusions, signature policy and timeout before broad scans. Logs and quarantine are excluded from scanning as configured. See [the workflow example](../Examples/Invoke-AntivirusWorkflow.ps1) for the module API.
+These settings change future behavior; they do not run a scan immediately. Check configured paths, exclusions, signature policy and timeout before broad scans. Logs and quarantine are excluded from scanning as configured. See [the workflow example](../examples/Invoke-AntivirusWorkflow.ps1) for the module API.
 
 ## Background scans
 

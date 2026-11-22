@@ -13,7 +13,7 @@
 | `Core/` | Localization, settings, logging, processes, permissions, results, system snapshots, path safety, menu and security assessment. |
 | `locales/` | Six JSON language resources; 282 keys per language at the recorded baseline. |
 | `Antivirus/` | Optional ClamAV setup, scanning, signatures and quarantine. |
-| `config/`, `assets/`, `Examples/` | Default configuration, visual assets and usage examples. |
+| `config/`, `assets/`, `examples/` | Default configuration, visual assets and usage examples. |
 | `tests/`, `tools/`, `.github/workflows/` | Regression tests, local checks, backup tooling and CI configuration. |
 
 The console dispatcher remains substantial. Compatibility wrappers preserve existing calls while selected responsibilities move into modules. There is no full graphical application or universal task scheduler.
