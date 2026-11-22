@@ -48,6 +48,22 @@ Die ausdrückliche Toolchain-Einrichtung lädt nur das offizielle Zig-Archiv und
 
 Aus einem sauberen, committeten Checkout bauen. Standardausgabe: dist/windows-x64/REMNEXA-2.2.0 sowie windows-x64-preview-ZIP mit SHA-256-Datei. Vorhandene Ausgaben werden nicht überschrieben. Das Manifest nennt Quellcommit und Hash jeder kopierten Datei; ZIP- und unsignierte PE-Zeitstempel sind normalisiert. Reproduzierbarkeit setzt identische Quellen, Compiler und gegebenenfalls Laufzeitdateien voraus. scripts/New-ApplicationIcon.ps1 regeneriert das Icon mit Windows System.Drawing als Formatumwandlung des vorhandenen Logos.
 
+## Authenticode-Signierung
+
+`Build-Release.ps1` kann den vorbereiteten Launcher und alle PowerShell-Skripte, Module und Modulmanifeste der Anwendung signieren, bevor Dateihashes und ZIP entstehen. Laufzeitdateien von Drittanbietern behalten ihre ursprünglichen Signaturen. Erforderlich sind ein bereits installiertes, gültiges Code-Signing-Zertifikat mit privatem Schlüssel, eine vertrauenswürdige und auf Widerruf prüfbare Zertifikatskette sowie Microsoft SignTool aus dem Windows SDK auf dem Signierrechner. Benutzer benötigen diese Entwicklerwerkzeuge nicht.
+
+```powershell
+./scripts/Build-Release.ps1 -OutputDirectory ./dist/signed-preview -RuntimePath ./runtime `
+    -SigningCertificateThumbprint '<40-stelliger Zertifikat-Fingerabdruck>' `
+    -SignToolPath '<Windows SDK x64 signtool.exe>'
+```
+
+Der RFC-3161-Zeitstempeldienst ist standardmäßig `https://timestamp.digicert.com`; über `-TimestampServer` lässt sich ein anderer HTTPS-Endpunkt angeben. Signatur und Zeitstempel verwenden SHA-256. Jede signierte Datei muss die SignTool-Prüfung und die Windows-Authenticode-Prüfung mit dem ausgewählten Herausgeber und einem Zeitstempel bestehen. Fehlende, abgelaufene oder nicht vertrauenswürdige Zertifikate, ein nicht vertrauenswürdiges Signierwerkzeug, fehlende Zeitstempel oder Signierfehler brechen den Build ab; teilweise signierte Zwischenstände werden verworfen. Private Schlüssel werden nicht exportiert, selbstsignierte Zertifikate weder erzeugt noch installiert und Vertrauens- oder Richtlinieneinstellungen nicht verändert. Ein Zertifikat-Fingerabdruck bezeichnet das öffentliche Zertifikat und ist kein Passwort.
+
+Das Manifest setzt `Signed` erst nach erfolgreicher Prüfung und protokolliert den öffentlichen Fingerabdruck, Algorithmus, Zeitstempeldienst und die Anzahl geprüfter Dateien. Signieren und Zeitstempeln verändern Dateien; Paketprüfsummen entstehen deshalb anschließend. Signierte Pakete sind nicht bytegleich reproduzierbar. Signaturen belegen Herausgeber und Dateiintegrität, garantieren aber weder SmartScreen-Reputation noch die Qualität der Malware-Erkennung.
+
+**Das aktuelle Paket bleibt unsigniert:** Auf dem Prüfrechner waren weder ein Code-Signing-Zertifikat mit privatem Schlüssel noch Windows SDK SignTool verfügbar. Die Schutzregeln des Signierablaufs sind durch isolierte Regressionstests mit Mocks abgedeckt; eine echte CA-Signatur mit Zeitstempel wurde noch nicht getestet. Die vorhandene unsignierte Vorschau bleibt nutzbar. Dieser Build erstellt oder ersetzt kein stabiles Release.
+
 ## Prüfung und Grenzen
 
 Launcher-Regressionen prüfen PE-/CLR-Metadaten, Icon-Größen, Quell-/Paketlayout, Unicode/Leerzeichen, Argumentsonderzeichen, fehlende/defekte Laufzeit, Rechte-/Policy-Erhalt, Rückgabecodes und Weiterleitungen. Pakettests prüfen erlaubte Inhalte, Dateihashes, sechs Sprachen, Modul-/Lizenzabhängigkeiten und echte Anwendungsselbsttests über die EXE. Bestehende Antivirus-/Navigationstests bleiben relevant.

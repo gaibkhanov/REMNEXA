@@ -1,12 +1,18 @@
 #Requires -Version 7.5
 [CmdletBinding()]
-param([string]$OutputDirectory=(Join-Path $PSScriptRoot '../dist/windows-x64'),[string]$ZigPath=(Join-Path $PSScriptRoot '../tools/Modules/zig/zig-x86_64-windows-0.15.2/zig.exe'),[string]$RuntimePath,[string]$GitPath='git')
+param([string]$OutputDirectory=(Join-Path $PSScriptRoot '../dist/windows-x64'),[string]$ZigPath=(Join-Path $PSScriptRoot '../tools/Modules/zig/zig-x86_64-windows-0.15.2/zig.exe'),[string]$RuntimePath,[string]$GitPath='git',
+      [string]$SigningCertificateThumbprint,[string]$SignToolPath,[string]$TimestampServer='https://timestamp.digicert.com')
 $ErrorActionPreference='Stop'
 $root=[IO.Path]::GetFullPath((Split-Path -Parent $PSScriptRoot))
 Import-Module (Join-Path $root 'Core/PathSafety.psd1') -Force
 $git=(Get-Command $GitPath -CommandType Application -ErrorAction Stop|Select-Object -First 1).Source
 $status=@(& $git -C $root status --porcelain);if($LASTEXITCODE -ne 0 -or $status.Count){throw 'Build from a clean committed checkout.'}
 $commit=& $git -C $root rev-parse HEAD
+$signingContext=$null
+if($SigningCertificateThumbprint){
+    Import-Module (Join-Path $PSScriptRoot 'ReleaseSigning.psm1') -Force
+    $signingContext=Get-RemnexaSigningContext -Thumbprint $SigningCertificateThumbprint -SignToolPath $SignToolPath -TimestampServer $TimestampServer
+}elseif($SignToolPath){throw 'Specify -SigningCertificateThumbprint when selecting a signing tool.'}
 $application=[IO.File]::ReadAllText((Join-Path $root 'REMNEXA.ps1'))
 $match=[regex]::Match($application,'\$script:CleanerVersion\s*=\s*''([\w.-]+)''');if(-not $match.Success){throw 'Missing application version.'};$version=$match.Groups[1].Value
 $output=[IO.Path]::GetFullPath($OutputDirectory)
@@ -52,6 +58,8 @@ try {
         $selected=($diagnostic -join "`n")|ConvertFrom-Json
         if(-not $selected.ok -or $selected.runtime -ne (Join-Path $stage 'runtime/pwsh.exe')){throw 'Bundled runtime was not selected as a compatible stable runtime.'}
     }
+    $signingReport=$null
+    if($signingContext){$signingReport=Invoke-RemnexaPackageSigning -PackageDirectory $stage -Context $signingContext}
     $readme=@'
 REMNEXA 2.2.0 - Windows x64 launcher preview / Launcher-Vorschau
 
@@ -76,9 +84,13 @@ Diese Launcher-Vorschau ist unsigniert und ersetzt nicht das stabile Quellreleas
 Lizenz: app/LICENSE; optionaler nativer Adapter: app/Antivirus/Workers/COPYING.txt.
 Drittanbieterhinweise: app/THIRD_PARTY_NOTICES.de.md.
 '@
+    if($signingReport){
+        $readme=$readme.Replace('This launcher preview is unsigned and does not replace the stable source release.','The launcher and application scripts have verified, timestamped Authenticode signatures. This preview does not replace the stable source release.')
+        $readme=$readme.Replace('Diese Launcher-Vorschau ist unsigniert und ersetzt nicht das stabile Quellrelease.','Launcher und Anwendungsskripte haben geprüfte Authenticode-Signaturen mit Zeitstempel. Diese Vorschau ersetzt nicht das stabile Quellrelease.')
+    }
     [IO.File]::WriteAllText((Join-Path $stage 'README.txt'),$readme.Replace('REMNEXA 2.2.0',('REMNEXA '+$version)),[Text.UTF8Encoding]::new($false))
     $records=@(Get-ChildItem -LiteralPath $stage -File -Recurse|ForEach-Object{[ordered]@{Path=[IO.Path]::GetRelativePath($stage,$_.FullName).Replace('\','/');SHA256=(Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()}}|Sort-Object { $_.Path })
-    $manifest=[ordered]@{Version=$version;PackageStatus='LauncherPreview';SourceCommit=$commit;Architecture='x64';Compiler='Zig 0.15.2';RuntimeIncluded=[bool]$RuntimePath;Signed=$false;Files=$records}
+    $manifest=[ordered]@{Version=$version;PackageStatus='LauncherPreview';SourceCommit=$commit;Architecture='x64';Compiler='Zig 0.15.2';RuntimeIncluded=[bool]$RuntimePath;Signed=[bool]$signingReport;Signing=$signingReport;Files=$records}
     [IO.File]::WriteAllText((Join-Path $stage 'app/package-manifest.json'),($manifest|ConvertTo-Json -Depth 6),[Text.UTF8Encoding]::new($false))
     # Security/indexing tools can briefly hold a newly copied runtime directory.
     # Retry the same atomic rename with a fixed bound; never weaken permissions.
@@ -97,7 +109,7 @@ Drittanbieterhinweise: app/THIRD_PARTY_NOTICES.de.md.
     }finally{$archive.Dispose()}
     $hash=(Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant()
     [IO.File]::WriteAllText(($zip+'.sha256'),($hash+'  '+[IO.Path]::GetFileName($zip)+"`n"),[Text.UTF8Encoding]::new($false))
-    [pscustomobject]@{Directory=$destination;Launcher=(Join-Path $destination 'REMNEXA.exe');Archive=$zip;SHA256=$hash;SourceCommit=$commit;RuntimeIncluded=[bool]$RuntimePath;Signed=$false}
+    [pscustomobject]@{Directory=$destination;Launcher=(Join-Path $destination 'REMNEXA.exe');Archive=$zip;SHA256=$hash;SourceCommit=$commit;RuntimeIncluded=[bool]$RuntimePath;Signed=[bool]$signingReport}
 }finally{
     if(Test-Path -LiteralPath $stage){
         $full=[IO.Path]::GetFullPath($stage)

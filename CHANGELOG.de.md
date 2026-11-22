@@ -6,6 +6,7 @@ Entwicklungsänderungen sind keine veröffentlichten Releases. Dieses Dokument v
 
 ## Nicht veröffentlicht — Windows-Launcher-Vorschau
 
+- Optionale SHA-256-Authenticode-Signierung mit HTTPS-RFC-3161-Zeitstempeln, Prüfung von Zertifikat und Werkzeug, Verifikation vor Paketprüfsummen sowie isolierten Regressionstests. Das aktuelle Paket bleibt mangels Signierzertifikat und Werkzeug unsigniert.
 - Nativen x64-Win32-Launcher mit offiziellem Mehrgrößen-Icon, geprüfter PowerShell-Auswahl und sicherer Argumentübergabe ergänzen; keine Policy-Umgehung oder pauschale Erhöhung.
 - Erlaubnisbasiertes Benutzerpaket mit einer EXE, app/ und optionaler lizenzierter Laufzeit bauen; Entwicklerdateien und Backups ausschließen.
 - Kompatible Quellcode-Starter erhalten, examples vereinheitlichen und lokale Backups mit Integritätsprüfung außerhalb des Repositorys aufbewahren.

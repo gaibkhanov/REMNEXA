@@ -12,6 +12,8 @@ A free, open-source Windows utility for application removal, startup management,
 
 > **Feature-branch launcher preview:** Native Windows entry with the REMNEXA icon and a clean end-user package. See [build and limits](docs/WINDOWS_LAUNCHER.md). The stable release above remains unchanged.
 
+The package builder supports verified Authenticode signing when a trusted signing certificate and Microsoft SignTool are available. The current preview is **unsigned**; see [signing requirements](docs/WINDOWS_LAUNCHER.md#authenticode-signing).
+
 ## Features
 
 ### Application removal

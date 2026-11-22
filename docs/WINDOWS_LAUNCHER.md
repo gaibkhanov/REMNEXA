@@ -48,6 +48,22 @@ The explicit toolchain installation downloads only the official Zig archive and 
 
 Build from a clean committed checkout. Output defaults to dist/windows-x64/REMNEXA-2.2.0 and a windows-x64-preview ZIP plus SHA-256 sidecar. Existing outputs are not overwritten. The manifest records the source commit and every copied file hash; ZIP timestamps and unsigned PE timestamps are normalized. Reproducibility applies to identical source, compiler and optional runtime bytes. The icon can be regenerated with scripts/New-ApplicationIcon.ps1 using Windows System.Drawing; it is format conversion of existing artwork, not new branding.
 
+## Authenticode signing
+
+`Build-Release.ps1` can sign the staged launcher and all application PowerShell scripts/modules/manifests before generating file hashes and the ZIP. Third-party runtime files retain their upstream signatures. Signing requires an already installed, currently valid code-signing certificate with its private key, a trusted and revocation-verifiable certificate chain, and Microsoft SignTool from the Windows SDK on the signing machine. These are developer requirements, not end-user dependencies.
+
+```powershell
+./scripts/Build-Release.ps1 -OutputDirectory ./dist/signed-preview -RuntimePath ./runtime `
+    -SigningCertificateThumbprint '<40-character certificate-store thumbprint>' `
+    -SignToolPath '<Windows SDK x64 signtool.exe>'
+```
+
+The default RFC 3161 timestamp endpoint is `https://timestamp.digicert.com`; another HTTPS endpoint can be specified with `-TimestampServer`. SHA-256 signatures and timestamps are required. Every signed file must pass SignTool verification and Windows Authenticode validation with the selected signer and a timestamp. Missing/expired/untrusted certificates, an untrusted signing tool, missing timestamps or signing failures stop the build; a partly signed staging directory is discarded. No private key is exported, no self-signed certificate is generated or installed, and trust/policy settings remain unchanged. Certificate thumbprints identify a public certificate and are not passwords.
+
+The manifest sets `Signed` only after successful verification and records the public signer thumbprint, algorithm, timestamp endpoint and verified file count. Signing and timestamping change bytes, so package hashes are computed afterwards; signed packages are not byte-reproducible. Signatures establish publisher identity and integrity, but do not guarantee SmartScreen reputation or certify malware detection quality.
+
+**Current delivery remains unsigned:** no code-signing certificate with private key or Windows SDK SignTool was available on the validation machine. Signing safeguards are covered by isolated regression tests using mocks; a real CA-backed signature/timestamp has not been tested. The existing unsigned preview remains usable. No stable release is created or replaced by this build.
+
 ## Verification and limits
 
 Launcher regression checks cover PE/CLR metadata, icon resolutions, source/package layouts, Unicode and spaces, argument metacharacters, runtime absence/corruption, no elevation/policy override, exit codes and compatibility routes. User-package tests check allowlisted contents, per-file hashes, six languages, module/license dependencies and real application self-tests through the EXE. Existing Antivirus/navigation tests remain applicable.

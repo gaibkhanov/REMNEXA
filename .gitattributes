@@ -2,4 +2,5 @@ src/Launcher/*.c text eol=lf
 src/Launcher/*.rc text eol=lf
 src/Launcher/*.manifest text eol=lf
 scripts/*.ps1 text eol=lf
+scripts/*.psm1 text eol=lf
 assets/icons/*.ico binary
