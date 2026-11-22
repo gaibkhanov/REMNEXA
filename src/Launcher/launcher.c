@@ -47,7 +47,7 @@ static BOOL Probe(const WCHAR *runtime,WCHAR *version) {
     si.cb=sizeof(si);si.dwFlags=STARTF_USESTDHANDLES;si.hStdOutput=writePipe;si.hStdError=writePipe;si.hStdInput=GetStdHandle(STD_INPUT_HANDLE);
     if(!CreateProcessW(runtime,command,NULL,NULL,TRUE,CREATE_NO_WINDOW,NULL,NULL,&si,&pi))goto cleanup;
     CloseHandle(writePipe);writePipe=NULL;
-    if(WaitForSingleObject(pi.hProcess,5000)!=WAIT_OBJECT_0){TerminateProcess(pi.hProcess,124);WaitForSingleObject(pi.hProcess,2000);goto cleanup;}
+    if(WaitForSingleObject(pi.hProcess,15000)!=WAIT_OBJECT_0){TerminateProcess(pi.hProcess,124);WaitForSingleObject(pi.hProcess,2000);goto cleanup;}
     GetExitCodeProcess(pi.hProcess,&code);
     if(code==0&&ReadFile(readPipe,result,sizeof(result)-1,&read,NULL)&&read>0) {
         DWORD i;valid=TRUE;
