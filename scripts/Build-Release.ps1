@@ -27,8 +27,12 @@ try {
         if(-not(Get-RemnexaPathSafety $source).IsSafe){throw 'Unsafe application payload.'}
         $target=Join-Path $stage ('app/'+$relative);[void][IO.Directory]::CreateDirectory((Split-Path -Parent $target));[IO.File]::Copy($source,$target)
     }
-    Copy-Item -LiteralPath (Join-Path $root 'docs/THIRD_PARTY_NOTICES.md') -Destination (Join-Path $stage 'app/THIRD_PARTY_NOTICES.md')
-    Copy-Item -LiteralPath (Join-Path $root 'docs/THIRD_PARTY_NOTICES.de.md') -Destination (Join-Path $stage 'app/THIRD_PARTY_NOTICES.de.md')
+    foreach($suffix in @('','.de')){
+        $notice=[IO.File]::ReadAllText((Join-Path $root ('docs/THIRD_PARTY_NOTICES'+$suffix+'.md')))
+        $notice=$notice.Replace('(../LICENSE)','(LICENSE)').Replace('(../Antivirus/Workers/COPYING.txt)','(Antivirus/Workers/COPYING.txt)')
+        $notice=$notice.Replace('(DEVELOPMENT_ROADMAP.md)',('(https://github.com/gaibkhanov/REMNEXA/blob/'+$commit+'/docs/DEVELOPMENT_ROADMAP.md)')).Replace('(DEVELOPMENT_ROADMAP.de.md)',('(https://github.com/gaibkhanov/REMNEXA/blob/'+$commit+'/docs/DEVELOPMENT_ROADMAP.de.md)'))
+        [IO.File]::WriteAllText((Join-Path $stage ('app/THIRD_PARTY_NOTICES'+$suffix+'.md')),$notice,[Text.UTF8Encoding]::new($false))
+    }
     Copy-Item -LiteralPath (Join-Path $root 'src/Launcher/THIRD_PARTY_NOTICES.txt') -Destination (Join-Path $stage 'app/LAUNCHER_NOTICES.txt')
     if($RuntimePath){
         $runtime=(Resolve-Path -LiteralPath $RuntimePath).Path
@@ -40,6 +44,10 @@ try {
             $relative=[IO.Path]::GetRelativePath($runtime,$file.FullName);$target=Join-Path $stage ('runtime/'+$relative)
             [void][IO.Directory]::CreateDirectory((Split-Path -Parent $target));[IO.File]::Copy($file.FullName,$target)
         }
+        $diagnostic=& (Join-Path $stage 'REMNEXA.exe') --diagnose
+        if($LASTEXITCODE -ne 0){throw 'Bundled runtime validation failed.'}
+        $selected=($diagnostic -join "`n")|ConvertFrom-Json
+        if(-not $selected.ok -or $selected.runtime -ne (Join-Path $stage 'runtime/pwsh.exe')){throw 'Bundled runtime was not selected as a compatible stable runtime.'}
     }
     $readme=@'
 REMNEXA 2.2.0 - Windows x64 launcher preview / Launcher-Vorschau
@@ -69,7 +77,13 @@ Drittanbieterhinweise: app/THIRD_PARTY_NOTICES.de.md.
     $records=@(Get-ChildItem -LiteralPath $stage -File -Recurse|ForEach-Object{[ordered]@{Path=[IO.Path]::GetRelativePath($stage,$_.FullName).Replace('\','/');SHA256=(Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()}}|Sort-Object { $_.Path })
     $manifest=[ordered]@{Version=$version;PackageStatus='LauncherPreview';SourceCommit=$commit;Architecture='x64';Compiler='Zig 0.15.2';RuntimeIncluded=[bool]$RuntimePath;Signed=$false;Files=$records}
     [IO.File]::WriteAllText((Join-Path $stage 'app/package-manifest.json'),($manifest|ConvertTo-Json -Depth 6),[Text.UTF8Encoding]::new($false))
-    [IO.Directory]::Move($stage,$destination)
+    # Security/indexing tools can briefly hold a newly copied runtime directory.
+    # Retry the same atomic rename with a fixed bound; never weaken permissions.
+    for($moveAttempt=0;$moveAttempt -lt 7;$moveAttempt++){
+        try{[IO.Directory]::Move($stage,$destination);break}
+        catch [UnauthorizedAccessException]{if($moveAttempt -eq 6){throw};Start-Sleep -Milliseconds (250*[Math]::Pow(2,$moveAttempt))}
+        catch [IO.IOException]{if($moveAttempt -eq 6){throw};Start-Sleep -Milliseconds (250*[Math]::Pow(2,$moveAttempt))}
+    }
     $archive=[IO.Compression.ZipFile]::Open($zip,[IO.Compression.ZipArchiveMode]::Create)
     try {
         foreach($file in (Get-ChildItem -LiteralPath $destination -File -Recurse|Sort-Object FullName)){
