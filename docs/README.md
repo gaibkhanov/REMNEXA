@@ -6,6 +6,8 @@ Documentation for the **2.2.0 source release**. Each Markdown guide has an Engli
 
 ## For users
 
+- [Windows launcher and user package](WINDOWS_LAUNCHER.md): native EXE entry, icon, builds and compatibility.
+
 - [Release 2.2.0](RELEASE_2.2.0.md): download, installation, changes, validation and known limits.
 
 - [Independent scans (introduced in rc.8)](INDEPENDENT_SCANS.md): exit REMNEXA and continue scanning, cancel, or return to the application.

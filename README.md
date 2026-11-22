@@ -10,6 +10,8 @@ A free, open-source Windows utility for application removal, startup management,
 
 > **Version 2.2.0**: [Download and release notes](https://github.com/gaibkhanov/REMNEXA/releases/tag/v2.2.0). Source package with SHA-256 checksum; PowerShell and optional ClamAV components are required separately. See [installation, validation and limits](docs/RELEASE_2.2.0.md).
 
+> **Feature-branch launcher preview:** Native Windows entry with the REMNEXA icon and a clean end-user package. See [build and limits](docs/WINDOWS_LAUNCHER.md). The stable release above remains unchanged.
+
 ## Features
 
 ### Application removal

@@ -6,6 +6,8 @@ Dokumentation der **Quellrelease 2.2.0**. Jede Markdown-Anleitung hat eine engli
 
 ## Für Anwender
 
+- [Windows-Launcher und Benutzerpaket](WINDOWS_LAUNCHER.de.md): nativer EXE-Einstieg, Icon, Builds und Kompatibilität.
+
 - [Release 2.2.0](RELEASE_2.2.0.de.md): Download, Installation, Änderungen, Prüfstand und bekannte Grenzen.
 
 - [Unabhängige Scans (eingeführt in rc.8)](INDEPENDENT_SCANS.de.md): REMNEXA beenden und Scan fortsetzen, abbrechen oder zur Anwendung zurückkehren.

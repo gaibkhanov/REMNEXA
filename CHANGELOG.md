@@ -4,6 +4,13 @@
 
 Development changes are not published release claims. Existing release artifacts and tags are not modified by this document.
 
+## Unreleased — Windows launcher preview
+
+- Add native x64 Win32 launcher with official multi-size icon, validated PowerShell discovery and safe argument passing; no policy bypass or blanket elevation.
+- Build an allowlisted user package with one EXE, app/ and optional licensed runtime; exclude developer files and backups.
+- Preserve source compatibility entries, normalize examples and keep verified local backups outside the repository.
+- [Build, layout and limits](docs/WINDOWS_LAUNCHER.md); existing stable release unchanged.
+
 ## 2.2.0 — 2026-11-21
 
 ### Stable source release

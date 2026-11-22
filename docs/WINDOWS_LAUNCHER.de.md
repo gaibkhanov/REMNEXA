@@ -1,0 +1,55 @@
+[English](WINDOWS_LAUNCHER.md) | [Deutsch](WINDOWS_LAUNCHER.de.md)
+
+# Windows-Launcher und Paketvorschau
+
+Dieser Feature-Branch ergänzt einen nativen x64-Win32-Launcher und ein getrenntes Benutzerpaket für die bestehende Anwendung 2.2.0. Das stabile Quellrelease v2.2.0 wird dadurch weder neu veröffentlicht noch ersetzt. Launcher und Paket sind unsignierte Vorschauen.
+
+## Quellcode und Benutzerpaket
+
+Bisher standen sechs CMD-Einstiege, der kompatible PowerShell-Starter, Entwicklerwerkzeuge/-tests und lokale Sicherungen nebeneinander. Im Quellcode bleiben kompatible Namen erhalten; im Benutzerpaket gibt es einen Einstieg:
+
+```text
+Quellcode                       Benutzerpaket
+REMNEXA.ps1                     REMNEXA-2.2.0/
+REMNEXA.cmd + Weiterleitungen      REMNEXA.exe
+Core/ Antivirus/ config/          app/
+src/Launcher/                      REMNEXA.ps1
+assets/icons/                      Core/ Antivirus/ config/
+locales/                           assets/ locales/ LICENSE
+scripts/ tests/ tools/             runtime/ (optional)
+docs/ examples/                   README.txt
+```
+
+Core, Antivirus und config behalten ihre Quellpfade: Module und Testkopien besitzen funktionierende relative Importe. Ein rein optisches Verschieben nach src würde zusätzlichen Migrationsaufwand erzeugen. Im Benutzerpaket liegen dieselben Abhängigkeiten unter app, ohne ihre Beziehungen zu verändern. src enthält den neuen Launcher, scripts die Icon-/Launcher-/Paket-Builds. Examples wird mit aktualisierten Verweisen zu examples. Sicherungen werden vollständig in einen benachbarten Backup-Bereich verschoben und vorher/nachher per SHA-256 protokolliert; sie werden weder gelöscht noch versioniert.
+
+REMNEXA-Antivirus.cmd, REMNEXA-Autostart.cmd, REMNEXA-Deinstallation.cmd und REMNEXA-Dienste.cmd leiten zum zentralen Quellcode-Einstieg weiter. Programm-Entferner.cmd/.ps1 bleiben kompatible Einstiege. Diese Starter fehlen im Benutzerpaket ebenso wie Tests, tools, scripts, Git-Metadaten, Backups und Logs. Alle Arbeitsbereiche bleiben im Hauptmenü erreichbar.
+
+## Nativer Launcher
+
+Der MIT-lizenzierte C-Quellcode nutzt Win32 direkt. Er benötigt weder .NET noch C-Laufzeit, Python oder Node. Das Manifest verlangt asInvoker. PowerShell wird direkt mit sicherer Windows-Argumentübergabe gestartet; Rückgabecodes bleiben erhalten. Arbeitsverzeichnis ist der EXE-Ordner. Der Launcher setzt keine ExecutionPolicy und fordert keine erhöhten Rechte an. Vorhandene aktionsbezogene Freigaben der Anwendung bleiben bestehen.
+
+Zuerst wird eine stabile PowerShell ab 7.5 unter runtime/pwsh.exe geprüft, danach an üblichen Program-Files-Pfaden und in absoluten PATH-Verzeichnissen. Leere/relative PATH-Einträge werden ignoriert, ungültige oder ungeeignete Kandidaten übersprungen. Verdeckte Prüfprozesse haben fünf Sekunden Zeitlimit und erzeugen kein zusätzliches sichtbares Konsolenfenster. Der normale Start nutzt eine gemeinsame Konsole. --diagnose liefert die Laufzeitauswahl maschinenlesbar, ohne Anwendung oder Einstellungsänderungen auszuführen.
+
+Das Icon übernimmt das vorhandene offizielle PNG, entfernt für Lesbarkeit nur transparenten Rand und enthält PNG-Stufen mit 16/24/32/48/64/128/256 Pixeln. Explorer verwendet das eingebettete Icon; klassische Konsolen bekommen das kleine/große Icon. Windows Terminal verwaltet seine Taskleistenidentität selbst; dort ist ein eigenes Taskleistenicon nicht garantiert. Spätere Verknüpfungen/Installer können assets/icons/remnexa.ico oder die EXE-Ressource nutzen. Ein Signierzertifikat steht nicht bereit.
+
+## Build reproduzieren
+
+Windows x64, PowerShell ab 7.5, Git und festgelegtes Zig 0.15.2 verwenden:
+
+```powershell
+./scripts/Install-LauncherToolchain.ps1
+./scripts/Build-Launcher.ps1
+./scripts/Build-Release.ps1
+# Optional vertrauenswürdige PowerShell-Dateien samt Lizenzhinweisen:
+./scripts/Build-Release.ps1 -OutputDirectory ./dist/with-runtime -RuntimePath ./runtime
+```
+
+Die ausdrückliche Toolchain-Einrichtung lädt nur das offizielle Zig-Archiv und prüft dessen fest hinterlegten SHA-256-Wert. Keine globale Installation oder PATH-Änderung. Die Toolchain ist ausschließlich für Entwickler und nicht im Benutzerpaket. Zig steht unter MIT; siehe [Build-Lizenzhinweise](../src/Launcher/THIRD_PARTY_NOTICES.txt). Die bisherigen PowerShell-/ClamAV-Lizenzgrenzen gelten laut [Drittanbieterhinweisen](THIRD_PARTY_NOTICES.de.md). Nur vorhandener Anwendungscode und eine ausdrücklich angegebene Laufzeit werden verpackt; keine ClamAV-Programme oder Signaturen werden kopiert.
+
+Aus einem sauberen, committeten Checkout bauen. Standardausgabe: dist/windows-x64/REMNEXA-2.2.0 sowie windows-x64-preview-ZIP mit SHA-256-Datei. Vorhandene Ausgaben werden nicht überschrieben. Das Manifest nennt Quellcommit und Hash jeder kopierten Datei; ZIP- und unsignierte PE-Zeitstempel sind normalisiert. Reproduzierbarkeit setzt identische Quellen, Compiler und gegebenenfalls Laufzeitdateien voraus. scripts/New-ApplicationIcon.ps1 regeneriert das Icon mit Windows System.Drawing als Formatumwandlung des vorhandenen Logos.
+
+## Prüfung und Grenzen
+
+Launcher-Regressionen prüfen PE-/CLR-Metadaten, Icon-Größen, Quell-/Paketlayout, Unicode/Leerzeichen, Argumentsonderzeichen, fehlende/defekte Laufzeit, Rechte-/Policy-Erhalt, Rückgabecodes und Weiterleitungen. Pakettests prüfen erlaubte Inhalte, Dateihashes, sechs Sprachen, Modul-/Lizenzabhängigkeiten und echte Anwendungsselbsttests über die EXE. Bestehende Antivirus-/Navigationstests bleiben relevant.
+
+Die Vorschau zertifiziert weder SmartScreen-Reputation noch jede Windows-10-/Terminal-Variante oder Offline-Ersteinrichtung optionaler Komponenten. Eine Benutzer-ExecutionPolicy kann heruntergeladene Skripte sperren; der Launcher meldet den Fehler und umgeht die Richtlinie nicht. Paketinhalt und unabhängige Sicherungen vor Systemänderungen prüfen. Die Build-Skripte verändern keine stabilen Releases.

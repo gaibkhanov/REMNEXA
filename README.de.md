@@ -10,6 +10,8 @@ Ein kostenloses Open-Source-Werkzeug für die Deinstallation von Anwendungen, Au
 
 > **Version 2.2.0**: [Download und Release Notes](https://github.com/gaibkhanov/REMNEXA/releases/tag/v2.2.0). Quellpaket mit SHA-256-Prüfsumme; PowerShell und optionale ClamAV-Komponenten werden separat benötigt. Siehe [Installation, Prüfstand und Grenzen](docs/RELEASE_2.2.0.de.md).
 
+> **Launcher-Vorschau im Feature-Branch:** Nativer Windows-Start mit eigenem Icon und aufgeräumtem Benutzerpaket. Build und Grenzen: [Windows-Launcher](docs/WINDOWS_LAUNCHER.de.md). Das stabile Release oben bleibt unverändert.
+
 ## Funktionen
 
 ### Anwendungen entfernen

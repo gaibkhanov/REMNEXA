@@ -4,6 +4,13 @@
 
 Entwicklungsänderungen sind keine veröffentlichten Releases. Dieses Dokument verändert keine vorhandenen Release-Dateien oder Tags.
 
+## Nicht veröffentlicht — Windows-Launcher-Vorschau
+
+- Nativen x64-Win32-Launcher mit offiziellem Mehrgrößen-Icon, geprüfter PowerShell-Auswahl und sicherer Argumentübergabe ergänzen; keine Policy-Umgehung oder pauschale Erhöhung.
+- Erlaubnisbasiertes Benutzerpaket mit einer EXE, app/ und optionaler lizenzierter Laufzeit bauen; Entwicklerdateien und Backups ausschließen.
+- Kompatible Quellcode-Starter erhalten, examples vereinheitlichen und lokale Backups mit Integritätsprüfung außerhalb des Repositorys aufbewahren.
+- [Build, Struktur und Grenzen](docs/WINDOWS_LAUNCHER.de.md); bestehendes stabiles Release unverändert.
+
 ## 2.2.0 — 2026-11-21
 
 ### Stabiles Quellrelease
