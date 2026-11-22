@@ -5,11 +5,11 @@ BeforeAll {
     $script:launcherTemp=Join-Path ([IO.Path]::GetTempPath()) ('REMNEXA Launcher Grüße '+[guid]::NewGuid().ToString('N'))
     [void][IO.Directory]::CreateDirectory($script:launcherTemp)
     function Invoke-LauncherFixture {
-        param([string]$Directory,[string[]]$Arguments=@('--diagnose'),[switch]$NoRuntime,[switch]$UsePath)
+        param([string]$Directory,[string[]]$Arguments=@('--diagnose'),[switch]$NoRuntime,[string]$RuntimeSearchPath=$PSHOME)
         $info=[Diagnostics.ProcessStartInfo]::new((Join-Path $Directory 'REMNEXA.exe'))
         $info.UseShellExecute=$false;$info.CreateNoWindow=$true;$info.RedirectStandardOutput=$true;$info.RedirectStandardError=$true;$info.WorkingDirectory=[IO.Path]::GetTempPath()
         $info.Environment['ProgramFiles']=$script:launcherTemp;$info.Environment['ProgramW6432']=$script:launcherTemp
-        $info.Environment['PATH']=if($NoRuntime){''}else{$PSHOME}
+        $info.Environment['PATH']=if($NoRuntime){''}else{$RuntimeSearchPath}
         foreach($arg in $Arguments){$info.ArgumentList.Add($arg)}
         $process=[Diagnostics.Process]::Start($info)
         try{
@@ -74,6 +74,13 @@ Describe 'Native Windows launcher' {
         [IO.File]::WriteAllText((Join-Path $directory 'runtime/pwsh.exe'),'not executable')
         $result=Invoke-LauncherFixture $directory
         if($result.ExitCode -or ($result.Output|ConvertFrom-Json).runtime -ne (Join-Path $PSHOME 'pwsh.exe')){throw 'Invalid portable fallback failed.'}
+    }
+    It 'finds installed PowerShell even after many unrelated absolute PATH entries' {
+        $directory=New-LauncherFixture 'long search path'
+        $entries=@(0..39|ForEach-Object{Join-Path $script:launcherTemp ('unrelated-'+$_)})+@($PSHOME)
+        foreach($entry in $entries|Select-Object -First 40){[void][IO.Directory]::CreateDirectory($entry)}
+        $result=Invoke-LauncherFixture $directory -RuntimeSearchPath ($entries -join ';')
+        if($result.ExitCode -or -not ($result.Output|ConvertFrom-Json).ok){throw 'A compatible runtime late in PATH was missed.'}
     }
     It 'propagates an application failure code without wrapping or rewriting the script' {
         $directory=New-LauncherFixture 'child failure'

@@ -71,7 +71,7 @@ static BOOL Candidate(WCHAR **chosen,WCHAR *version,const WCHAR *root,const WCHA
     HeapFree(GetProcessHeap(),0,path);return FALSE;
 }
 static BOOL FindRuntime(const WCHAR *root,WCHAR **chosen,WCHAR *version) {
-    WCHAR *buffer=AllocText(),*start,*p;DWORD length;int tried=0;
+    WCHAR *buffer=AllocText(),*start,*p;DWORD length;
     if(Candidate(chosen,version,root,L"runtime\\pwsh.exe"))return TRUE;
     if(!buffer)return FALSE;
     if(GetEnvironmentVariableW(L"ProgramW6432",buffer,CAP)&&Candidate(chosen,version,buffer,L"PowerShell\\7\\pwsh.exe"))return TRUE;
@@ -83,7 +83,7 @@ static BOOL FindRuntime(const WCHAR *root,WCHAR **chosen,WCHAR *version) {
         if(*p==L';'||!*p){WCHAR saved=*p;*p=0;
             if(start[0]==L'\"'){start++;if(lstrlenW(start)>0&&start[lstrlenW(start)-1]==L'\"')start[lstrlenW(start)-1]=0;}
             /* Ignore empty/relative PATH entries: never search the current directory. */
-            if(lstrlenW(start)>2&&((start[1]==L':'&&start[2]==L'\\')||(start[0]==L'\\'&&start[1]==L'\\'))&&tried++<32)
+            if(lstrlenW(start)>2&&((start[1]==L':'&&start[2]==L'\\')||(start[0]==L'\\'&&start[1]==L'\\')))
                 if(Candidate(chosen,version,start,L"pwsh.exe"))return TRUE;
             if(!saved)break;start=p+1;
         }
