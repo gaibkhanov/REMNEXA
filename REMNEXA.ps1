@@ -27,6 +27,18 @@ param(
 
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = 'Stop'
+Import-Module -Name (Join-Path $PSScriptRoot 'Core\Platform.psm1') -Force -ErrorAction Stop
+if (-not (Get-RemnexaPlatformSupport).Supported) {
+    $platformMessage = 'REMNEXA requires Windows 11 or newer (client build 22000+). Windows 10 and Windows Server are not supported.'
+    try {
+        $platformLanguage = [Globalization.CultureInfo]::CurrentUICulture.TwoLetterISOLanguageName
+        if ($platformLanguage -notin @('de', 'en', 'es', 'fr', 'ru', 'tr')) { $platformLanguage = 'en' }
+        $platformTexts = Get-Content -LiteralPath (Join-Path $PSScriptRoot ('locales/' + $platformLanguage + '.json')) -Raw -Encoding utf8 | ConvertFrom-Json
+        if ($platformTexts.Windows11Required) { $platformMessage = $platformTexts.Windows11Required }
+    } catch { Write-Verbose 'Using the fallback Windows compatibility message.' }
+    [Console]::Error.WriteLine($platformMessage)
+    exit 14
+}
 Import-Module -Name (Join-Path $PSScriptRoot 'Core\PathSafety.psd1') -Force -ErrorAction Stop
 Import-Module -Name (Join-Path $PSScriptRoot 'Core\PrivacyBackupValidation.psd1') -Force -ErrorAction Stop
 Import-Module -Name (Join-Path $PSScriptRoot 'Core\MenuChoices.psd1') -Force -ErrorAction Stop

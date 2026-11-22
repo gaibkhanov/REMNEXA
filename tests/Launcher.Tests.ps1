@@ -37,7 +37,7 @@ AfterAll {
     $full=[IO.Path]::GetFullPath($script:launcherTemp)
     if($full.StartsWith([IO.Path]::GetTempPath(),[StringComparison]::OrdinalIgnoreCase) -and (Split-Path -Leaf $full) -match '^REMNEXA Launcher Grüße [a-f0-9]{32}$'){Remove-Item -LiteralPath $full -Recurse -Force}
 }
-Describe 'Native Windows launcher' {
+Describe 'Native Windows launcher' -Tag Windows11Client {
     It 'is an x64 native PE with embedded version and icon resources' {
         $bytes=[IO.File]::ReadAllBytes($script:launcherBinary);$pe=[BitConverter]::ToInt32($bytes,0x3c)
         if($bytes[0] -ne 0x4d -or [BitConverter]::ToUInt16($bytes,$pe+4) -ne 0x8664){throw 'Not an x64 PE.'}

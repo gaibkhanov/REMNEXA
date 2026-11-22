@@ -95,10 +95,21 @@ static int Error(const WCHAR *message,int code,BOOL diagnostic) {
     else MessageBoxW(NULL,message,L"REMNEXA",MB_OK|MB_ICONERROR);
     return code;
 }
+static BOOL SupportedWindows(void) {
+    typedef LONG (WINAPI *VersionProc)(OSVERSIONINFOEXW *);
+    HMODULE module=GetModuleHandleW(L"ntdll.dll");
+    VersionProc query=module?(VersionProc)GetProcAddress(module,"RtlGetVersion"):NULL;
+    OSVERSIONINFOEXW version={0};version.dwOSVersionInfoSize=sizeof(version);
+    if(!query||query(&version)!=0)return FALSE;
+    return version.wProductType==VER_NT_WORKSTATION &&
+        (version.dwMajorVersion>10||(version.dwMajorVersion==10&&
+            (version.dwMinorVersion>0||(version.dwMinorVersion==0&&version.dwBuildNumber>=22000))));
+}
 static int Run(void) {
     WCHAR *root=AllocText(),*script=NULL,*runtime=NULL,*version=AllocText(),*command=AllocText(),*last;int argc=0,i;WCHAR **args=CommandLineToArgvW(GetCommandLineW(),&argc);
     BOOL diagnostic=argc==2&&lstrcmpW(args[1],L"--diagnose")==0;STARTUPINFOW si={0};PROCESS_INFORMATION pi={0};DWORD exitCode=1;
     if(!root||!version||!command||!args)return 1;
+    if(!SupportedWindows())return Error(L"REMNEXA benoetigt Windows 11 oder neuer (Client-Build ab 22000). Windows 10 und Windows Server werden nicht unterstuetzt.\nREMNEXA requires Windows 11 or newer (client build 22000+). Windows 10 and Windows Server are not supported.",14,diagnostic);
     SetLastError(0);if(!GetModuleFileNameW(NULL,root,CAP)||GetLastError()==ERROR_INSUFFICIENT_BUFFER)return 1;
     last=root;for(WCHAR *p=root;*p;p++)if(*p==L'\\')last=p;*last=0;
     SetConsoleTitleW(L"REMNEXA");SetConsoleOutputCP(CP_UTF8);SetConsoleCP(CP_UTF8);

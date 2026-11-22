@@ -6,7 +6,8 @@
 
 | Bestandteil/Szenario | Ziel oder Voraussetzung | Prüfstatus |
 | --- | --- | --- |
-| Windows | Windows 10 / 11 | Prüfungen am Entwicklungsrechner; saubere VM-Matrix offen. |
+| Windows | Windows 11 oder neuer, Client-Build ab 22000 | Prüfung in nativem Launcher und PowerShell-Einstieg; Entwicklungsrechner und simulierte nicht unterstützte Versionen geprüft; saubere Windows-11-VM-Matrix offen. |
+| Windows 10 / älter / Server | Nicht unterstützt | Abweisung vor Anwendungsinitialisierung, Datenmigration oder Hintergrundaufgaben. Vorhandene Release-Artefakte bleiben unverändert. |
 | Architektur | Windows-x64-Paket | Keine vollständige x64-Installationsmatrix; ARM64 und 32 Bit nicht validiert. |
 | PowerShell | Ab 7.5 | Lokale Tests auf 7.6.9 dokumentiert; Mindestversion wird geprüft. |
 | Windows PowerShell 5.1 | Nicht als Anwendungslaufzeit unterstützt | Fehlerfreies Parsen macht sie nicht zur unterstützten Laufzeit. |
@@ -24,6 +25,8 @@
 
 ## Noch erforderliche Release-Prüfungen
 
+Gehostete GitHub-Windows-Runner verwenden Windows Server. CI schließt mit `Windows11Client` markierte Tests ausdrücklich aus, protokolliert `NotRunCount` und führt tatsächliche Host-Abweisung, simulierte Versionsgrenzen sowie Modul- und Pakettests weiter aus. Ein grüner gehosteter Lauf ersetzt keine lokalen Windows-11-Start- und Selbsttests. CI erhält keine Umgehung der produktiven Kompatibilitätsprüfung.
+
 Teste frische unterstützte Windows-Systeme, Standard-/Administratorkonten, gesperrte/gemeinsame Ressourcen, abgebrochene UAC, Neustarts, Reparaturfehler, unterbrochene Updates und Rollback in wegwerfbaren VMs. Dokumentiere genaue Builds, Hardware und Komponentenstände.
 
 Prüfungen zu Scanlebenszyklus, CLI-/nativen Messungen und Ressourcenlimits liegen vor; siehe Release-Hinweise und verlinkte Messprotokolle. Daraus folgen keine universellen Beschleunigungsversprechen, Startzeit-/Leerlaufziele oder KI-Leistungswerte.
@@ -32,4 +35,4 @@ Siehe [Prüfbericht](VERSION_2.2.0.de.md) und [Roadmap](DEVELOPMENT_ROADMAP.de.m
 
 ## Aktueller Prüfstand für 2.2.0
 
-Der [Release-Prüfstand](RELEASE_2.2.0.de.md) ergänzt diese Matrix: rc.8 bestand 204 lokale Pester-Tests, 12 Selbsttests und die Fehleranalyse von 106 PowerShell-Dateien; auch dessen GitHub-CI war erfolgreich. Tatsächlicher erhöhter Worker-Start, Ressourcenlimits und CLI-/native Scans sind dokumentiert. Das endgültige Quellrelease wird erneut geprüft. Quell-ZIP und Prüfsumme ersetzen keinen Installer oder eine digitale Signatur. Windows 10, echte 8-GB-VM, HDD und die vollständige Konto-/UAC-Matrix bleiben ungeprüft.
+Der [Release-Prüfstand](RELEASE_2.2.0.de.md) ergänzt diese Matrix: rc.8 bestand 204 lokale Pester-Tests, 12 Selbsttests und die Fehleranalyse von 106 PowerShell-Dateien; auch dessen GitHub-CI war erfolgreich. Tatsächlicher erhöhter Worker-Start, Ressourcenlimits und CLI-/native Scans sind dokumentiert. Das endgültige Quellrelease wird erneut geprüft. Quell-ZIP und Prüfsumme ersetzen keinen Installer oder eine digitale Signatur. Windows 10 wird in aktuellen Entwicklungsständen nicht unterstützt. Echte 8-GB-VM, HDD und die vollständige Konto-/UAC-Matrix bleiben ungeprüft.

@@ -23,11 +23,12 @@ Describe 'Clean end-user Windows distribution' {
         $root=$script:userPackage.Directory
         $manifest=Get-Content (Join-Path $root 'app/package-manifest.json') -Raw|ConvertFrom-Json
         if($manifest.RuntimeIncluded -or $manifest.Signed -or $manifest.PackageStatus -ne 'LauncherPreview'){throw 'Incorrect distribution claims.'}
+        if($manifest.MinimumWindowsVersion -ne '10.0.22000' -or $manifest.WindowsProductType -ne 'Workstation'){throw 'Windows 11 client requirement is missing.'}
         foreach($record in $manifest.Files){if((Get-FileHash -LiteralPath (Join-Path $root $record.Path) -Algorithm SHA256).Hash.ToLowerInvariant() -cne $record.SHA256){throw 'Copied application hash mismatch.'}}
         foreach($relative in @('REMNEXA.ps1','Core/PathSafety.psd1','Antivirus/Antivirus.psd1','Antivirus/Workers/ScanHost.ps1','Antivirus/Workers/COPYING.txt','config/antivirus.json','assets/remnexa-logo.png','assets/icons/remnexa.ico','LICENSE')){if(-not(Test-Path -LiteralPath (Join-Path $root ('app/'+$relative)))){throw ('Required application file missing: '+$relative)}}
         foreach($code in @('de','en','es','fr','ru','tr')){[void](Get-Content (Join-Path $root ('app/locales/'+$code+'.json')) -Raw|ConvertFrom-Json)}
     }
-    It 'starts the real packaged application through the native launcher and passes self-tests' {
+    It 'starts the real packaged application through the native launcher and passes self-tests' -Tag Windows11Client {
         $info=[Diagnostics.ProcessStartInfo]::new($script:userPackage.Launcher)
         $info.UseShellExecute=$false;$info.CreateNoWindow=$true;$info.RedirectStandardOutput=$true;$info.RedirectStandardError=$true;$info.WorkingDirectory=[IO.Path]::GetTempPath();$info.Environment['PATH']=$PSHOME
         foreach($arg in @('-SelfTest','-NoElevation')){$info.ArgumentList.Add($arg)}

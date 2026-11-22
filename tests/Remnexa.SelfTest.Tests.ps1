@@ -1,5 +1,5 @@
 Describe 'REMNEXA source-package self-test' {
-    It 'passes when optional portable runtime and ClamAV engine are absent' {
+    It 'passes when optional portable runtime and ClamAV engine are absent' -Tag Windows11Client {
         $projectRoot = Split-Path -Parent $PSScriptRoot
         $tempRoot = Join-Path ([IO.Path]::GetTempPath()) ('REMNEXA-Pester-' + [guid]::NewGuid().ToString('N'))
         $appRoot = Join-Path $tempRoot 'app'

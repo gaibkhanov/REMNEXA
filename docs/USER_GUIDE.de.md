@@ -14,7 +14,7 @@ Starte `REMNEXA.cmd` oder führe aus:
 pwsh -NoProfile -File .\REMNEXA.ps1
 ```
 
-PowerShell ab 7.5 ist erforderlich. Das Hauptmenü startet ohne Administratorabfrage. Vor erhöhtem Zugriff für eine Aktion oder den Antivirus-Bereich erklärt REMNEXA den Grund. Enter öffnet die Windows-Abfrage; Ja erlaubt die Erhöhung, Nein lehnt ab. Im Hinweis kehrt 0 zurück und X beendet. Ein bereits erhöhter Prozess fragt nicht erneut.
+Aktuelle Entwicklungsstände benötigen Windows 11 oder neuer (Client-Build ab 22000) und PowerShell ab 7.5. Windows 10 und Windows Server werden nicht unterstützt; bestehende veröffentlichte Releases bleiben unverändert. Das Hauptmenü startet ohne Administratorabfrage. Vor erhöhtem Zugriff für eine Aktion oder den Antivirus-Bereich erklärt REMNEXA den Grund. Enter öffnet die Windows-Abfrage; Ja erlaubt die Erhöhung, Nein lehnt ab. Im Hinweis kehrt 0 zurück und X beendet. Ein bereits erhöhter Prozess fragt nicht erneut.
 
 Die Administratorfreigabe startet einen erhöhten Anwendungsprozess. Sie erlaubt nicht beliebige Änderungen; gesonderte Aktionsbestätigungen bleiben erforderlich.
 

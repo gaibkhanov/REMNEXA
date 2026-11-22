@@ -76,12 +76,20 @@ jobs:
           $configuration = New-PesterConfiguration
           $configuration.Run.Path = './tests'
           $configuration.Run.PassThru = $true
+          Import-Module ./Core/Platform.psm1 -Force
+          $platform = Get-RemnexaPlatformSupport
+          if (-not $platform.Supported) {
+            # Hosted Windows runners use Server, not a supported Windows 11 client.
+            # Keep real OS-rejection tests and all module/build tests active.
+            $configuration.Filter.ExcludeTag = @('Windows11Client')
+            Write-Host '::notice title=Windows 11 client coverage::Client startup tests require a Windows 11 machine and are excluded on this unsupported host. Platform rejection tests remain enabled.'
+          }
           $configuration.TestResult.Enabled = $true
           $configuration.TestResult.OutputPath = './dist/pester-results.xml'
           $result = Invoke-Pester -Configuration $configuration
-          $result | Select-Object PassedCount,FailedCount,SkippedCount,TotalCount |
+          $result | Select-Object PassedCount,FailedCount,SkippedCount,NotRunCount,TotalCount |
             ConvertTo-Json | Set-Content ./dist/ci-test-summary.json -Encoding utf8
-          Write-Host "::notice title=Pester test totals::Passed=$($result.PassedCount); Failed=$($result.FailedCount); Skipped=$($result.SkippedCount); Total=$($result.TotalCount)"
+          Write-Host "::notice title=Pester test totals::Passed=$($result.PassedCount); Failed=$($result.FailedCount); Skipped=$($result.SkippedCount); NotRun=$($result.NotRunCount); Total=$($result.TotalCount)"
           if ($result.FailedCount -gt 0) {
             throw "$($result.FailedCount) Pester test(s) failed."
           }

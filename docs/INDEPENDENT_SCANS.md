@@ -52,7 +52,7 @@ Final local regression on PowerShell 7.6.9 and Pester 5.7.1: **204 passed, 0 fai
 
 `tools/Test-ClamAVIndependentScan.ps1` ran installed ClamAV 1.5.4 through both CLI and native private-worker backends against **2,501 harmless files and one custom hash-signature match per backend**. Each creator exited while the scan was still active, a paused scan resumed before detachment, and the scan completed with full fixture coverage and a saved report. No automatic quarantine, personal-directory scan or installed database modification occurred. See [sanitized results](benchmarks/rc8-independent-scan.json). This custom HDB fixture verifies lifecycle behavior, not malware-detection effectiveness or full-database performance.
 
-Tests use the available Windows 11 SSD host with 16 GB RAM. Windows 10, a real 8 GB VM, HDD and malware-laboratory coverage remain unverified. Remote CI is a separate check; local test success does not establish a successful GitHub run. Existing [native-engine licensing boundaries](PRIVATE_SCAN_ENGINE.md) still apply.
+Tests use the available Windows 11 SSD host with 16 GB RAM. Windows 10 is unsupported in current development builds. A real 8 GB VM, HDD and malware-laboratory coverage remain unverified. Remote CI is a separate check; local test success does not establish a successful GitHub run. Existing [native-engine licensing boundaries](PRIVATE_SCAN_ENGINE.md) still apply.
 
 From a clean candidate checkout, build and verify the source distribution:
 

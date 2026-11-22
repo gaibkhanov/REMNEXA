@@ -1,4 +1,5 @@
 {
+  "Windows11Required": "Для REMNEXA требуется Windows 11 или новее (клиентская сборка 22000 и выше). Windows 10 и Windows Server не поддерживаются.",
   "ProgressRunning": "Обработка",
   "ProgressUnknown": "Общий объём пока неизвестен",
   "ProgressWaiting": "Ожидание вашего выбора",

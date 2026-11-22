@@ -52,7 +52,7 @@ Abschließende lokale Regression mit PowerShell 7.6.9 und Pester 5.7.1: **204 be
 
 `tools/Test-ClamAVIndependentScan.ps1` lief mit installiertem ClamAV 1.5.4 über CLI und privaten nativen Worker gegen **jeweils 2.501 harmlose Dateien und einen benutzerdefinierten Hash-Signaturtreffer**. Jeder erzeugende Prozess endete bei noch aktivem Scan, ein pausierter Scan wurde vor dem Trennen fortgesetzt und der Scan endete mit vollständiger Testabdeckung und gespeichertem Bericht. Keine automatische Quarantäne, keine Prüfung persönlicher Ordner und keine Änderung installierter Datenbanken. Siehe [bereinigtes Prüfprotokoll](benchmarks/rc8-independent-scan.json). Diese eigene HDB-Testsignatur prüft den Lebenszyklus, nicht Malware-Erkennungsleistung oder die Geschwindigkeit mit vollständiger Datenbank.
 
-Getestet wurde auf dem vorhandenen Windows-11-SSD-Rechner mit 16 GB RAM. Windows 10, echte 8-GB-VM, HDD und Malware-Labor bleiben ungeprüft. Remote-CI ist eine eigene Prüfung; bestandene lokale Tests belegen keinen erfolgreichen GitHub-Lauf. Die bisherigen [Lizenzgrenzen der nativen Engine](PRIVATE_SCAN_ENGINE.de.md) gelten weiter.
+Getestet wurde auf dem vorhandenen Windows-11-SSD-Rechner mit 16 GB RAM. Windows 10 wird in aktuellen Entwicklungsständen nicht unterstützt. Echte 8-GB-VM, HDD und Malware-Labor bleiben ungeprüft. Remote-CI ist eine eigene Prüfung; bestandene lokale Tests belegen keinen erfolgreichen GitHub-Lauf. Die bisherigen [Lizenzgrenzen der nativen Engine](PRIVATE_SCAN_ENGINE.de.md) gelten weiter.
 
 Quellpaket aus einem sauberen Kandidaten-Checkout bauen und prüfen:
 

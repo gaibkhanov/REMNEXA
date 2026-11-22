@@ -1,5 +1,5 @@
 Describe 'REMNEXA application startup in a redirected host' {
-    It 'keeps the real home menu responsive with background work <Background> and cleans up on exit' -TestCases @(@{Background=$false},@{Background=$true}) {
+    It 'keeps the real home menu responsive with background work <Background> and cleans up on exit' -Tag Windows11Client -TestCases @(@{Background=$false},@{Background=$true}) {
         param($Background)
         $root = Split-Path -Parent $PSScriptRoot
         $fixture = Join-Path ([IO.Path]::GetTempPath()) ('REMNEXA-ApplicationStart-' + [guid]::NewGuid().ToString('N'))

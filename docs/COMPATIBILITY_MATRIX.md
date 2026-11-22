@@ -6,7 +6,8 @@
 
 | Component/scenario | Target or requirement | Verification status |
 | --- | --- | --- |
-| Windows | Windows 10 / 11 | Development-host checks only; clean VM matrix pending. |
+| Windows | Windows 11 or newer, client build 22000+ | Enforced by native launcher and PowerShell entry; development-host checks and simulated unsupported-version tests; clean Windows 11 VM matrix pending. |
+| Windows 10 / older / Server | Unsupported | Rejected before application initialization, data migration or background workers. Existing released artifacts are unchanged. |
 | Architecture | Windows x64 distribution | No complete x64 packaging/install matrix; ARM64 and 32-bit not validated. |
 | PowerShell | 7.5+ | Recorded local tests on 7.6.9; minimum-version enforcement exists. |
 | Windows PowerShell 5.1 | Unsupported for running the app | A successful syntax parse does not make it supported. |
@@ -23,6 +24,8 @@
 | Installer/portable release | Planned verified packages | Verified source ZIP/checksum; no 2.2.0 installer, Complete AI package or digital signature. |
 
 ## Release validation still required
+
+Hosted GitHub Windows runners use Windows Server. CI explicitly excludes tests tagged `Windows11Client`, reports `NotRunCount`, and still runs the actual-host rejection, simulated version boundaries, module and packaging tests. A green hosted run does not replace local Windows 11 client startup and self-tests. No production compatibility bypass is added for CI.
 
 Exercise fresh supported Windows installations, standard/admin accounts, locked/shared resources, cancelled UAC, restarts, failed repairs, interrupted updates and rollback in disposable VMs. Record exact Windows builds, hardware and component versions.
 

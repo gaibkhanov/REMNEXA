@@ -66,4 +66,4 @@ Final local regression: **191 passed, 0 failed, 0 skipped** with Pester 5.7.1 an
 
 The native test also verifies reuse of the same engine PID for the next request and release of a completed scan's cached engine before foreground access. Background-start return times are recorded with unequal cold setup; these are responsiveness observations, not a comparative engine performance benchmark. See [sanitized results](benchmarks/rc7-background-scan.json).
 
-Validation is on the available Windows 11 SSD host with 16 GB RAM. These checks do not establish Windows 10, HDD, actual 8 GB VM, malware-detection effectiveness or long-pause behavior for every file format. The [existing native engine and licensing boundaries](PRIVATE_SCAN_ENGINE.md) remain in force.
+Validation is on the available Windows 11 SSD host with 16 GB RAM. Windows 10 is unsupported in current development builds. These checks do not establish HDD, actual 8 GB VM, malware-detection effectiveness or long-pause behavior for every file format. The [existing native engine and licensing boundaries](PRIVATE_SCAN_ENGINE.md) remain in force.

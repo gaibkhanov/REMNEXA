@@ -64,6 +64,7 @@ try {
 REMNEXA 2.2.0 - Windows x64 launcher preview / Launcher-Vorschau
 
 EN: Extract the entire folder and double-click REMNEXA.exe.
+Requires Windows 11 or newer (client build 22000+). Windows 10/Server are unsupported.
 PowerShell 7.5+ (stable) is required unless a compatible runtime is bundled.
 The launcher uses runtime/pwsh.exe first, then an installed compatible runtime.
 No automatic elevation, policy bypass, service or antivirus exclusion is added.
@@ -75,6 +76,7 @@ Third-party notices: app/THIRD_PARTY_NOTICES.md.
 Documentation: https://github.com/gaibkhanov/REMNEXA
 
 DE: Den ganzen Ordner entpacken und REMNEXA.exe doppelklicken.
+Windows 11 oder neuer (Client-Build ab 22000) erforderlich; Windows 10/Server nicht unterstützt.
 PowerShell ab 7.5 (stabil) wird benötigt, sofern keine passende Laufzeit beiliegt.
 Zuerst wird runtime/pwsh.exe, danach eine passende installierte Laufzeit genutzt.
 Keine automatische Erhöhung, Policy-Umgehung, Dienste oder Antivirus-Ausnahmen.
@@ -90,7 +92,7 @@ Drittanbieterhinweise: app/THIRD_PARTY_NOTICES.de.md.
     }
     [IO.File]::WriteAllText((Join-Path $stage 'README.txt'),$readme.Replace('REMNEXA 2.2.0',('REMNEXA '+$version)),[Text.UTF8Encoding]::new($false))
     $records=@(Get-ChildItem -LiteralPath $stage -File -Recurse|ForEach-Object{[ordered]@{Path=[IO.Path]::GetRelativePath($stage,$_.FullName).Replace('\','/');SHA256=(Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()}}|Sort-Object { $_.Path })
-    $manifest=[ordered]@{Version=$version;PackageStatus='LauncherPreview';SourceCommit=$commit;Architecture='x64';Compiler='Zig 0.15.2';RuntimeIncluded=[bool]$RuntimePath;Signed=[bool]$signingReport;Signing=$signingReport;Files=$records}
+    $manifest=[ordered]@{Version=$version;PackageStatus='LauncherPreview';SourceCommit=$commit;Architecture='x64';MinimumWindowsVersion='10.0.22000';WindowsProductType='Workstation';Compiler='Zig 0.15.2';RuntimeIncluded=[bool]$RuntimePath;Signed=[bool]$signingReport;Signing=$signingReport;Files=$records}
     [IO.File]::WriteAllText((Join-Path $stage 'app/package-manifest.json'),($manifest|ConvertTo-Json -Depth 6),[Text.UTF8Encoding]::new($false))
     # Security/indexing tools can briefly hold a newly copied runtime directory.
     # Retry the same atomic rename with a fixed bound; never weaken permissions.

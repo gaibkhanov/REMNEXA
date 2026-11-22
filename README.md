@@ -6,7 +6,7 @@
 
 A free, open-source Windows utility for application removal, startup management, system maintenance and optional local malware scanning. Review detected items and choose which supported changes to make.
 
-**Windows 10 / 11 · PowerShell 7.5+ · Open Source · Six interface languages**
+**Windows 11 or newer · PowerShell 7.5+ · Open Source · Six interface languages**
 
 > **Version 2.2.0**: [Download and release notes](https://github.com/gaibkhanov/REMNEXA/releases/tag/v2.2.0). Source package with SHA-256 checksum; PowerShell and optional ClamAV components are required separately. See [installation, validation and limits](docs/RELEASE_2.2.0.md).
 
@@ -46,7 +46,7 @@ German, English, Spanish, French, Russian and Turkish. Translation resources are
 
 ## Installation
 
-Requirements: Windows 10 or 11, PowerShell **7.5 or newer**, and administrator approval for operations requiring elevated access. Windows PowerShell 5.1 cannot run the application. Consult the [compatibility matrix](docs/COMPATIBILITY_MATRIX.md) for tested limits.
+Requirements: Windows 11 or newer (Windows client build **22000+**), PowerShell **7.5 or newer**, and administrator approval for operations requiring elevated access. Current development builds reject Windows 10, older Windows versions and Windows Server before application initialization. Windows PowerShell 5.1 cannot run the application. Existing published release files remain unchanged. Consult the [compatibility matrix](docs/COMPATIBILITY_MATRIX.md) for tested limits.
 
 Download the release source ZIP, or check out the release tag with Git:
 

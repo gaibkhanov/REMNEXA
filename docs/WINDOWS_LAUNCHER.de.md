@@ -34,7 +34,7 @@ Das Icon übernimmt das vorhandene offizielle PNG, entfernt für Lesbarkeit nur 
 
 ## Build reproduzieren
 
-Windows x64, PowerShell ab 7.5, Git und festgelegtes Zig 0.15.2 verwenden:
+Windows 11 x64 (Client-Build ab 22000), PowerShell ab 7.5, Git und festgelegtes Zig 0.15.2 verwenden:
 
 ```powershell
 ./scripts/Install-LauncherToolchain.ps1
@@ -68,6 +68,8 @@ Das Manifest setzt `Signed` erst nach erfolgreicher Prüfung und protokolliert d
 
 Launcher-Regressionen prüfen PE-/CLR-Metadaten, Icon-Größen, Quell-/Paketlayout, Unicode/Leerzeichen, Argumentsonderzeichen, fehlende/defekte Laufzeit, Rechte-/Policy-Erhalt, Rückgabecodes und Weiterleitungen. Pakettests prüfen erlaubte Inhalte, Dateihashes, sechs Sprachen, Modul-/Lizenzabhängigkeiten und echte Anwendungsselbsttests über die EXE. Bestehende Antivirus-/Navigationstests bleiben relevant.
 
-Die Vorschau zertifiziert weder SmartScreen-Reputation noch jede Windows-10-/Terminal-Variante oder Offline-Ersteinrichtung optionaler Komponenten. Eine Benutzer-ExecutionPolicy kann heruntergeladene Skripte sperren; der Launcher meldet den Fehler und umgeht die Richtlinie nicht. Paketinhalt und unabhängige Sicherungen vor Systemänderungen prüfen. Die Build-Skripte verändern keine stabilen Releases.
+Nativer Launcher und direkter PowerShell-Einstieg benötigen Windows 11 oder neuer (Client-Build ab 22000). Windows 10, ältere Windows-Versionen und Windows Server werden vor Laufzeitsuche bzw. Anwendungsinitialisierung abgewiesen. Der Launcher nutzt RtlGetVersion; das Skript prüft Betriebssystemversion und Client-Produkttyp. Die Kompatibilitäts-GUID im Manifest wird mit Windows 10 geteilt und ersetzt diese Buildprüfung nicht. Lässt sich kein unterstützter Client feststellen, wird der Start abgewiesen. Die Mindestanforderung gilt für aktuelle Entwicklungsstände; vorhandene veröffentlichte Artefakte bleiben unverändert.
+
+Die Vorschau zertifiziert weder SmartScreen-Reputation noch jede unterstützte Windows-11-/Terminal-Variante oder Offline-Ersteinrichtung optionaler Komponenten. Eine Benutzer-ExecutionPolicy kann heruntergeladene Skripte sperren; der Launcher meldet den Fehler und umgeht die Richtlinie nicht. Paketinhalt und unabhängige Sicherungen vor Systemänderungen prüfen. Die Build-Skripte verändern keine stabilen Releases.
 
 Dokumentierte lokale Prüfung: **216 Tests bestanden, 0 fehlgeschlagen, 0 übersprungen** (Pester 5.7.1, PowerShell 7.6.9); die vier Pakettests wurden nach den Paketkorrekturen erfolgreich wiederholt. Syntax- und PSScriptAnalyzer-Fehlerprüfungen bestehen für **112 PowerShell-Dateien**. Zwei saubere Builds ohne optionale Laufzeit ergaben bytegleiche ZIPs. Das Paket mit PowerShell 7.6.9 enthält **738 Dateien** mit geprüften Hashes und vollständigen Laufzeit-Lizenzhinweisen. **12 Anwendungsselbsttests bestehen bei abgeschalteter Suche nach installierten Laufzeiten**, ohne erhöhte Rechte. Der zusätzliche Upstream-Preview-CMD-Starter ist ausgeschlossen. Ein echter Start über die Windows-Shell nutzte eine gemeinsame Konsole für Launcher und PowerShell und endete über das Hauptmenü; auch die Icon-Extraktion durch die Windows-Shell besteht. Dies dokumentiert den verfügbaren Windows-11-Rechner, keine vollständige Windows-Kompatibilitätsmatrix.

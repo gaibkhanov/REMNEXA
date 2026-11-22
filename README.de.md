@@ -6,7 +6,7 @@
 
 Ein kostenloses Open-Source-Werkzeug für die Deinstallation von Anwendungen, Autostart-Verwaltung, Windows-Wartung und optionale lokale Malware-Scans. Prüfe die gefundenen Einträge und entscheide selbst über die unterstützten Änderungen.
 
-**Windows 10 / 11 · PowerShell 7.5+ · Open Source · Sechs Oberflächensprachen**
+**Windows 11 oder neuer · PowerShell 7.5+ · Open Source · Sechs Oberflächensprachen**
 
 > **Version 2.2.0**: [Download und Release Notes](https://github.com/gaibkhanov/REMNEXA/releases/tag/v2.2.0). Quellpaket mit SHA-256-Prüfsumme; PowerShell und optionale ClamAV-Komponenten werden separat benötigt. Siehe [Installation, Prüfstand und Grenzen](docs/RELEASE_2.2.0.de.md).
 
@@ -46,7 +46,7 @@ Deutsch, Englisch, Spanisch, Französisch, Russisch und Türkisch. Übersetzunge
 
 ## Installation
 
-Voraussetzungen: Windows 10 oder 11, PowerShell **ab Version 7.5** sowie Administratorfreigabe für Aktionen, die erhöhte Rechte benötigen. Windows PowerShell 5.1 kann die Anwendung nicht ausführen. Die [Kompatibilitätsmatrix](docs/COMPATIBILITY_MATRIX.de.md) beschreibt die Prüfgrenzen.
+Voraussetzungen: Windows 11 oder neuer (Windows-Client-Build **ab 22000**), PowerShell **ab Version 7.5** sowie Administratorfreigabe für Aktionen, die erhöhte Rechte benötigen. Aktuelle Entwicklungsstände weisen Windows 10, ältere Windows-Versionen und Windows Server vor der Anwendungsinitialisierung ab. Windows PowerShell 5.1 kann die Anwendung nicht ausführen. Bereits veröffentlichte Releasedateien bleiben unverändert. Die [Kompatibilitätsmatrix](docs/COMPATIBILITY_MATRIX.de.md) beschreibt die Prüfgrenzen.
 
 Lade das Release-Quellpaket herunter oder verwende den Release-Tag mit Git:
 

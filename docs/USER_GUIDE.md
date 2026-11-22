@@ -14,7 +14,7 @@ Launch `REMNEXA.cmd`, or run:
 pwsh -NoProfile -File .\REMNEXA.ps1
 ```
 
-PowerShell 7.5+ is required. The home menu starts without an administrator request. Before requesting elevated access for an operation or the Antivirus workspace, REMNEXA explains why. Press Enter to open the Windows prompt; choose Yes to allow elevation or No to decline. In the explanation, 0 returns and X exits. An already elevated process does not request elevation again.
+Current development builds require Windows 11 or newer (client build 22000+) and PowerShell 7.5+. Windows 10 and Windows Server are unsupported; existing published releases remain unchanged. The home menu starts without an administrator request. Before requesting elevated access for an operation or the Antivirus workspace, REMNEXA explains why. Press Enter to open the Windows prompt; choose Yes to allow elevation or No to decline. In the explanation, 0 returns and X exits. An already elevated process does not request elevation again.
 
 Administrator approval starts an elevated application process; it does not grant unlimited permission to change everything. Separate action confirmations still apply.
 

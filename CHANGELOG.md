@@ -6,6 +6,7 @@ Development changes are not published release claims. Existing release artifacts
 
 ## Unreleased — Windows launcher preview
 
+- Require Windows 11 or newer (client build 22000+) in the native launcher and PowerShell entry; reject Windows 10/older/Server before application initialization, add six-language notices and platform-boundary regression tests. Existing release artifacts remain unchanged.
 - Add opt-in SHA-256 Authenticode signing with HTTPS RFC 3161 timestamps, trusted-certificate/tool checks, verification before package hashing and isolated regression tests. The current artifact remains unsigned because signing credentials/tools are unavailable.
 - Add native x64 Win32 launcher with official multi-size icon, validated PowerShell discovery and safe argument passing; no policy bypass or blanket elevation.
 - Build an allowlisted user package with one EXE, app/ and optional licensed runtime; exclude developer files and backups.

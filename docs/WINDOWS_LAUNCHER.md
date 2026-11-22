@@ -34,7 +34,7 @@ The icon preserves the existing official PNG artwork, trims only transparent mar
 
 ## Reproduce the build
 
-Use Windows x64, PowerShell 7.5+, Git and the pinned Zig 0.15.2 toolchain:
+Use Windows 11 x64 (client build 22000+), PowerShell 7.5+, Git and the pinned Zig 0.15.2 toolchain:
 
 ```powershell
 ./scripts/Install-LauncherToolchain.ps1
@@ -68,6 +68,8 @@ The manifest sets `Signed` only after successful verification and records the pu
 
 Launcher regression checks cover PE/CLR metadata, icon resolutions, source/package layouts, Unicode and spaces, argument metacharacters, runtime absence/corruption, no elevation/policy override, exit codes and compatibility routes. User-package tests check allowlisted contents, per-file hashes, six languages, module/license dependencies and real application self-tests through the EXE. Existing Antivirus/navigation tests remain applicable.
 
-The preview does not certify SmartScreen reputation, every Windows 10/Terminal variant or offline optional-component setup. Downloaded scripts may be blocked by a user's execution policy; the launcher reports failure instead of bypassing that policy. Review package contents and independent backups before system changes. Stable releases are not modified by these build scripts.
+The native launcher and direct PowerShell entry require Windows 11 or newer (client build 22000+). Windows 10, older Windows versions and Windows Server are rejected before runtime discovery or application initialization. The launcher queries RtlGetVersion; the script checks the OS version and client product type. The compatibility manifest GUID is shared with Windows 10 and does not replace this build check. Failure to determine a supported client is rejected. This minimum applies to current development builds; existing published artifacts remain unchanged.
+
+The preview does not certify SmartScreen reputation, every supported Windows 11/Terminal variant or offline optional-component setup. Downloaded scripts may be blocked by a user's execution policy; the launcher reports failure instead of bypassing that policy. Review package contents and independent backups before system changes. Stable releases are not modified by these build scripts.
 
 Recorded local validation: **216 tests passed, 0 failed, 0 skipped** (Pester 5.7.1, PowerShell 7.6.9); the four package tests were repeated successfully after packaging fixes. Syntax and PSScriptAnalyzer error gates passed on **112 PowerShell files**. Two clean builds without an optional runtime produced byte-identical ZIPs. The bundle with PowerShell 7.6.9 has **738 files**, verified hashes, complete runtime licenses/notices and **12 passing application self-tests with installed-runtime discovery disabled**, without elevation. The redundant upstream preview CMD alias is excluded. A real Windows-shell launch shared one console between launcher and PowerShell and exited through the main menu; Windows shell icon extraction also succeeded. This records the available Windows 11 host, not a full Windows compatibility matrix.
