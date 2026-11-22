@@ -10,6 +10,10 @@ on:
       - 'tests/**'
       - 'locales/**'
       - 'config/**'
+      - 'src/**'
+      - 'scripts/**'
+      - 'assets/**'
+      - '.gitattributes'
       - '.github/workflows/quality.yml'
   pull_request:
     paths:
@@ -20,6 +24,10 @@ on:
       - 'tests/**'
       - 'locales/**'
       - 'config/**'
+      - 'src/**'
+      - 'scripts/**'
+      - 'assets/**'
+      - '.gitattributes'
       - '.github/workflows/quality.yml'
   workflow_dispatch:
 
