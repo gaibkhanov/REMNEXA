@@ -40,8 +40,11 @@ try {
         if(-not((Test-Path -LiteralPath (Join-Path $runtime 'LICENSE.txt')) -or (Test-Path -LiteralPath (Join-Path $runtime 'LICENSE')))){throw 'Optional runtime license is missing.'}
         if(-not(Test-Path -LiteralPath (Join-Path $runtime 'ThirdPartyNotices.txt'))){throw 'Optional PowerShell third-party notices are missing.'}
         foreach($file in Get-ChildItem -LiteralPath $runtime -File -Recurse -Force){
+            $relative=[IO.Path]::GetRelativePath($runtime,$file.FullName)
+            # The optional upstream preview CMD alias is not a runtime dependency.
+            if($relative -match '^preview[\\/]'){continue}
             if(-not(Get-RemnexaPathSafety $file.FullName).IsSafe){throw 'Unsafe runtime component.'}
-            $relative=[IO.Path]::GetRelativePath($runtime,$file.FullName);$target=Join-Path $stage ('runtime/'+$relative)
+            $target=Join-Path $stage ('runtime/'+$relative)
             [void][IO.Directory]::CreateDirectory((Split-Path -Parent $target));[IO.File]::Copy($file.FullName,$target)
         }
         $diagnostic=& (Join-Path $stage 'REMNEXA.exe') --diagnose
