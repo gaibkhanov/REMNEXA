@@ -4,7 +4,7 @@ param([Parameter(Mandatory)][string]$SessionDirectory)
 $ErrorActionPreference='Stop'
 $module=Import-Module (Join-Path $PSScriptRoot '../Antivirus.psd1') -PassThru
 & $module {$script:AVUseLocalBackground=$true}
-$rpc=$null
+$rpc=$null;$consoleView=$null
 try {
     & $module {
         param($Directory)
@@ -20,7 +20,7 @@ try {
     & $module {param($Path,$Data)Write-AVSessionJson $Path $Data} (Join-Path $SessionDirectory 'server.json') $descriptor
     $parentId=[int]$owner.ParentId;$parentTicks=[long]$owner.ParentStartTicks
     $detached=$false;$lastWrite=[DateTimeOffset]::MinValue;$lastDraw=[DateTimeOffset]::MinValue;$finishedAt=$null;$reportWritten=$false;$release=$false
-    $lastRequest=[DateTimeOffset]::UtcNow;$scan=$null;$showAll=$false;$reportName='results.json'
+    $lastRequest=[DateTimeOffset]::UtcNow;$scan=$null;$reportName='results.json';$lastFallbackState='';$lastFallback=[DateTimeOffset]::MinValue
     $language=[string]$owner.Language
     $messages=[IO.File]::ReadAllText((Join-Path $PSScriptRoot ('../../locales/'+$language+'.json')))|ConvertFrom-Json -AsHashtable
     function Text {param($Key,[object[]]$Values=@())$text=[string]$messages[$Key];if($Values.Count){$text -f $Values}else{$text}}
@@ -35,6 +35,7 @@ try {
         & $module {param($Path,$Data)Write-AVSessionJson $Path $Data} (Join-Path $SessionDirectory 'status.json') $view
     }
     try{$Host.UI.RawUI.WindowTitle='REMNEXA Antivirus'}catch{}
+    $consoleView=& $module {New-AVScanWindow}
     while(-not $release) {
         $request=$rpc.Take()
         if($request) {
@@ -82,21 +83,36 @@ try {
         $interactive=$false
         try{$interactive=-not[Console]::IsInputRedirected -and -not[Console]::IsOutputRedirected}catch{}
         if($interactive -and $scan) {
-            if(([DateTimeOffset]::UtcNow-$lastDraw).TotalSeconds -ge 1) {
-                if(-not $showAll){try{Clear-Host}catch{}}
-                Write-Host (Text 'AVSessionWindowTitle') -ForegroundColor Cyan
-                Write-Host (Text 'AVSessionWindowHint') -ForegroundColor Yellow
+            if(([DateTimeOffset]::UtcNow-$lastDraw).TotalMilliseconds -ge 500) {
+                $lines=[Collections.Generic.List[string]]::new();$colors=[Collections.Generic.List[ushort]]::new()
+                function Row {param($Value,$Color=7)$lines.Add([string]$Value);$colors.Add([ushort]$Color)}
+                Row (Text 'AVSessionWindowTitle') 11
+                Row (Text 'AVSessionWindowHint') 14
+                $controls=if(-not $active){''}elseif($scan.State -in @('Paused','Pausing')){'[R] '+(Text 'AVBackgroundResume')+'  [C] '+(Text 'AVBackgroundCancel')}elseif($scan.State -eq 'Cancelling'){Text 'AVBackgroundStateCancelling'}else{'[P] '+(Text 'AVBackgroundPause')+'  [C] '+(Text 'AVBackgroundCancel')}
+                Row $controls 15
+                Row (Text 'AVSessionKeysHint') 8
                 $total=if($scan.Total -lt 0){'?'}else{$scan.Total};$percent=if($scan.Total -gt 0){'{0}%' -f [Math]::Floor(100*$scan.Files/$scan.Total)}else{'?'}
-                Write-Host (Text 'AVSessionSummary' @((Text ('AVBackgroundState'+$scan.State)),$scan.Files,$total,$percent,$scan.Findings))
-                foreach($line in @($scan.Evidence|Select-Object -Last 20)){Write-Host ([regex]::Replace($line,'[\p{Cc}\p{Cf}]',' ')) -ForegroundColor Yellow}
-                if($scan.Error){Write-Host ([regex]::Replace($scan.Error,'[\p{Cc}\p{Cf}]',' ')) -ForegroundColor Red}
-                Write-Host ('[P] '+(Text 'AVBackgroundPause')+'  [R] '+(Text 'AVBackgroundResume')+'  [C] '+(Text 'AVBackgroundCancel'))
-                if(-not $active){Write-Host (Text 'AVSessionReportSaved' @((Join-Path $SessionDirectory $reportName))) -ForegroundColor Green}
+                $stateColor=if($scan.State -eq 'Failed'){12}elseif($scan.State -in @('Warning','Cancelled','Paused','Pausing')){14}elseif($scan.State -eq 'Completed'){10}else{11}
+                Row (Text 'AVSessionSummary' @((Text ('AVBackgroundState'+$scan.State)),$scan.Files,$total,$percent,$scan.Findings)) $stateColor
+                $elapsed=[TimeSpan]::FromSeconds([Math]::Floor($scan.ElapsedSeconds)).ToString('hh\:mm\:ss')
+                $rate=if($scan.ActiveSeconds -gt 0){[Math]::Round($scan.Files/$scan.ActiveSeconds,1)}else{0}
+                Row (Text 'AVBackgroundDetail' @($scan.Mode,(Text ('AVBackgroundPhase'+$scan.Phase)),$elapsed,$rate))
+                if($scan.Error){Row $scan.Error 12}
+                if(-not $active){Row (Text 'AVSessionReportSaved' @((Join-Path $SessionDirectory $reportName))) 10}
+                Row (Text 'AVBackgroundFindings') 14
+                foreach($line in @($scan.Evidence|Select-Object -Last 20)){Row $line 14}
+                $drawn=$false
+                try{if($consoleView){$drawn=$consoleView.Draw($lines.ToArray(),$colors.ToArray())}}catch{Write-Verbose $_.Exception.Message}
+                if(-not $drawn -and ($lastFallbackState -ne $scan.State -or ([DateTimeOffset]::UtcNow-$lastFallback).TotalSeconds -ge 5)){
+                    foreach($line in $lines){Write-Host ([regex]::Replace($line,'[\p{Cc}\p{Cf}]',' '))}
+                    $lastFallbackState=$scan.State
+                    $lastFallback=[DateTimeOffset]::UtcNow
+                }
                 $lastDraw=[DateTimeOffset]::UtcNow
             }
-            if([Console]::KeyAvailable){
-                switch([Console]::ReadKey($true).KeyChar.ToString().ToUpperInvariant()){'P'{Set-ClamAVBackgroundScan Pause};'R'{Set-ClamAVBackgroundScan Resume};'C'{Set-ClamAVBackgroundScan Cancel}}
-            }
+            try{for($key=0;$key -lt 16 -and [Console]::KeyAvailable;$key++){
+                switch([Console]::ReadKey($true).KeyChar.ToString().ToUpperInvariant()){'P'{if($active){Set-ClamAVBackgroundScan Pause}};'R'{if($active){Set-ClamAVBackgroundScan Resume}};'C'{if($active){Set-ClamAVBackgroundScan Cancel}}}
+            }}catch{Write-Verbose ('Console input unavailable: '+$_.Exception.Message)}
         }
         if(-not $active -and $scan -and $detached){Stop-ClamAVBackgroundScan}
         if($finishedAt -and ([DateTimeOffset]::UtcNow-$finishedAt).TotalSeconds -gt $(if($detached){15}else{60})){break}
@@ -109,5 +125,6 @@ try {
     try{& $module {param($Path,$Data)Write-AVSessionJson $Path $Data} (Join-Path $SessionDirectory 'status.json') $failure}catch{}
     exit 1
 }finally{
+    if($consoleView){$consoleView.Dispose()}
     try{Stop-ClamAVBackgroundScan}finally{if($rpc){$rpc.Dispose()};Remove-Module Antivirus -ErrorAction SilentlyContinue}
 }

@@ -6,6 +6,9 @@ Entwicklungsänderungen sind keine veröffentlichten Releases. Dieses Dokument v
 
 ## Nicht veröffentlicht — Windows-Launcher-Vorschau
 
+- Wiederholte Fortschrittsmeldungen und überlagerte Downloadbalken beheben. Tatsächliche Downloadbytes, abbrechbare begrenzte HTTPS-Übertragung und deutlichen Hinweis auf Aktualisierung vor dem Scan anzeigen; ein Abbruch startet keinen Scan.
+- Wiederholtes Löschen der Scan-Konsole durch eine stabile Pufferaktualisierung ersetzen, Quick Edit nur im betroffenen Fenster deaktivieren, direkte P/R/C-Steuerung erhalten und U zum Aktualisieren der Momentaufnahme in der Hauptanwendung ergänzen. Isolierte Konsolen-/Maus-, Downloadfehler- und Abbruchtests hinzufügen.
+
 - Windows 11 oder neuer (Client-Build ab 22000) in nativem Launcher und PowerShell-Einstieg voraussetzen; Windows 10/älter/Server vor Anwendungsinitialisierung abweisen, Hinweise in sechs Sprachen und Regressionstests der Versionsgrenzen ergänzen. Vorhandene Release-Artefakte bleiben unverändert.
 - Optionale SHA-256-Authenticode-Signierung mit HTTPS-RFC-3161-Zeitstempeln, Prüfung von Zertifikat und Werkzeug, Verifikation vor Paketprüfsummen sowie isolierten Regressionstests. Das aktuelle Paket bleibt mangels Signierzertifikat und Werkzeug unsigniert.
 - Nativen x64-Win32-Launcher mit offiziellem Mehrgrößen-Icon, geprüfter PowerShell-Auswahl und sicherer Argumentübergabe ergänzen; keine Policy-Umgehung oder pauschale Erhöhung.

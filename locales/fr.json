@@ -1,4 +1,11 @@
 {
+  "ProgressUnitBytes": "octets",
+  "AVDownloadHint": "C : annuler le téléchargement. L’analyse n’a pas encore commencé.",
+  "AVDownloadTimeout": "Délai de téléchargement dépassé. Le paquet n’a pas été installé.",
+  "AVUpdatePreparingScan": "Les composants antivirus sont mis à jour en premier. L’analyse des fichiers n’a pas encore commencé.",
+  "AVUpdateCancelled": "Mise à jour annulée. Aucune analyse n’a démarré.",
+  "AVBackgroundRefresh": "Actualiser la vue (état en direct dans la fenêtre d’analyse séparée)",
+  "AVSessionKeysHint": "Appuyez directement sur P/R/C, sans Entrée. La pause prend effet à un point sûr.",
   "Windows11Required": "REMNEXA nécessite Windows 11 ou une version ultérieure (version client 22000 minimum). Windows 10 et Windows Server ne sont pas pris en charge.",
   "ProgressRunning": "Traitement en cours",
   "ProgressUnknown": "Volume total encore inconnu",

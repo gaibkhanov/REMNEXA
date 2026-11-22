@@ -93,7 +93,7 @@ function Update-ClamAVEngine {
             New-Item -ItemType Directory -Path $extractPath -Force -ErrorAction Stop | Out-Null
             Write-AVLog -Message "ClamAV-Engine-Update gestartet: $($statusBefore.Version) -> $($asset.Version)." -Event 'EngineUpdate'
             Update-RemnexaProgress $remnexaWorkProgress -Status (Get-RemnexaProgressText 'ProgressTaskDownload') -Force
-            Invoke-WebRequest -Uri $asset.Uri -OutFile $archivePath -UseBasicParsing -ErrorAction Stop
+            Receive-AVPackage -Uri $asset.Uri -OutFile $archivePath
             [void](Assert-ClamAVArchiveDigest -Digest ([string]$asset.Digest) -ArchivePath $archivePath)
 
             Update-RemnexaProgress $remnexaWorkProgress -Status (Get-RemnexaProgressText 'ProgressTaskExtract') -Force
@@ -165,6 +165,7 @@ function Update-ClamAVEngine {
             if (Test-Path -LiteralPath $stagingRoot) { Remove-Item -LiteralPath $stagingRoot -Recurse -Force -ErrorAction SilentlyContinue }
         }
     }
+    catch [OperationCanceledException] { Complete-RemnexaProgress $remnexaWorkProgress -Outcome Cancelled; throw }
     catch { Complete-RemnexaProgress $remnexaWorkProgress -Outcome Failed; throw }
     finally { if($scanLease){$scanLease.ReleaseMutex();$scanLease.Dispose()};if ($remnexaWorkProgress.Outcome -eq 'Running') { Complete-RemnexaProgress $remnexaWorkProgress } }
 }

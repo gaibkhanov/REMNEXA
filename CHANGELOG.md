@@ -6,6 +6,9 @@ Development changes are not published release claims. Existing release artifacts
 
 ## Unreleased — Windows launcher preview
 
+- Fix repeated progress banners and overlapping download bars. Show actual download bytes, cancellable bounded HTTPS transfers and a clear update-before-scan message; cancellation does not launch the scan.
+- Replace repeated scan-console clearing with one stable buffer update, disable window-local Quick Edit, retain direct P/R/C controls and add manual U refresh for the main application's snapshot. Add isolated console/mouse, download-failure and cancellation regressions.
+
 - Require Windows 11 or newer (client build 22000+) in the native launcher and PowerShell entry; reject Windows 10/older/Server before application initialization, add six-language notices and platform-boundary regression tests. Existing release artifacts remain unchanged.
 - Add opt-in SHA-256 Authenticode signing with HTTPS RFC 3161 timestamps, trusted-certificate/tool checks, verification before package hashing and isolated regression tests. The current artifact remains unsigned because signing credentials/tools are unavailable.
 - Add native x64 Win32 launcher with official multi-size icon, validated PowerShell discovery and safe argument passing; no policy bypass or blanket elevation.

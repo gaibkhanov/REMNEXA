@@ -16,6 +16,8 @@ Der Paketbau unterstützt geprüfte Authenticode-Signierung mit vertrauenswürdi
 
 ## Funktionen
 
+Die Launcher-Vorschau behebt außerdem überlagerte Antivirus-Fortschrittsanzeigen und das Flackern des Scanfensters. Dort funktionieren **P/R/C** direkt ohne Enter; in der Scanverwaltung aktualisieren **U** und Enter die Momentaufnahme. Engine-Downloads zeigen empfangene Bytes und lassen sich vor dem Start des Dateiscans mit **C** abbrechen. Siehe [Scanbedienung](docs/INDEPENDENT_SCANS.de.md).
+
 ### Anwendungen entfernen
 
 - Unterstützte Desktop-, MSI- und Microsoft-Store-Anwendungen deinstallieren.

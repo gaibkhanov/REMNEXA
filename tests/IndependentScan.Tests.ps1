@@ -83,6 +83,23 @@ Describe 'Independent antivirus process lifetime and secure controls' {
         Stop-ClamAVBackgroundScan
         if((Get-ClamAVBackgroundScan).State -ne 'Cancelled'){throw 'Remote cancellation was lost.'}
     }
+    It 'keeps a real console frame stable after mouse input and accepts direct pause resume cancel keys' {
+        foreach($index in 31..80){[IO.File]::WriteAllText((Join-Path $script:independentTemp ('data/'+$index+'.txt')),'benign fixture')}
+        [void](Start-ClamAVBackgroundScan -ScanType Custom -Path (Join-Path $script:independentTemp 'data') -ConfigPath $script:independentConfig)
+        [void](Wait-Independent {param($s)$s -and $s.Findings -eq 1})
+        $session=& $script:independentModule {Find-AVIndependentSession}
+        $report=Join-Path $script:independentTemp 'console-probe.json'
+        $info=[Diagnostics.ProcessStartInfo]::new((Join-Path $PSHOME 'pwsh.exe'))
+        $info.UseShellExecute=$false;$info.CreateNoWindow=$true;$info.RedirectStandardOutput=$true;$info.RedirectStandardError=$true
+        foreach($arg in @('-NoProfile','-File',(Join-Path $PSScriptRoot 'fixtures/ObserveScanConsole.ps1'),'-ProcessId',[string]$session.Descriptor.ProcessId,'-StartTicks',[string]$session.Descriptor.StartTicks,'-SessionDirectory',$session.Directory,'-Report',$report)){$info.ArgumentList.Add($arg)}
+        $observer=[Diagnostics.Process]::Start($info)
+        try {
+            $stdout=$observer.StandardOutput.ReadToEndAsync();$stderr=$observer.StandardError.ReadToEndAsync()
+            if(-not $observer.WaitForExit(25000)){$observer.Kill($true);throw 'Console observer timed out.'}
+            $result=Get-Content -LiteralPath $report -Raw|ConvertFrom-Json
+            if($observer.ExitCode -ne 0 -or -not $result.Passed){throw ('Console regression: '+($result|ConvertTo-Json -Compress)+' '+$stdout.GetAwaiter().GetResult()+$stderr.GetAwaiter().GetResult())}
+        }finally{$observer.Dispose()}
+    }
     It 'kills only its owned CLI scanner if the scan host itself is forcibly closed' {
         [void](Start-ClamAVBackgroundScan -ScanType Custom -Path (Join-Path $script:independentTemp 'data') -ConfigPath $script:independentConfig)
         $scan=Wait-Independent {param($s)$s -and $s.Findings -eq 1 -and $s.ScannerProcessId -gt 0}

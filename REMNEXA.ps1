@@ -2330,7 +2330,12 @@ function Invoke-AVScanWithUpdatePrompt {
         }
         if($update) {
             $component=if($signatures -and $engine){'Both'}elseif($engine){'Engine'}else{'Signatures'}
+            Write-Status (T 'AVUpdatePreparingScan') 'Info'
             try { [void](Invoke-ClamAVManagedUpdate -Component $component -Confirm:$false) }
+            catch [OperationCanceledException] {
+                Write-Status (T 'AVUpdateCancelled') 'Warning'
+                return @()
+            }
             catch {
                 Write-Status (T 'AVUpdateFailure') 'Warning'
                 Write-LogEntry -Message $_.Exception.Message -Level Warning -Component 'Antivirus/Update'
@@ -2406,6 +2411,7 @@ function Show-AVBackgroundManager {
         }
         $active=$scan.State -in @('Starting','Running','Pausing','Paused','Cancelling')
         if($active) {
+            Write-Host ('  [U] '+(T 'AVBackgroundRefresh'))
             if($scan.State -in @('Paused','Pausing')){Write-Host ('  [R] '+(T 'AVBackgroundResume'))}
             elseif($scan.State -ne 'Cancelling'){Write-Host ('  [P] '+(T 'AVBackgroundPause'))}
             Write-Host ('  [C] '+(T 'AVBackgroundCancel'))
@@ -2416,15 +2422,11 @@ function Show-AVBackgroundManager {
         }
         Write-Host ('  [0] '+(T 'BackPreviousMenu'))
         Write-Host ('  [X] '+(T 'ExitApplication'))
-        $interactive=$false
-        try{$interactive=-not [Console]::IsInputRedirected -and -not [Console]::IsOutputRedirected}catch{}
-        if($interactive -and $active) {
-            $until=[DateTimeOffset]::UtcNow.AddSeconds(2)
-            while(-not [Console]::KeyAvailable -and [DateTimeOffset]::UtcNow -lt $until){Start-Sleep -Milliseconds 100}
-            if(-not [Console]::KeyAvailable){continue}
-            $choice=[Console]::ReadKey($true).KeyChar.ToString().ToUpperInvariant()
-        }else{$choice=(Read-RemnexaInput (T 'SelectPrompt') -ExitOptionAlreadyShown -ScanManagerContext).Trim().ToUpperInvariant()}
+        # This menu is a stable snapshot. Live updates belong to the independent
+        # scan window, not a timer that clears a menu while the user is typing.
+        $choice=(Read-RemnexaInput (T 'SelectPrompt') -ExitOptionAlreadyShown -ScanManagerContext).Trim().ToUpperInvariant()
         switch($choice) {
+            'U'{continue}
             '0'{return}
             'X'{Stop-RemnexaApplication}
             'P'{if($active){Set-ClamAVBackgroundScan -Action Pause}}

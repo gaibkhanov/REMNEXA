@@ -12,7 +12,7 @@ Describe 'ClamAV smart-update console workflows' {
             $script:InputQueue=[Collections.Generic.Queue[string]]::new()
             $script:HostLines=[Collections.Generic.List[string]]::new()
             $script:Events=[Collections.Generic.List[string]]::new()
-            $script:Scans=0;$script:Updates=0;$script:Checks=0;$script:Forced=$false;$script:FailUpdate=$false;$script:Component=''
+            $script:Scans=0;$script:Updates=0;$script:Checks=0;$script:Forced=$false;$script:FailUpdate=$false;$script:CancelUpdate=$false;$script:Component=''
             $script:UIState=[pscustomobject]@{
                 status='update_available';isChecking=$false;isStale=$false;lastSuccessfulCheckUtc=[DateTimeOffset]::UtcNow.ToString('o')
                 engine=[pscustomobject]@{installedVersion='1.5.4';availableVersion='1.5.4';status='current';updateAvailable=$false;canUpdate=$false;isStale=$false}
@@ -31,6 +31,7 @@ Describe 'ClamAV smart-update console workflows' {
                 param($Component)
                 if($PSCmdlet.ShouldProcess('fixture','update component')) {
                     $script:Updates++;$script:Component=$Component;$script:Events.Add('update')
+                    if($script:CancelUpdate){throw [OperationCanceledException]::new('fixture cancellation')}
                     if($script:FailUpdate){throw 'fixture failure'}
                     [pscustomobject]@{Ready=$true}
                 }
@@ -63,6 +64,9 @@ Describe 'ClamAV smart-update console workflows' {
     }
     It 'scans directly with existing signatures when the user declines' {
         & $script:smartUI {$script:InputQueue.Enqueue('N');Invoke-AVScanWithUpdatePrompt -ScanType Quick|Out-Null;if($script:Updates -or $script:Scans -ne 1){throw 'Declining did not preserve the scan.'}}
+    }
+    It 'does not start a scan or ask another question after the user cancels the update' {
+        & $script:smartUI {$script:CancelUpdate=$true;$script:InputQueue.Enqueue('J');Invoke-AVScanWithUpdatePrompt -ScanType Quick|Out-Null;if($script:Updates -ne 1 -or $script:Scans -or $script:InputQueue.Count){throw 'Cancellation did not return directly without scanning.'}}
     }
     It 'shows information without creating a second update or losing a custom scan path' {
         & $script:smartUI {$script:InputQueue.Enqueue('I');$script:InputQueue.Enqueue('J');Invoke-AVScanWithUpdatePrompt -ScanType Custom -Path 'fixture'|Out-Null;if($script:Updates -ne 1 -or $script:Scans -ne 1 -or $script:InputQueue.Count){throw 'Information flow duplicated a prompt or action.'}}

@@ -2,6 +2,8 @@
 
 # Optionale ClamAV-Integration
 
+Die Launcher-Vorschau zeigt Engine-Paketdownloads mit einer einzigen Fortschrittsanzeige anhand tatsächlich empfangener Bytes. Eine bestätigte Aktualisierung erfolgt **vor** dem angeforderten Dateiscan; die Oberfläche weist darauf hin. **C** bricht den Download ab und kehrt zurück, ohne diesen Scan zu starten. Downloads erlauben nur begrenzte HTTPS-Weiterleitungen, mit 15 Sekunden Verbindungsfrist und 15 Minuten Gesamtfrist. Teilarchive werden bei Fehler oder Abbruch entfernt; Prüfsumme, Staging und Rücksicherung bleiben erforderlich. Statusabfragen bleiben ohne `Get-ClamAVStatus -ShowProgress` still.
+
 REMNEXA bindet ClamAV für lokale Prüfungen bei Bedarf ein. Es bietet keinen residenten Schutzdienst und ersetzt weder Microsoft Defender noch einen anderen Antivirus. Beachte [Benutzerhandbuch](../docs/USER_GUIDE.de.md) und [Sicherheitsmodell](../docs/SECURITY_MODEL.de.md).
 
 ## Unabhängige Scans und Beenden

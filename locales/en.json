@@ -1,4 +1,11 @@
 {
+  "ProgressUnitBytes": "bytes",
+  "AVDownloadHint": "C: cancel download. The scan has not started yet.",
+  "AVDownloadTimeout": "Download timed out. The package was not installed.",
+  "AVUpdatePreparingScan": "Antivirus components are being updated first. The file scan has not started yet.",
+  "AVUpdateCancelled": "Update cancelled. No scan was started.",
+  "AVBackgroundRefresh": "Refresh snapshot (live status in the separate scan window)",
+  "AVSessionKeysHint": "Press P/R/C directly, without Enter. Pause takes effect at a safe checkpoint.",
   "Windows11Required": "REMNEXA requires Windows 11 or newer (client build 22000+). Windows 10 and Windows Server are not supported.",
   "ProgressRunning": "Processing",
   "ProgressUnknown": "Total work not yet known",

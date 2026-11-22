@@ -15,8 +15,8 @@ function Get-ClamAVStatus {
     Get-ClamAVStatus | Format-List
     #>
     [CmdletBinding()]
-    param([string]$ConfigPath = $script:AVConfigPath,[switch]$ForScan)
-    $remnexaWorkProgress = New-RemnexaProgress -Activity (Get-RemnexaProgressText 'ProgressTaskStatus')
+    param([string]$ConfigPath = $script:AVConfigPath,[switch]$ForScan,[switch]$ShowProgress)
+    $remnexaWorkProgress = if($ShowProgress){New-RemnexaProgress -Activity (Get-RemnexaProgressText 'ProgressTaskStatus')}else{$null}
     try {
         $config = Get-AVConfig -Path $ConfigPath
         $root = Find-ClamAVInstallation -Config $config
@@ -87,6 +87,6 @@ function Get-ClamAVStatus {
             DatabasePath       = $paths.Database
         }
     }
-    catch { Complete-RemnexaProgress $remnexaWorkProgress -Outcome Failed; throw }
-    finally { if ($remnexaWorkProgress.Outcome -eq 'Running') { Complete-RemnexaProgress $remnexaWorkProgress } }
+    catch { if($remnexaWorkProgress){Complete-RemnexaProgress $remnexaWorkProgress -Outcome Failed}; throw }
+    finally { if ($remnexaWorkProgress -and $remnexaWorkProgress.Outcome -eq 'Running') { Complete-RemnexaProgress $remnexaWorkProgress } }
 }

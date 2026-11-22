@@ -88,7 +88,7 @@ function Initialize-ClamAV {
             $downloadUri = [uri]$asset.Uri
             Write-AVLog -Message "ClamAV-Download gestartet: $($asset.Uri)" -Event 'Initialize'
             Update-RemnexaProgress $remnexaWorkProgress -Status (Get-RemnexaProgressText 'ProgressTaskDownload') -Force
-            Invoke-WebRequest -Uri $downloadUri -OutFile $archivePath -UseBasicParsing -ErrorAction Stop
+            Receive-AVPackage -Uri $downloadUri -OutFile $archivePath
 
             [void](Assert-ClamAVArchiveDigest -Digest ([string]$asset.Digest) -ArchivePath $archivePath)
             Update-RemnexaProgress $remnexaWorkProgress -Status (Get-RemnexaProgressText 'ProgressTaskExtract') -Force
@@ -126,6 +126,7 @@ function Initialize-ClamAV {
             }
         }
     }
+    catch [OperationCanceledException] { Complete-RemnexaProgress $remnexaWorkProgress -Outcome Cancelled; throw }
     catch { Complete-RemnexaProgress $remnexaWorkProgress -Outcome Failed; throw }
     finally { if ($remnexaWorkProgress.Outcome -eq 'Running') { Complete-RemnexaProgress $remnexaWorkProgress } }
 }

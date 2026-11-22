@@ -26,6 +26,8 @@ Candidate rc.3 checks official engine/database metadata in a silent background w
 
 ## Installation and updates
 
+The launcher preview shows engine package downloads as one measured-byte progress display. A confirmed update happens **before** the requested file scan; the interface states this explicitly. Press **C** during the download to cancel and return without starting that scan. Downloads use HTTPS-only bounded redirects, a 15-second connection timeout and a 15-minute overall deadline. Failed or cancelled partial archives are removed; the existing hash verification, staging and rollback remain required. Status queries stay silent unless `Get-ClamAVStatus -ShowProgress` is requested.
+
 Use the setup action in the application, or explicitly request installation:
 
 ```powershell

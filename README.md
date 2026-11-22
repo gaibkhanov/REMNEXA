@@ -16,6 +16,8 @@ The package builder supports verified Authenticode signing when a trusted signin
 
 ## Features
 
+The launcher preview also fixes overlapping Antivirus progress output and scan-window flicker. Scan controls use **P/R/C** directly without Enter; the main scan manager uses **U** and Enter for a snapshot refresh. Engine downloads show received bytes and support **C** to cancel before the file scan starts. See [scan controls](docs/INDEPENDENT_SCANS.md).
+
 ### Application removal
 
 - Uninstall supported desktop, MSI and Microsoft Store applications.

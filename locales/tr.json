@@ -1,4 +1,11 @@
 {
+  "ProgressUnitBytes": "bayt",
+  "AVDownloadHint": "C: indirmeyi iptal et. Tarama henüz başlamadı.",
+  "AVDownloadTimeout": "İndirme zaman aşımına uğradı. Paket kurulmadı.",
+  "AVUpdatePreparingScan": "Önce antivirüs bileşenleri güncelleniyor. Dosya taraması henüz başlamadı.",
+  "AVUpdateCancelled": "Güncelleme iptal edildi. Tarama başlatılmadı.",
+  "AVBackgroundRefresh": "Görünümü yenile (canlı durum ayrı tarama penceresinde)",
+  "AVSessionKeysHint": "Enter olmadan doğrudan P/R/C tuşuna basın. Duraklatma güvenli bir noktada uygulanır.",
   "Windows11Required": "REMNEXA için Windows 11 veya üzeri (istemci derlemesi 22000 ve üzeri) gereklidir. Windows 10 ve Windows Server desteklenmez.",
   "ProgressRunning": "İşleniyor",
   "ProgressUnknown": "Toplam iş henüz bilinmiyor",

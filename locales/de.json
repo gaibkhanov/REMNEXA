@@ -1,4 +1,11 @@
 {
+  "ProgressUnitBytes": "Bytes",
+  "AVDownloadHint": "C: Download abbrechen. Der Scan wurde noch nicht gestartet.",
+  "AVDownloadTimeout": "Zeitlimit beim Download erreicht. Das Paket wurde nicht installiert.",
+  "AVUpdatePreparingScan": "Zuerst werden die Antivirus-Komponenten aktualisiert. Der Dateiscan wurde noch nicht gestartet.",
+  "AVUpdateCancelled": "Aktualisierung abgebrochen. Es wurde kein Scan gestartet.",
+  "AVBackgroundRefresh": "Momentaufnahme aktualisieren (Live-Status im separaten Scanfenster)",
+  "AVSessionKeysHint": "P/R/C direkt drücken, ohne Enter. Pause greift am nächsten sicheren Haltepunkt.",
   "Windows11Required": "REMNEXA benötigt Windows 11 oder neuer (Client-Build ab 22000). Windows 10 und Windows Server werden nicht unterstützt.",
   "ProgressRunning": "Wird verarbeitet",
   "ProgressUnknown": "Gesamtumfang noch unbekannt",

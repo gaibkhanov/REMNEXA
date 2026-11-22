@@ -20,6 +20,14 @@ The scan window reports actual processed counts and available findings. Percenta
 
 ## Ownership, results and cleanup
 
+### Console controls in the launcher preview
+
+The scan window refreshes a bounded screen buffer in one write instead of clearing the console repeatedly. Controls stay above the findings: press **P**, **R** or **C** directly, without Enter. Quick Edit and mouse input are disabled only for this window while it is managed, so clicking does not suspend the scan; console settings are restored on normal exit. Pause takes effect at a safe scanner checkpoint.
+
+The main application's scan manager presents a stable snapshot while accepting input. Use **U** and Enter to refresh it; the separate scan window continues updating automatically. Already running windows must be restarted to load these changes.
+
+The regression suite includes an isolated real-console test that checks mouse input, 20 frame samples, direct pause/resume/cancel keys and preservation of findings. It uses harmless fixture files, not a personal-directory or malware scan.
+
 The scan host owns the existing runspace and its scanner processes. The native worker retains its existing restricted token and Windows job limits; an owned CLI scanner also belongs to a kill-on-close job. Continuing a scan does not change Windows security settings or start an installed background service.
 
 Control uses bounded, typed messages over a local current-user-only named pipe, restricted to the same elevation level. The client verifies the server PID. Requests cannot contain arbitrary shell commands. Session data is stored under the configured ClamAV log directory in `ScanSessions/scan-<random-id>/`, with access restricted to the current user and SYSTEM. This is not a security boundary against other programs already running as the same user.

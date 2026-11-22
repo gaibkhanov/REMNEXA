@@ -57,23 +57,42 @@ function Get-RemnexaProgressFrame {
     [PSCustomObject]@{ Percent=$percent; Color=$color; Text=$line; Outcome=$Progress.Outcome; Completed=$Progress.Completed; Total=$Progress.Total }
 }
 
+function Test-RemnexaInteractiveProgress {
+    try { return $Host.Name -eq 'ConsoleHost' -and -not [Console]::IsOutputRedirected }
+    catch { return $false }
+}
+
 function Write-RemnexaProgressFrame {
     param([object]$Progress, [switch]$Force)
     if (-not $script:ProgressRendering) { return }
     if (-not $Force -and ($Progress.Watch.ElapsedMilliseconds - $Progress.LastRendered) -lt 1000) { return }
     $frame = Get-RemnexaProgressFrame $Progress
     $Progress.LastRendered = $Progress.Watch.ElapsedMilliseconds
-    try {
-        Write-Progress -Id $Progress.Id -ParentId $Progress.ParentId -Activity $Progress.Activity -Status $frame.Text -PercentComplete $frame.Percent
-        if ($Progress.Outcome -ne 'Running' -or $Progress.Waiting) { Write-Progress -Id $Progress.Id -Activity $Progress.Activity -Completed }
+    $interactiveConsole = Test-RemnexaInteractiveProgress
+    if ($interactiveConsole) {
+        # One native progress record, with compact text rather than another bar
+        # embedded inside PowerShell's bar. Nested operations share this slot.
+        try {
+            if ($Progress.Outcome -ne 'Running' -or $Progress.Waiting) {
+                Write-Progress -Id 999 -Activity $Progress.Activity -Completed
+            } else {
+                $status = if ($Progress.Status) { $Progress.Status } else { Get-RemnexaProgressText 'ProgressRunning' }
+                if ($Progress.Total -ge 0) { $status += ' | {0}/{1} {2}' -f $Progress.Completed, $Progress.Total, $Progress.Unit }
+                if ($Progress.CurrentItem) { $status += ' | ' + $Progress.CurrentItem }
+                $status = [regex]::Replace($status, '[\p{Cc}\p{Cf}]', ' ')
+                if ($status.Length -gt 180) { $status = $status.Substring(0,177) + '...' }
+                Write-Progress -Id 999 -Activity $Progress.Activity -Status $status -PercentComplete $frame.Percent
+            }
+        } catch { Write-Verbose $_.Exception.Message }
+        # Keep a single final summary for the whole operation, not every nested
+        # status probe. Force means refresh, not append another console line.
+        if ($Progress.ParentId -lt 0 -and $Progress.Outcome -ne 'Running') { Write-Host $frame.Text -ForegroundColor $frame.Color }
+    } elseif ($Progress.ParentId -lt 0 -or $Progress.Outcome -in @('Failed','Cancelled')) {
+        if ($Force -or $Progress.Outcome -ne 'Running' -or $Progress.Watch.ElapsedMilliseconds-$Progress.LastFallback -ge 5000) {
+            Write-Host $frame.Text -ForegroundColor $frame.Color
+            $Progress.LastFallback = $Progress.Watch.ElapsedMilliseconds
+        }
     }
-    catch { Write-Verbose $_.Exception.Message }
-    # Interactive consoles redraw the native bar. Other hosts retain throttled
-    # colored lines so progress is visible even when Write-Progress is hidden.
-    $interactiveConsole = $false
-    try { $interactiveConsole = $Host.Name -eq 'ConsoleHost' -and -not [Console]::IsOutputRedirected -and $ProgressPreference -ne 'SilentlyContinue' }
-    catch { Write-Verbose $_.Exception.Message }
-    if (-not $interactiveConsole -or $Force -or $Progress.Outcome -ne 'Running') { Write-Host $frame.Text -ForegroundColor $frame.Color }
 }
 
 function New-RemnexaProgress {
@@ -81,7 +100,7 @@ function New-RemnexaProgress {
     if ($Total -lt -1) { throw 'Progress total cannot be negative except -1 for unknown work.' }
     $script:ProgressNextId++
     $parent = if ($script:ProgressActive.Count) { $script:ProgressActive[$script:ProgressActive.Count - 1].Id } else { -1 }
-    $state = [PSCustomObject]@{ Id=$script:ProgressNextId; ParentId=$parent; Activity=$Activity; Total=$Total; Completed=[long]0; Unit=$Unit; Status=''; CurrentItem=''; Outcome='Running'; NoticeLevel=''; Waiting=$false; Watch=[Diagnostics.Stopwatch]::StartNew(); LastRendered=[long]-1000 }
+    $state = [PSCustomObject]@{ Id=$script:ProgressNextId; ParentId=$parent; Activity=$Activity; Total=$Total; Completed=[long]0; Unit=$Unit; Status=''; CurrentItem=''; Outcome='Running'; NoticeLevel=''; Waiting=$false; Watch=[Diagnostics.Stopwatch]::StartNew(); LastRendered=[long]-1000; LastFallback=[long]-5000 }
     $script:ProgressActive.Add($state)
     Write-RemnexaProgressFrame $state -Force
     return $state
@@ -110,6 +129,8 @@ function Complete-RemnexaProgress {
     Write-RemnexaProgressFrame $Progress -Force
     $Progress.Watch.Stop()
     [void]$script:ProgressActive.Remove($Progress)
+    $parent = Get-RemnexaActiveProgress
+    if ($parent) { Write-RemnexaProgressFrame $parent -Force:(Test-RemnexaInteractiveProgress) }
 }
 
 function Suspend-RemnexaProgress {
