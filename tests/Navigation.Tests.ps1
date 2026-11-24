@@ -186,6 +186,7 @@ Describe 'REMNEXA conditional pagination and exit options' {
             'Read-ExplicitConfirmation'=1; 'Invoke-PrivacyMenu'=1; 'Invoke-LogCleanupMenu'=1
             'Read-RemovalConfirmation'=1; 'Read-AppxRemovalScope'=1; 'Invoke-RemovalOperationCore'=1
             'Show-AVBackgroundManager'=2
+            'Show-AVScanHistoryScreen'=1
             'Confirm-RemnexaExit'=1
         }
         $found=@{}
@@ -196,6 +197,7 @@ Describe 'REMNEXA conditional pagination and exit options' {
             while($null -ne $owner -and $owner -isnot [Management.Automation.Language.FunctionDefinitionAst]){$owner=$owner.Parent}
             if ($owner.Name -notin $expected.Keys) { throw "Exit option hidden in unexpected context: $($owner.Name)" }
             if($owner.Name -eq 'Show-AVBackgroundManager' -and @([regex]::Matches($owner.Extent.Text,'\[X\].*ExitApplication')).Count -ne 2){throw 'The scan manager must explicitly show exit in both views.'}
+            if($owner.Name -eq 'Show-AVScanHistoryScreen' -and $owner.Extent.Text -notmatch '\[X\].*ExitApplication'){throw 'History must explicitly show its exit option.'}
             if($owner.Name -eq 'Confirm-RemnexaExit' -and $command.Extent.Text -notmatch 'ExitDecisionContext'){throw 'An exit decision must not recurse through the exit wrapper.'}
             $found[$owner.Name]++
         }
