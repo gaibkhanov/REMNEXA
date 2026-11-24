@@ -191,6 +191,10 @@ function Install-RemnexaPowerShellUpdate {
     param($Paths,$State,[string]$PowerShellVersion,[string]$Stage)
     $release=Get-RemnexaOfficialRelease PowerShell
     if((ConvertTo-RemnexaStableVersion $release.Version) -le (ConvertTo-RemnexaStableVersion $PowerShellVersion)){return 'Completed'}
+    if($State.Prepared.PowerShell -eq $release.Version){
+        $existing=Join-Path $Paths.Package ('runtime/versions/'+$release.Version+'/pwsh.exe');Assert-RemnexaUpdatePath $existing
+        if(Test-Path -LiteralPath $existing){$State.Task.Version=$release.Version;return 'Ready'}
+    }
     $archive=Join-Path $Stage 'powershell.zip';Receive-RemnexaUpdateArchive $release $archive $State $Paths
     $runtime=Join-Path $Paths.Package 'runtime';$versions=Join-Path $runtime 'versions'
     [void][IO.Directory]::CreateDirectory($versions);Assert-RemnexaUpdatePath $versions

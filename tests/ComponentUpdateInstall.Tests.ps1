@@ -72,6 +72,31 @@ Describe 'Staged antivirus activation and rollback' {
     }
 }
 
+Describe 'Scan continuation after a background update' {
+    It 'preserves successful updates when queued scan startup fails <FailScan>' -TestCases @(@{FailScan=$false},@{FailScan=$true}) {
+        param($FailScan)
+        InModuleScope Updates -Parameters @{Root=$TestDrive;FailScan=$FailScan} {
+            param($Root,$FailScan)
+            Mock Import-Module {}
+            Mock Install-RemnexaAntivirusUpdate {param($Paths,$State,$Stage)$State.Task.Version='1.5.5';'Completed'}
+            Mock Get-RemnexaLocalTools {@{PowerShell='7.7.0';Antivirus='1.5.5';Signatures='main:63';Application='2.2.0'}}
+            Mock Start-ClamAVBackgroundScan {if($FailScan){throw 'Isolated scan-host busy fixture.'}}
+            $app=Join-Path $Root ([guid]::NewGuid().ToString('N'));[void][IO.Directory]::CreateDirectory($app)
+            $paths=Get-RemnexaUpdatePaths $app (Join-Path $app 'cache');$state=New-RemnexaUpdateState $paths.Context
+            $id=[guid]::NewGuid().ToString('N')
+            $state.Task=@{Id=$id;Component='Signatures';Status='Starting';UpdatedUtc=[DateTimeOffset]::UtcNow.ToString('o');Completed=-1;Total=-1;Reason='';Version='';PreparedPath='';AfterScanType='Quick';AfterScanPath=@('harmless fixture');Language='de';ScanStarted=$false}
+            Write-RemnexaUpdateJson $paths.State $state
+            Invoke-RemnexaComponentWorker $app $paths.Directory $id '2.2.0' '7.7.0'
+            $result=Get-RemnexaComponentUpdates $app $paths.Directory
+            $result.Task.Status|Should -Be Completed
+            $result.Task.ScanStarted|Should -Be (-not $FailScan)
+            $result.Task.Reason|Should -Be $(if($FailScan){'scan_not_started'}else{''})
+            @($result.Task.AfterScanPath).Count|Should -Be 0
+            Should -Invoke Start-ClamAVBackgroundScan -Times 1
+        }
+    }
+}
+
 Describe 'Component update console workflows' {
     BeforeEach {
         $script:console=New-Module -ArgumentList (Split-Path -Parent $PSScriptRoot) -ScriptBlock {
