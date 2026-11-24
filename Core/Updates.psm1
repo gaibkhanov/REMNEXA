@@ -119,7 +119,7 @@ function Get-RemnexaLocalTools {
         $file=Join-Path $root 'clamscan.exe';Assert-RemnexaUpdatePath $file
         $fileVersion=if(Test-Path -LiteralPath $file){[Diagnostics.FileVersionInfo]::GetVersionInfo($file).FileVersion}else{''}
         $status=@{Version=$(if($fileVersion -match '^\d+\.\d+\.\d+$'){$fileVersion}else{''})}
-    }else{$status=Get-ClamAVStatus -ConfigPath (Join-Path $ApplicationRoot 'config/antivirus.json')}
+    }else{try{$status=Get-ClamAVStatus -ConfigPath (Join-Path $ApplicationRoot 'config/antivirus.json')}catch{$status=@{Version=''}}}
     $databases=@(& $module {param($Path)Get-AVLocalDatabaseVersions (Get-AVConfig -Path $Path)} (Join-Path $ApplicationRoot 'config/antivirus.json'))
     $databaseText=(@($databases|ForEach-Object{$_.name+':'+$(if($null -eq $_.installedVersion){'?'}else{$_.installedVersion})}) -join ' | ')
     @{PowerShell=$PowerShellVersion;Antivirus=[string]$status.Version;Signatures=$databaseText;Application=$ApplicationVersion}

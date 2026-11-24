@@ -19,8 +19,10 @@ Describe 'REMNEXA application startup in a redirected host' {
             [IO.File]::WriteAllText((Join-Path $engine 'clamscan.exe'),'harmless non-executable fixture')
             $config.ClamAVPath=$engine
             $config|ConvertTo-Json -Depth 5|Set-Content -LiteralPath $configPath -Encoding utf8
-            $slow='param($ConfigPath,$StatePath,[switch]$Force); [void][IO.Directory]::CreateDirectory((Split-Path -Parent $StatePath)); [IO.File]::WriteAllText((Join-Path (Split-Path -Parent $StatePath) "worker-test.pid"),[string]$PID); Start-Sleep -Seconds 60'
-            [IO.File]::WriteAllText((Join-Path $source 'Antivirus/Workers/UpdateCheck.ps1'),$slow)
+            # Replace the central metadata worker, keeping both cases isolated
+            # from the network and preserving the real foreground startup path.
+            $slow='param($ApplicationRoot,$StateDirectory,$Id,$ApplicationVersion,$PowerShellVersion); [void][IO.Directory]::CreateDirectory($StateDirectory); [IO.File]::WriteAllText((Join-Path $StateDirectory "worker-test.pid"),[string]$PID); Start-Sleep -Seconds 60'
+            [IO.File]::WriteAllText((Join-Path $source 'Core/UpdateWorker.ps1'),$slow)
             $process.StartInfo = [Diagnostics.ProcessStartInfo]::new((Join-Path $PSHOME 'pwsh.exe'))
             $process.StartInfo.UseShellExecute = $false
             $process.StartInfo.CreateNoWindow = $true
@@ -41,7 +43,8 @@ Describe 'REMNEXA application startup in a redirected host' {
             $stderr = $process.StandardError.ReadToEndAsync()
             $workerPid=0
             if($Background) {
-                $marker=Join-Path $local 'REMNEXA/worker-test.pid'
+                $context=[Convert]::ToHexString([Security.Cryptography.SHA256]::HashData([Text.Encoding]::UTF8.GetBytes($source.ToLowerInvariant()))).ToLowerInvariant()
+                $marker=Join-Path $local ('REMNEXA/Updates/'+$context+'/worker-test.pid')
                 $watch=[Diagnostics.Stopwatch]::StartNew()
                 while(-not(Test-Path -LiteralPath $marker) -and $watch.Elapsed.TotalSeconds -lt 8) { Start-Sleep -Milliseconds 50 }
                 if(-not(Test-Path -LiteralPath $marker)) { throw 'The isolated slow update worker did not start.' }
