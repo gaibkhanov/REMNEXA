@@ -163,11 +163,15 @@ Describe 'Observed native scanner cancellation' {
         $root=Split-Path -Parent $PSScriptRoot
         Import-Module (Join-Path $root 'Core/NativeProcess.psd1') -Force
         $pidPath=Join-Path ([IO.Path]::GetTempPath()) ('REMNEXA-Cancel-'+[guid]::NewGuid().ToString('N')+'.txt')
-        $source=[Threading.CancellationTokenSource]::new();$source.CancelAfter(2500)
+        $source=[Threading.CancellationTokenSource]::new()
         $code='[IO.File]::WriteAllText(' + "'"+$pidPath+"',"+'$PID.ToString());Start-Sleep 60'
         $encoded=[Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($code));$cancelled=$false
         try{
-            try{Invoke-RemnexaNativeProcess -FilePath (Join-Path $PSHOME 'pwsh.exe') -ArgumentList @('-NoProfile','-EncodedCommand',$encoded) -CancellationToken $source.Token -TimeoutSeconds 15|Out-Null}catch [OperationCanceledException]{$cancelled=$true}
+            # Wait for the harmless child to publish readiness. A cold Windows
+            # runtime can legitimately take more than 2.5 seconds under disk load;
+            # cancelling before startup never exercised live-process cleanup.
+            $whenReady={param($Event)if([IO.File]::Exists($pidPath)){$source.Cancel()}}.GetNewClosure()
+            try{Invoke-RemnexaNativeProcess -FilePath (Join-Path $PSHOME 'pwsh.exe') -ArgumentList @('-NoProfile','-EncodedCommand',$encoded) -CancellationToken $source.Token -OnHeartbeat $whenReady -TimeoutSeconds 15|Out-Null}catch [OperationCanceledException]{$cancelled=$true}
             if(-not $cancelled -or -not(Test-Path $pidPath)){throw 'Live cancellation was not exercised.'}
             $child=Get-Process -Id ([int][IO.File]::ReadAllText($pidPath)) -ErrorAction SilentlyContinue
             if($child){try{if(-not $child.WaitForExit(3000)){throw 'Cancelled child survived.'}}finally{$child.Dispose()}}
