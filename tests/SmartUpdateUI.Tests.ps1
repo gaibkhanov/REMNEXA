@@ -43,6 +43,8 @@ Describe 'ClamAV smart-update console workflows' {
             function Initialize-AntivirusModule {return $true}
             function Clear-RemnexaScreen {}
             function Show-BrandHeader {}
+            $script:HistoryOpened=0
+            function Show-AVScanHistoryScreen {$script:HistoryOpened++}
             function Get-ClamAVStatus {[pscustomobject]@{Installed=$true;Ready=$true;Version='1.5.4'}}
             $script:PerformanceMode='Balanced'
             function Get-AVConfig {[pscustomobject]@{ScanPerformanceMode=$script:PerformanceMode}}
@@ -107,6 +109,9 @@ Describe 'ClamAV smart-update console workflows' {
             [void](Invoke-AntivirusMenu)
             if($script:PerformanceMode -ne 'Fast' -or $script:Scans -or $script:Updates){throw 'Performance menu did not save independently.'}
         }
+    }
+    It 'opens H history without starting a scan or forcing an update' {
+        & $script:smartUI {foreach($value in @('H','0')){$script:InputQueue.Enqueue($value)};[void](Invoke-AntivirusMenu);if($script:HistoryOpened -ne 1 -or $script:Scans -or $script:Updates -or $script:Checks){throw 'History is not independently accessible.'}}
     }
     It 'contains all new translated messages and matching format placeholders in six languages' {
         $root=Split-Path -Parent $PSScriptRoot

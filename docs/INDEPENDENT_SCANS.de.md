@@ -6,6 +6,14 @@ Entwicklungskandidat auf `feature/independent-antivirus-session`; kein stabiles 
 
 ## REMNEXA während des Scans nutzen
 
+### Gespeicherte Scan-Historie
+
+Die Launcher-Vorschau trennt Live-Status und gespeicherte Ergebnisse. Neben Anwendungseingaben erscheinen nur aktive Scans. Die Startseite zeigt die drei letzten gespeicherten Durchläufe; **H** im Antivirus-Menü oder **/scans** öffnet bis zu 100 Einträge, fünf pro Seite. Vor-/Zurückblättern wird nur bei vorhandener Folgeseite angeboten. **D** öffnet die bestehende Scanverwaltung und ihre letzten verfügbaren Befunde.
+
+Neue interaktive Scans speichern pro beendetem oder abgebrochenem Durchlauf eine eigene atomare Zusammenfassung: Scanart, tatsächlich geprüfte Dateien, Funde, Dauer sowie Start- und Endzeit. Wiederverwendung des Scanfensters erhält frühere Zusammenfassungen. Ältere Sitzungsstände bleiben lesbar; deren Datum ist ausdrücklich der letzte gespeicherte Stand. Scanart oder Abschlusszeit werden nicht erfunden. Null geprüfte Dateien und unvollständige Abdeckung gelten niemals als unauffälliger Scan. Aktive Scans gehören erst nach ihrem Ende in die Historie; verwaiste aktive Sitzungsstände gelten als unvollständig.
+
+Die Historie wird lokal und nur lesend aus sicheren Sitzungspfaden der konfigurierten Installation geladen. Zusammenfassungen speichern keine zusätzlichen Zieldateipfade; für vorhandene Detailberichte gelten die bisherigen Datenschutzhinweise. Diese Änderung löscht keine Historieneinträge automatisch.
+
 ### Konsolensteuerung in der Launcher-Vorschau
 
 Das Scanfenster aktualisiert einen begrenzten Bildschirmpuffer mit einem Schreibvorgang, statt die Konsole wiederholt zu löschen. Die Bedienung steht oberhalb der Befunde: **P**, **R** und **C** direkt drücken, ohne Enter. Quick Edit und Mauseingaben werden nur für dieses verwaltete Fenster deaktiviert, damit ein Klick den Scan nicht anhält. Beim normalen Beenden werden die Konsoleneinstellungen wiederhergestellt. Eine Pause greift am nächsten sicheren Prüfpunkt der Scan-Engine.

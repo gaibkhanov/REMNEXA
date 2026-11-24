@@ -20,6 +20,14 @@ The scan window reports actual processed counts and available findings. Percenta
 
 ## Ownership, results and cleanup
 
+### Saved scan history
+
+The launcher preview separates live scan status from saved results. Only active scans appear beside application prompts. The home screen lists the three most recent saved scans; **H** in Antivirus or **/scans** opens up to 100 records, five per page. Next/previous controls appear only when the corresponding page exists. **D** opens the existing scan manager and its latest available findings.
+
+New interactive scans save a separate atomic summary for every completed, interrupted or cancelled run, including scan type, actual processed counts, findings, duration and start/end times. Reusing a scan window preserves earlier summaries. Older session snapshots remain readable; their date is explicitly the last recorded state, with no invented scan type or completion time. Zero processed files and incomplete coverage never imply a clean scan. Active scans stay out of history until they finish; an abandoned active snapshot is treated as incomplete.
+
+History reads are local and read-only, restricted to the configured installation context and safe session paths. Summaries do not add target file paths; existing detailed reports retain their original privacy considerations. No history files are automatically deleted by this change.
+
 ### Console controls in the launcher preview
 
 The scan window refreshes a bounded screen buffer in one write instead of clearing the console repeatedly. Controls stay above the findings: press **P**, **R** or **C** directly, without Enter. Quick Edit and mouse input are disabled only for this window while it is managed, so clicking does not suspend the scan; console settings are restored on normal exit. Pause takes effect at a safe scanner checkpoint.

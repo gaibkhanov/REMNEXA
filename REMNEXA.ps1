@@ -182,6 +182,10 @@ function Read-RemnexaInput {
             Show-AVBackgroundManager
             continue
         }
+        if(-not $ScanManagerContext -and $answer -and $answer.Trim() -ieq '/scans' -and (Get-Command Show-AVScanHistoryScreen -ErrorAction SilentlyContinue)) {
+            Show-AVScanHistoryScreen
+            continue
+        }
         if($answer -and $answer.Trim() -in @('x','X','exit','EXIT')) {
             if($ExitDecisionContext){$answer='0';break}
             Stop-RemnexaApplication
@@ -2382,13 +2386,86 @@ function Invoke-AVPerformanceMenu {
 }
 
 function Show-AVBackgroundSummary {
+    param([switch]$IncludeFinished)
     if(-not (Get-Command Get-ClamAVBackgroundScan -ErrorAction SilentlyContinue)){return}
     $scan=Get-ClamAVBackgroundScan
     if(-not $scan){return}
+    if($scan.State -notin @('Starting','Running','Pausing','Paused','Cancelling')){
+        if($IncludeFinished){
+            Write-Host (T 'AVHistorySavedSnapshot') -ForegroundColor DarkGray
+            Write-Host (T 'AVHistoryLastResult' @((T ('AVBackgroundState'+$scan.State)),$scan.Files,$scan.Findings)) -ForegroundColor White
+        }
+        return
+    }
     $percent=if($scan.Total -gt 0){'{0}%' -f [Math]::Floor(100*$scan.Files/$scan.Total)}else{T 'ProgressUnknown'}
     $color=if($scan.State -eq 'Failed'){'Red'}elseif($scan.State -in @('Warning','Cancelled','Paused','Pausing')){'Yellow'}elseif($scan.State -eq 'Completed'){'Green'}else{'Cyan'}
     $total=if($scan.Total -lt 0){'?'}else{$scan.Total}
     Write-Host (T 'AVBackgroundSummary' @((T ('AVBackgroundState'+$scan.State)),$scan.Files,$total,$percent,$scan.Findings)) -ForegroundColor $color
+}
+
+function Show-AVScanHistoryEntries {
+    param([object[]]$Entries,[switch]$Detailed,[int]$Offset=0)
+    for($index=0;$index -lt $Entries.Count;$index++){
+        $entry=$Entries[$index]
+        $when=Format-HistoryTimestamp ([string]$entry.RecordedAtUtc)
+        $label=if($Offset+$index -eq 0){T 'AVHistoryLatest'}else{'#'+($Offset+$index+1)}
+        $color=if($entry.State -eq 'Completed' -and $entry.Files -gt 0){'Green'}elseif($entry.State -eq 'Failed'){'Red'}else{'Yellow'}
+        Write-Host ('  '+$label+' | '+$when+' | '+(T ('AVHistoryType'+$entry.ScanType))) -ForegroundColor White
+        $total=if($entry.Total -lt 0){'?'}else{[string]$entry.Total}
+        Write-Host ('    '+(T 'AVHistoryRow' @((T ('AVBackgroundState'+$entry.State)),$entry.Files,$total,$entry.Findings))) -ForegroundColor $color
+        if($Detailed){
+            $elapsed=[TimeSpan]::FromSeconds([Math]::Floor($entry.ElapsedSeconds)).ToString('hh\:mm\:ss')
+            Write-Host ('    '+(T 'AVHistoryDuration' @($elapsed))) -ForegroundColor DarkGray
+            if($entry.StartedAtUtc){Write-Host ('    '+(T 'AVHistoryStarted' @((Format-HistoryTimestamp $entry.StartedAtUtc)))) -ForegroundColor DarkGray}
+            if($entry.CompletedAtUtc){Write-Host ('    '+(T 'AVHistoryEnded' @((Format-HistoryTimestamp $entry.CompletedAtUtc)))) -ForegroundColor DarkGray}
+            if($entry.IsLegacy){Write-Host ('    '+(T 'AVHistoryLegacy')) -ForegroundColor DarkGray}
+            if($entry.Files -eq 0){Write-Host ('    '+(T 'AVHistoryNoFiles')) -ForegroundColor DarkGray}
+            elseif($entry.State -in @('Cancelled','Failed')){Write-Host ('    '+(T 'AVHistoryIncomplete')) -ForegroundColor DarkGray}
+            Write-Host ''
+        }
+    }
+}
+
+function Show-AVScanHistorySummary {
+    if(-not(Get-Command Get-ClamAVScanHistory -ErrorAction SilentlyContinue)){return}
+    $entries=@(Get-ClamAVScanHistory -First 3)
+    if(-not $entries.Count){return}
+    Write-Host (T 'AVHistoryTitle') -ForegroundColor White
+    Write-Host ('  '+(T 'AVHistorySavedSnapshot')) -ForegroundColor DarkGray
+    Show-AVScanHistoryEntries -Entries $entries
+    Write-Host ('  '+(T 'AVHistoryShortcut')) -ForegroundColor DarkGray
+    Write-Host ''
+}
+
+function Show-AVScanHistoryScreen {
+    if(-not(Get-Command Get-ClamAVScanHistory -ErrorAction SilentlyContinue)){return}
+    $entries=@(Get-ClamAVScanHistory -First 100);$page=0;$pageSize=5
+    $pages=[Math]::Max(1,[Math]::Ceiling($entries.Count/$pageSize))
+    while($true){
+        Clear-RemnexaScreen
+        Write-Host (T 'AVHistoryTitle') -ForegroundColor White
+        Write-Host (T 'AVHistorySavedSnapshot') -ForegroundColor DarkGray
+        if(-not $entries.Count){Write-Host (T 'AVHistoryNone') -ForegroundColor DarkGray}
+        else{
+            Write-Host (T 'PageLabel' @(($page+1),$pages,$entries.Count)) -ForegroundColor DarkGray
+            Write-Host ''
+            Show-AVScanHistoryEntries -Entries @($entries|Select-Object -Skip ($page*$pageSize) -First $pageSize) -Detailed -Offset ($page*$pageSize)
+            Write-Host ('  [D] '+(T 'AVHistoryDetails'))
+        }
+        if($page+1 -lt $pages){Write-Host ('  [N] '+(T 'AVHistoryNext'))}
+        if($page -gt 0){Write-Host ('  [P] '+(T 'AVHistoryPrevious'))}
+        Write-Host ('  [0] '+(T 'BackPreviousMenu'))
+        Write-Host ('  [X] '+(T 'ExitApplication'))
+        $choice=(Read-RemnexaInput (T 'SelectPrompt') -ExitOptionAlreadyShown -ScanManagerContext).Trim().ToUpperInvariant()
+        switch($choice){
+            '0'{return}
+            'X'{Stop-RemnexaApplication}
+            'N'{if($page+1 -lt $pages){$page++}}
+            'P'{if($page -gt 0){$page--}}
+            'D'{if($entries.Count){Show-AVBackgroundManager}}
+            default{Write-Status (T 'AVUpdateInvalidChoice') 'Warning'}
+        }
+    }
 }
 
 function Show-AVBackgroundManager {
@@ -2398,7 +2475,7 @@ function Show-AVBackgroundManager {
         if(-not $scan){Write-Host (T 'AVBackgroundNone');return}
         Clear-RemnexaScreen
         Write-Host (T 'AVBackgroundTitle') -ForegroundColor White
-        Show-AVBackgroundSummary
+        Show-AVBackgroundSummary -IncludeFinished
         $elapsed=[TimeSpan]::FromSeconds([Math]::Floor($scan.ElapsedSeconds)).ToString('hh\:mm\:ss')
         $rate=if($scan.ActiveSeconds -gt 0){[Math]::Round($scan.Files/$scan.ActiveSeconds,1)}else{0}
         Write-Host (T 'AVBackgroundDetail' @($scan.Mode,(T ('AVBackgroundPhase'+$scan.Phase)),$elapsed,$rate))
@@ -2465,10 +2542,11 @@ function Invoke-AntivirusMenu {
         Write-Host ('  [I] ' + (T 'AVUpdateInfo'))
         Write-Host ('  [P] ' + (T 'AVPerformanceMenu'))
         Write-Host ('  [B] ' + (T 'AVBackgroundTitle'))
+        Write-Host ('  [H] ' + (T 'AVHistoryTitle'))
         Write-Host ('  [0] ' + (T 'BackPreviousMenu'))
         $choice = (Read-RemnexaInput (T 'SelectPrompt')).Trim().ToUpperInvariant()
         if ($choice -eq '0') { return 'menu' }
-        if ($choice -notmatch '^[1-7UIPB]$') {
+        if ($choice -notmatch '^[1-7UIPBH]$') {
             Write-Status (T 'InvalidAVChoice') 'Warning'
             Start-Sleep -Milliseconds 800
             continue antivirusLoop
@@ -2477,6 +2555,7 @@ function Invoke-AntivirusMenu {
         try {
             switch ($choice) {
                 'B' { Show-AVBackgroundManager;continue antivirusLoop }
+                'H' { Show-AVScanHistoryScreen;continue antivirusLoop }
                 'P' { Invoke-AVPerformanceMenu;continue antivirusLoop }
                 'U' { Invoke-AVUpdateMenu;continue antivirusLoop }
                 'I' { Show-AVUpdateSummary -Detailed }
@@ -3920,6 +3999,7 @@ function Main {
                 }
                 default {
                     Show-HistorySummary
+                    Show-AVScanHistorySummary
                     $homeChoice = Show-HomeMenu
                     switch ($homeChoice) {
                         '0' {
@@ -3996,6 +4076,7 @@ function Main {
         }
         elseif ($interactiveSession) {
             Show-HistorySummary
+            Show-AVScanHistorySummary
             if ($script:ReturnToProgramList -and $null -ne $script:LastProgramListContext) {
                 $menuChoice = '99'
                 $preselected = Select-ProgramPaged -Programs $script:LastProgramListContext.Programs -Title $script:LastProgramListContext.Title -ResumeContext $script:LastProgramListContext

@@ -6,6 +6,9 @@ Entwicklungsänderungen sind keine veröffentlichten Releases. Dieses Dokument v
 
 ## Nicht veröffentlicht — Windows-Launcher-Vorschau
 
+- Gespeicherte Antivirus-Historie vom Live-Status trennen: datierte Übersicht auf der Startseite, H und /scans, bedingte Seitennavigation und klare Hinweise bei unvollständigen Scans. Einzelne Durchläufe bei Wiederverwendung des Scanfensters erhalten und alte Stände ohne erfundene Zeitangaben lesen.
+- Benutzerordner mit einer EXE, kurzer README, app/ und optional runtime/ erläutern; Quellcode und kompatible Starter bleiben im Entwicklungsordner.
+
 - Wiederholte Fortschrittsmeldungen und überlagerte Downloadbalken beheben. Tatsächliche Downloadbytes, abbrechbare begrenzte HTTPS-Übertragung und deutlichen Hinweis auf Aktualisierung vor dem Scan anzeigen; ein Abbruch startet keinen Scan.
 - Wiederholtes Löschen der Scan-Konsole durch eine stabile Pufferaktualisierung ersetzen, Quick Edit nur im betroffenen Fenster deaktivieren, direkte P/R/C-Steuerung erhalten und U zum Aktualisieren der Momentaufnahme in der Hauptanwendung ergänzen. Isolierte Konsolen-/Maus-, Downloadfehler- und Abbruchtests hinzufügen.
 

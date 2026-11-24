@@ -22,6 +22,7 @@ try {
     $detached=$false;$lastWrite=[DateTimeOffset]::MinValue;$lastDraw=[DateTimeOffset]::MinValue;$finishedAt=$null;$reportWritten=$false;$release=$false
     $lastRequest=[DateTimeOffset]::UtcNow;$scan=$null;$reportName='results.json';$lastFallbackState='';$lastFallback=[DateTimeOffset]::MinValue
     $language=[string]$owner.Language
+    $scanType='Unknown';$startedAtUtc=$null;$completedAtUtc=$null;$historyId=$null
     $messages=[IO.File]::ReadAllText((Join-Path $PSScriptRoot ('../../locales/'+$language+'.json')))|ConvertFrom-Json -AsHashtable
     function Text {param($Key,[object[]]$Values=@())$text=[string]$messages[$Key];if($Values.Count){$text -f $Values}else{$text}}
     function Save-HostSnapshot {
@@ -32,7 +33,21 @@ try {
         $view.Evidence=@($preview|ForEach-Object{if($_.Length -gt 2048){$_.Substring(0,2048)+'…'}else{$_}})
         $view|Add-Member Detached $detached
         $view|Add-Member ReportFile $reportName
+        $view|Add-Member ScanType $scanType
+        $view|Add-Member StartedAtUtc $startedAtUtc
+        $view|Add-Member CompletedAtUtc $completedAtUtc
+        $view|Add-Member RecordedAtUtc ([DateTimeOffset]::UtcNow.ToString('o'))
+        $view|Add-Member HistoryId $historyId
         & $module {param($Path,$Data)Write-AVSessionJson $Path $Data} (Join-Path $SessionDirectory 'status.json') $view
+    }
+    function Save-CompletedScan {
+        param($Snapshot)
+        if(-not $Snapshot -or $reportWritten -or $Snapshot.State -notin @('Completed','Warning','Cancelled','Failed')){return}
+        & $module {param($Path,$Data)Write-AVSessionJson $Path $Data} (Join-Path $SessionDirectory $reportName) @($Snapshot.Results)
+        $script:completedAtUtc=[DateTimeOffset]::UtcNow.ToString('o')
+        $record=[ordered]@{SchemaVersion=1;HistoryId=$historyId;ScanType=$scanType;State=$Snapshot.State;Files=$Snapshot.Files;Total=$Snapshot.Total;Findings=$Snapshot.Findings;ElapsedSeconds=$Snapshot.ElapsedSeconds;StartedAtUtc=$startedAtUtc;CompletedAtUtc=$completedAtUtc;RecordedAtUtc=$completedAtUtc;ReportFile=$reportName}
+        & $module {param($Path,$Data)Write-AVSessionJson $Path $Data} (Join-Path $SessionDirectory ('history-'+$historyId+'.json')) $record
+        $script:reportWritten=$true;$script:finishedAt=[DateTimeOffset]::UtcNow
     }
     try{$Host.UI.RawUI.WindowTitle='REMNEXA Antivirus'}catch{}
     $consoleView=& $module {New-AVScanWindow}
@@ -44,12 +59,14 @@ try {
                 switch($command.Action) {
                     'Start' {
                         if($command.ScanType -notin @('Quick','Full','Custom') -or $command.Language -notin @('de','en','es','fr','ru','tr') -or -not [IO.Path]::IsPathFullyQualified($command.ConfigPath)){throw 'Invalid scan parameters.'}
+                        Save-CompletedScan (Get-ClamAVBackgroundScan -IncludeResults)
                         [void](Start-ClamAVBackgroundScan -ScanType $command.ScanType -Path @($command.Paths) -ConfigPath $command.ConfigPath -Language $command.Language)
                         $parentId=[int]$request.ClientProcessId
                         $parent=Get-Process -Id $parentId
                         try{$parentTicks=$parent.StartTime.ToUniversalTime().Ticks}finally{$parent.Dispose()}
                         $detached=$false;$finishedAt=$null;$reportWritten=$false
                         $reportName='results-'+$command.Id+'.json'
+                        $scanType=$command.ScanType;$startedAtUtc=[DateTimeOffset]::UtcNow.ToString('o');$completedAtUtc=$null;$historyId=$command.Id
                         $language=$command.Language;$messages=[IO.File]::ReadAllText((Join-Path $PSScriptRoot ('../../locales/'+$language+'.json')))|ConvertFrom-Json -AsHashtable
                     }
                     'Pause'{Set-ClamAVBackgroundScan Pause}
@@ -72,10 +89,7 @@ try {
         }
         $scan=Get-ClamAVBackgroundScan -IncludeResults
         $active=$scan -and $scan.State -in @('Starting','Running','Pausing','Paused','Cancelling')
-        if($scan -and -not $active -and -not $reportWritten){
-            & $module {param($Path,$Data)Write-AVSessionJson $Path $Data} (Join-Path $SessionDirectory $reportName) @($scan.Results)
-            $reportWritten=$true;$finishedAt=[DateTimeOffset]::UtcNow
-        }
+        if($scan -and -not $active){Save-CompletedScan $scan}
         if($scan -and ([DateTimeOffset]::UtcNow-$lastWrite).TotalMilliseconds -ge 500) {
             Save-HostSnapshot $scan
             $lastWrite=[DateTimeOffset]::UtcNow

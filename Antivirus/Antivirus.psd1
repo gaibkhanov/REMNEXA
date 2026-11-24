@@ -18,7 +18,7 @@
         'Get-ClamAVScanEngineState','Stop-ClamAVScanEngine',
         'Invoke-ClamAVScan',
         'Start-ClamAVBackgroundScan','Get-ClamAVBackgroundScan','Set-ClamAVBackgroundScan','Stop-ClamAVBackgroundScan',
-        'Disconnect-ClamAVBackgroundScan',
+        'Disconnect-ClamAVBackgroundScan','Get-ClamAVScanHistory',
         'Invoke-ClamAVTargetedScan',
         'Get-ClamAVScanResult',
         'Get-ClamAVQuarantine',

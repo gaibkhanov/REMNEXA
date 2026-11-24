@@ -55,6 +55,23 @@ Describe 'Independent antivirus process lifetime and secure controls' {
         $end=Wait-Independent {param($s)$s -and $s.State -eq 'Warning'}
         if($end.Files -ne 30 -or $end.Findings -ne 1 -or @($end.Results|Where-Object { $_.Status -eq 'Infected' -and $_.CoverageComplete }).Count -ne 1 -or -not (Test-Path -LiteralPath $end.ReportPath)){throw 'Detached completion lost coverage or results.'}
     }
+    It 'saves separate dated history records for consecutive scans and reads them after reopening the module' {
+        $targets=@(1..3|ForEach-Object{Join-Path $script:independentTemp ('data/'+$_.ToString()+'.txt')})
+        [void](Start-ClamAVBackgroundScan -ScanType Custom -Path $targets -ConfigPath $script:independentConfig)
+        $first=Wait-Independent {param($s)$s -and $s.State -in @('Completed','Warning')}
+        $firstId=$first.HistoryId
+        [void](Start-ClamAVBackgroundScan -ScanType Custom -Path $targets -ConfigPath $script:independentConfig)
+        [void](Wait-Independent {param($s)$s -and $s.HistoryId -ne $firstId -and $s.State -in @('Completed','Warning')})
+        $entries=@(Get-ClamAVScanHistory -ConfigPath $script:independentConfig)
+        $entries.Count|Should -Be 2
+        @($entries.Id|Select-Object -Unique).Count|Should -Be 2
+        foreach($entry in $entries){$entry.Files|Should -Be 3;$entry.ScanType|Should -Be Custom;$entry.IsLegacy|Should -BeFalse;$entry.StartedAtUtc|Should -Not -BeNullOrEmpty;$entry.CompletedAtUtc|Should -Not -BeNullOrEmpty}
+        Remove-Module Antivirus
+        Import-Module (Join-Path $script:independentRoot 'Antivirus/Antivirus.psd1') -Force
+        $script:independentModule=Get-Module Antivirus
+        & $script:independentModule {param($Root,$Config)$script:AVConfigPath=$Config;$script:AVModuleRoot=Join-Path $Root 'Antivirus';$script:AVScanHostWindowStyle='Hidden'} $script:independentTemp $script:independentConfig
+        @(Get-ClamAVScanHistory -ConfigPath $script:independentConfig).Count|Should -Be 2
+    }
     It 'continues after an unannounced creator process exit without silently cancelling the scan' {
         [void](Start-FixtureCreator Implicit)
         $end=Wait-Independent {param($s)$s -and $s.State -eq 'Warning'}

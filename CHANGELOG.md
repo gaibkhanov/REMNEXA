@@ -6,6 +6,9 @@ Development changes are not published release claims. Existing release artifacts
 
 ## Unreleased — Windows launcher preview
 
+- Separate saved Antivirus history from live status: dated home-screen summaries, H and /scans navigation, conditional paging and clear incomplete-scan messages. Preserve per-run records across scan-window reuse and read older snapshots without inventing timestamps.
+- Clarify that the end-user folder contains one EXE, a short README, app/ and optional runtime/; source and compatibility launchers remain in the developer checkout.
+
 - Fix repeated progress banners and overlapping download bars. Show actual download bytes, cancellable bounded HTTPS transfers and a clear update-before-scan message; cancellation does not launch the scan.
 - Replace repeated scan-console clearing with one stable buffer update, disable window-local Quick Edit, retain direct P/R/C controls and add manual U refresh for the main application's snapshot. Add isolated console/mouse, download-failure and cancellation regressions.
 
