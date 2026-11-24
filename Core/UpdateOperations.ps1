@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MIT
 # Private update operations, loaded by Updates.psm1. Only verified archives execute.
 function Copy-RemnexaUpdateTree {
-    param([string]$Source,[string]$Destination)
+    param([string]$Source,[string]$Destination,[scriptblock]$OnProgress)
     Assert-RemnexaUpdatePath $Source;Assert-RemnexaUpdatePath $Destination
     $pending=[Collections.Generic.Stack[string]]::new();$pending.Push($Source);$count=0;$bytes=[long]0
     while($pending.Count){
@@ -9,6 +9,7 @@ function Copy-RemnexaUpdateTree {
         $relative=[IO.Path]::GetRelativePath($Source,$directory);$target=Join-Path $Destination $relative
         [void][IO.Directory]::CreateDirectory($target)
         foreach($entry in [IO.Directory]::EnumerateFileSystemEntries($directory)){
+            if($OnProgress){& $OnProgress}
             Assert-RemnexaUpdatePath $entry;$count++
             if($count -gt 50000){throw 'Too many files in the portable installation.'}
             if([IO.Directory]::Exists($entry)){$pending.Push($entry)}else{
@@ -39,7 +40,9 @@ function Install-RemnexaAntivirusUpdate {
     Assert-RemnexaUpdatePath $root;Assert-RemnexaUpdatePath $database
     if(-not(Test-Path -LiteralPath (Join-Path $root 'clamscan.exe'))){throw 'antivirus_not_installed'}
     $fingerprint=Get-RemnexaDatabaseFingerprint $database
-    $staged=Join-Path $Stage 'ClamAV';Copy-RemnexaUpdateTree $root $staged
+    $phaseCommand=Get-Command Set-RemnexaUpdatePhase
+    $copyProgress={& $phaseCommand $State $Paths 'Preparing'}.GetNewClosure()
+    $staged=Join-Path $Stage 'ClamAV';Copy-RemnexaUpdateTree $root $staged -OnProgress $copyProgress
     $clone=Get-AVConfig -Path $configPath
     $clone.ClamAVPath=$staged;$clone.DatabasePath=Join-Path $staged ([IO.Path]::GetRelativePath($root,$database))
     $clone.LogPath=Join-Path $Stage 'logs';$clone.QuarantinePath=Join-Path $Stage 'quarantine';$clone.AutoCheckUpdates=$false
