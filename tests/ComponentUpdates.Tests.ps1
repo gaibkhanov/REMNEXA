@@ -92,14 +92,22 @@ Describe 'Component update security and background lifecycle' {
     It 'returns promptly while a separate worker is busy and rejects a duplicate task' {
         $app=Join-Path $TestDrive 'background-app';$av=Join-Path $app 'Antivirus';[void][IO.Directory]::CreateDirectory($av)
         [IO.File]::WriteAllText((Join-Path $av 'Antivirus.psd1'),"@{RootModule='Antivirus.psm1';ModuleVersion='1.0.0'}")
-        [IO.File]::WriteAllText((Join-Path $av 'Antivirus.psm1'),"Start-Sleep -Seconds 2; throw 'Isolated fixture: no network or installation.'")
+        $gateCode=@'
+$gate=Join-Path $PSScriptRoot 'release.fixture'
+$watch=[Diagnostics.Stopwatch]::StartNew()
+while(-not[IO.File]::Exists($gate) -and $watch.Elapsed.TotalSeconds -lt 12){Start-Sleep -Milliseconds 50}
+throw 'Isolated fixture: no network or installation.'
+'@
+        [IO.File]::WriteAllText((Join-Path $av 'Antivirus.psm1'),$gateCode)
         $cache=Join-Path $TestDrive 'background-cache'
         $watch=[Diagnostics.Stopwatch]::StartNew()
         Start-RemnexaComponentTask $app -Component Check -ApplicationVersion '2.2.0' -StateDirectory $cache|Should -BeTrue
-        $watch.Elapsed.TotalSeconds|Should -BeLessThan 2
+        # Gate the worker instead of assuming a fixed Windows process-start time:
+        # the foreground must return while the independent task is still blocked.
         Start-RemnexaComponentTask $app -Component Check -ApplicationVersion '2.2.0' -StateDirectory $cache -Force|Should -BeFalse
         $state=Get-RemnexaComponentUpdates $app $cache
         $state.Task.Status|Should -BeIn @('Starting','Checking')
+        [IO.File]::WriteAllText((Join-Path $av 'release.fixture'),'release owned fixture')
         $deadline=[Diagnostics.Stopwatch]::StartNew()
         do{Start-Sleep -Milliseconds 100;$state=Get-RemnexaComponentUpdates $app $cache}while($state.Task.Status -ne 'Failed' -and $deadline.Elapsed.TotalSeconds -lt 15)
         $state.Task.Status|Should -Be Failed
