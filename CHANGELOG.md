@@ -6,6 +6,8 @@ Development changes are not published release claims. Existing release artifacts
 
 ## Unreleased — Windows launcher preview
 
+- Add **[E] Extras → Default applications** with Simple/Advanced views, current Windows associations, literal search, conditional paging and refresh. Open the supported Windows Default apps page for user-confirmed changes; no registry writes or elevation. Translate the feature into all six interface languages.
+
 - Add a common background update center for portable PowerShell, ClamAV, signatures and supported stable Complete app releases. Require confirmation and verified official assets; preserve active runtimes/scans and stage replacements with cancellation before activation.
 - Show local component/database versions, prepared-runtime notices and recent saved activities on the start dashboard. Keep menus usable during updates; document restart, offline, scan-lock and app-package limits.
 

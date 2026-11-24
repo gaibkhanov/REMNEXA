@@ -87,6 +87,18 @@ Ausgewählte erweiterte Werkzeuge bieten Windows-Reparatur, optionale Features, 
 
 Unterstützte Datenschutzsicherungen werden vor Wiederherstellung gegen eine feste Registry-Liste geprüft. Das ist eine begrenzte Konfigurationswiederherstellung, kein vollständiges System-Rollback.
 
+## Extras: Standardanwendungen
+
+Wähle auf der Hauptseite **[E] Extras**, danach **[1] Standardanwendungen**. Der einfache Modus listet 30 bekannte Dateiendungen und Web-/E-Mail-Protokolle. Der erweiterte Modus erfasst alle gültigen registrierten Dateiendungen der aktuellen Windows-Registry-Sicht einschließlich benutzerbezogener Registrierungen und ergänzt HTTP, HTTPS und E-Mail. Eine Registrierung belegt nicht, dass die Anwendung noch installiert ist; nicht ermittelbare Zuordnungen werden gekennzeichnet.
+
+- **[M]** wechselt zwischen Einfach/Erweitert; **[S]** filtert Namen ohne Platzhalter. Eine leere Suche entfernt den Filter.
+- **[N]/[P]** erscheinen nur bei vorhandener nächster/vorheriger Seite. Nummern wählen Einträge der angezeigten Seite.
+- Wähle einen Eintrag, um aktuelle Anwendung und Windows-Zuordnungskennung zu sehen. **[1]** öffnet Windows-Einstellungen; suche dort nach der angezeigten Dateiendung oder dem Protokoll und wähle eine installierte Anwendung. Windows verlangt die Bestätigung durch den Benutzer.
+- Kehre zu REMNEXA zurück und drücke Enter oder verwende **[R]**, um die Zuordnungen neu einzulesen. **[W]** öffnet Standard-Apps direkt aus der Liste.
+- **[0]** führt einen Bildschirm zurück. **[X]** beendet REMNEXA mit der vorhandenen Rückfrage bei laufendem Scan.
+
+Das Feature funktioniert offline und benötigt normalerweise keine Administratorrechte. Es liest Zuordnungen über die Windows-Shell-Schnittstelle; registrierte Anwendungsbefehle werden nicht ausgeführt, UserChoice nicht geändert und Windows-Schutzmechanismen nicht umgangen. Es öffnet die [dokumentierte Windows-Seite Standard-Apps](https://learn.microsoft.com/en-us/windows/apps/develop/launch/launch-settings-app) und verwendet keine undokumentierten Links zu einzelnen Dateitypen. REMNEXA kann Formate nicht still im Hintergrund umstellen oder Windows-Bestätigungen ersetzen.
+
 ## Antivirus
 
 Der optionale Antivirus-Bereich erklärt die Rechteerhöhung und bietet Engine-/Signatur-Einrichtung, Scans und Quarantäne. Lies vor Verwendung die [ClamAV-Anleitung](../Antivirus/README.de.md). Ein Scan bietet keinen Echtzeitschutz.

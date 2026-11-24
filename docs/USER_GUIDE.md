@@ -87,6 +87,18 @@ Selected advanced tools expose Windows repair, optional features, Registry-candi
 
 Supported privacy backups are checked against a fixed Registry allowlist before restore. This is a limited configuration restore, not full system rollback.
 
+## Extras: default applications
+
+From the home screen choose **[E] Extras**, then **[1] Default applications**. Simple mode lists 30 familiar file extensions and web/email protocols. Advanced mode enumerates all valid registered file extensions in the current Windows Registry view, including user-only registrations, and adds HTTP, HTTPS and mail. Registrations do not prove an application is still installed; an unavailable assignment is shown as such.
+
+- **[M]** switches Simple/Advanced; **[S]** filters names literally, without wildcards. Submit an empty search to clear the filter.
+- **[N]/[P]** appear only when another page exists. Numbers select entries on the displayed page.
+- Select an entry to see its current application and Windows association identifier. **[1]** opens Windows Settings; search there for the displayed extension or protocol and select an installed application. Windows requires the user to confirm the assignment.
+- Return to REMNEXA and press Enter, or use **[R]**, to read the current assignments again. **[W]** opens Default apps directly from the list.
+- **[0]** goes back one screen. **[X]** exits REMNEXA using the existing active-scan confirmation.
+
+The feature works offline and normally needs no administrator rights. It only reads associations through the Windows Shell API; it never executes registered application commands, edits UserChoice, or bypasses Windows protections. It opens the [documented Default apps Settings URI](https://learn.microsoft.com/en-us/windows/apps/develop/launch/launch-settings-app), rather than relying on undocumented per-extension deep links. REMNEXA cannot silently set every format or replace Windows' confirmation dialog.
+
 ## Antivirus
 
 The optional Antivirus area explains elevation and supports engine/signature setup, scans and quarantine operations. See the [ClamAV guide](../Antivirus/README.md) before using it. A scan is not real-time protection.

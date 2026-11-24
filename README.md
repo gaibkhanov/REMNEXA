@@ -36,6 +36,12 @@ Inspect and manage supported startup entries, with backups for supported changes
 
 The system overview is read-only. The current interface is a terminal application; a graphical dashboard is planned.
 
+### Extras: default applications
+
+Open **[E] Extras → [1] Default applications**. Simple mode lists common documents, images, media, web and mail associations. **[M]** switches to all registered file extensions plus HTTP, HTTPS and mail, with search and paging. Read current application names through the Windows Shell API; **[R]** refreshes them.
+
+Select an entry to open Windows **Default apps**, search there for the displayed extension or protocol and confirm your choice. REMNEXA does not write protected associations or request administrator rights for this feature. Unavailable associations are marked explicitly. See the [user guide](docs/USER_GUIDE.md#extras-default-applications).
+
 ### Optional ClamAV scanning
 
 Scans run in their own window. Keep using REMNEXA, or exit it and choose to let the scan finish independently. Pause, resume, cancel and inspect findings through the scan manager or scan window. See the [independent scan guide](docs/INDEPENDENT_SCANS.md).

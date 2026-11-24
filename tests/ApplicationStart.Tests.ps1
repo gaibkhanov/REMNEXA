@@ -1,6 +1,6 @@
 Describe 'REMNEXA application startup in a redirected host' {
-    It 'keeps the real home menu responsive with background work <Background> and cleans up on exit' -Tag Windows11Client -TestCases @(@{Background=$false},@{Background=$true}) {
-        param($Background)
+    It 'keeps the real home menu responsive with background work <Background>, Extras <Extras>, and cleans up on exit' -Tag Windows11Client -TestCases @(@{Background=$false;Extras=$false},@{Background=$true;Extras=$false},@{Background=$false;Extras=$true}) {
+        param($Background,$Extras)
         $root = Split-Path -Parent $PSScriptRoot
         $fixture = Join-Path ([IO.Path]::GetTempPath()) ('REMNEXA-ApplicationStart-' + [guid]::NewGuid().ToString('N'))
         $process = [Diagnostics.Process]::new()
@@ -51,6 +51,9 @@ Describe 'REMNEXA application startup in a redirected host' {
                 $workerPid=[int][IO.File]::ReadAllText($marker)
                 if(-not(Get-Process -Id $workerPid -ErrorAction SilentlyContinue)) { throw 'The worker was not running while the menu waited for input.' }
             }
+            if ($Extras) {
+                foreach ($answer in @('E','1','M','S','pdf','1','0','0','0')) { $process.StandardInput.WriteLine($answer) }
+            }
             $process.StandardInput.WriteLine('0')
             $process.StandardInput.Close()
             if (-not $process.WaitForExit(15000)) {
@@ -66,6 +69,10 @@ Describe 'REMNEXA application startup in a redirected host' {
                 throw "Home/exit failed (exit $($process.ExitCode)): $output $errorOutput"
             }
             if($workerPid -gt 0 -and (Get-Process -Id $workerPid -ErrorAction SilentlyContinue)) { throw 'The background update worker survived application exit.' }
+            # Use ASCII labels here: redirected Windows hosts can use a legacy output codepage.
+            if($Extras -and ($output -notmatch 'Standardanwendungen' -or $output -notmatch 'Erweitert' -or $output -notmatch 'Windows-Zuordnung:')) {
+                throw 'The real Extras navigation, advanced search or association detail screen was not reached.'
+            }
             if($output -match 'AVUpdate|Updateprüfung|Update check') { throw 'Background updates displayed an unsolicited startup message.' }
         }
         finally {

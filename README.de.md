@@ -36,6 +36,12 @@ Unterstützte Autostart-Einträge prüfen und verwalten, einschließlich Sicheru
 
 Die Systemübersicht liest ausschließlich Daten. Die aktuelle Oberfläche läuft im Terminal; ein grafisches Dashboard ist geplant.
 
+### Extras: Standardanwendungen
+
+Öffne **[E] Extras → [1] Standardanwendungen**. Der einfache Modus zeigt bekannte Dokument-, Bild-, Medien-, Web- und E-Mail-Zuordnungen. **[M]** wechselt zu allen registrierten Dateiendungen sowie HTTP, HTTPS und E-Mail, mit Suche und Seitenaufteilung. Die aktuelle Anwendung wird über die Windows-Shell-Schnittstelle gelesen; **[R]** liest den Stand neu ein.
+
+Wähle einen Eintrag, um Windows **Standard-Apps** zu öffnen. Suche dort nach der angezeigten Dateiendung oder dem Protokoll und bestätige deine Auswahl. REMNEXA schreibt keine geschützten Zuordnungen und fordert dafür keine Administratorrechte an. Nicht ermittelbare Zuordnungen werden gekennzeichnet. Siehe [Benutzeranleitung](docs/USER_GUIDE.de.md#extras-standardanwendungen).
+
 ### Optionale ClamAV-Prüfung
 
 Scans laufen im eigenen Fenster. Nutze REMNEXA weiter oder beende es und lasse den Scan unabhängig fertiglaufen. Pause, Fortsetzung, Abbruch und Befunde sind im Scanmanager oder Scanfenster erreichbar. Siehe [Anleitung zum unabhängigen Scan](docs/INDEPENDENT_SCANS.de.md).

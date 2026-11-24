@@ -6,6 +6,8 @@ Entwicklungsänderungen sind keine veröffentlichten Releases. Dieses Dokument v
 
 ## Nicht veröffentlicht — Windows-Launcher-Vorschau
 
+- **[E] Extras → Standardanwendungen** mit einfachem/erweitertem Modus, aktuellen Windows-Zuordnungen, Suche, bedingten Seitenoptionen und erneutem Einlesen ergänzen. Änderungen erfolgen durch den Benutzer auf der unterstützten Windows-Seite „Standard-Apps“, ohne Registry-Schreibzugriff oder Rechteerhöhung. Oberfläche in allen sechs Sprachen.
+
 - Gemeinsamer Hintergrund-Updatebereich für portable PowerShell, ClamAV, Signaturen und unterstützte stabile Complete-App-Pakete. Zustimmung und geprüfte offizielle Artefakte sind erforderlich; aktive Laufzeiten und Scans bleiben erhalten, Austausch mit Abbruch vor der Übernahme.
 - Lokale Komponenten-/Datenbankversionen, vorbereitete Laufzeiten und letzte gespeicherte Aktivitäten im Start-Dashboard. Menüs bleiben während Updates nutzbar; Neustart-, Offline-, Scan-Sperren- und Paketgrenzen sind dokumentiert.
 

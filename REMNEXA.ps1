@@ -48,6 +48,8 @@ Import-Module -Name (Join-Path $PSScriptRoot 'Core\Logging.psd1') -Force -ErrorA
 Import-Module -Name (Join-Path $PSScriptRoot 'Core\Permissions.psd1') -Force -ErrorAction Stop
 Import-Module -Name (Join-Path $PSScriptRoot 'Core\OperationResults.psd1') -Force -ErrorAction Stop
 Import-Module -Name (Join-Path $PSScriptRoot 'Core\SystemSnapshot.psd1') -Force -ErrorAction Stop
+Import-Module -Name (Join-Path $PSScriptRoot 'Core/DefaultApplications.psm1') -ErrorAction Stop
+. (Join-Path $PSScriptRoot 'Core/ExtrasConsole.ps1')
 Import-Module -Name (Join-Path $PSScriptRoot 'Core\Progress.psd1') -ErrorAction Stop
 Import-Module -Name (Join-Path $PSScriptRoot 'Core\NativeProcess.psd1') -ErrorAction Stop
 Import-Module -Name (Join-Path $PSScriptRoot 'Core\SecurityAssessment.psd1') -Force -ErrorAction Stop
@@ -919,12 +921,13 @@ function Show-HomeMenu {
     Write-Host ('  [7] ' + (T 'Home7'))
     Write-Host ('  [8] ' + (T 'Home8'))
     Write-Host ('  [9] ' + (T 'Home9'))
+    Write-Host ('  [E] ' + (T 'ExtrasTitle'))
     Write-Host ('  [U] ' + (T 'CUTitle'))
     Write-Host ('  [0] ' + (T 'Main0'))
     Write-Host ''
     while ($true) {
         $answer = (Read-RemnexaInput (T 'SelectPrompt') -ExitOptionAlreadyShown).Trim()
-        if ($answer -match '^[0-9uU]$') { return $answer.ToUpperInvariant() }
+        if ($answer -match '^[0-9uUeE]$') { return $answer.ToUpperInvariant() }
         if ($answer -ieq 'exit') { return '0' }
         Write-Status (T 'HomeInvalid') 'Warning'
     }
@@ -4022,6 +4025,7 @@ function Main {
                     $homeChoice = Show-HomeMenu
                     switch ($homeChoice) {
                         'U' {Show-ComponentUpdateCenter;continue mainLoop}
+                        'E' {Show-RemnexaExtrasMenu;continue mainLoop}
                         '0' {
                             Write-Status (T 'ProgramEnded') 'Success'
                             return
