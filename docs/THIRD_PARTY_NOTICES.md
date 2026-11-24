@@ -17,6 +17,8 @@ This is an inventory and review guide, not legal advice or a declaration that ev
 
 ## Maintainer checklist
 
+Complete candidates bundle PowerShell with its original `LICENSE.txt` and `ThirdPartyNotices.txt`. They include the unmodified ClamAV runtime payload and original `COPYING.txt`/`COPYING/` notices, plus the matching official source release at `app/licenses/clamav/clamav-<version>.tar.gz`. The package manifest records upstream archive hashes and signature-snapshot hashes. Debug/linker artifacts are omitted; required runtime DLLs are retained. UnRAR and Microsoft runtime libraries retain their separate terms; they are not relicensed as MIT/GPL. The native adapter sources and GPL notices remain included. Standard/source distributions still exclude these upstream binaries and databases.
+
 1. Identify exact upstream version, source, hash and included files.
 2. Read that package's license and all accompanying notices, including transitive components.
 3. Check modification, redistribution, source-availability and attribution requirements.

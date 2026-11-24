@@ -6,6 +6,9 @@ Development changes are not published release claims. Existing release artifacts
 
 ## Unreleased — Windows launcher preview
 
+- Make Complete the default user package: bundle pinned PowerShell 7.7.0, portable ClamAV 1.5.5, verified FreshClam signature snapshots, runtime dependencies, license notices and matching ClamAV source. Fail incomplete or stale builds; retain an explicitly selected Standard developer profile.
+- Verify upstream archive/runtime bytes and signature integrity, exclude local updater state and preserve database timestamps when archiving. Add isolated packaging security regressions and clearly identify Standard CI artifacts as developer builds.
+
 - Separate saved Antivirus history from live status: dated home-screen summaries, H and /scans navigation, conditional paging and clear incomplete-scan messages. Preserve per-run records across scan-window reuse and read older snapshots without inventing timestamps.
 - Clarify that the end-user folder contains one EXE, a short README, app/ and optional runtime/; source and compatibility launchers remain in the developer checkout.
 

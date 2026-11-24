@@ -10,6 +10,8 @@ Version 2.2.0 starts interactive scans in their own window. REMNEXA remains usab
 
 ## Components and requirements
 
+The Complete user package already includes the portable engine, required Windows runtime DLLs and main/daily/bytecode databases. Extract and start REMNEXA; no manual ClamAV setup or first-scan download is required. Included signatures are a dated snapshot and can later be updated with the existing confirmed update actions. This differs from the source/Standard distribution described below.
+
 The source contains the PowerShell integration, not ClamAV executables or signature databases. Setup needs a supported Windows ClamAV package, internet access and suitable permissions. The application explains elevation before opening its Antivirus workspace. API users must provide elevation where required for system scan targets or installation paths.
 
 Load the module from the repository root:

@@ -128,14 +128,14 @@ jobs:
           path: dist/REMNEXA-2.2.0-source.zip*
           if-no-files-found: error
 
-      - name: Build Windows launcher preview
+      - name: Build Standard developer preview (Complete is validated separately)
         shell: pwsh
-        run: ./scripts/Build-Release.ps1
+        run: ./scripts/Build-Release.ps1 -Distribution Standard
 
-      - name: Upload Windows launcher preview
+      - name: Upload Standard developer preview
         uses: actions/upload-artifact@v4
         with:
-          name: REMNEXA-windows-x64-launcher-preview
+          name: REMNEXA-standard-developer-preview
           path: dist/windows-x64/*.zip*
           if-no-files-found: error
 

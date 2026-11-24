@@ -2,6 +2,21 @@
 
 # Windows-Launcher und Paketvorschau
 
+## Vollständiges Benutzerpaket
+
+Der Standard des Paketbauers ist jetzt **Complete**. Die festen PowerShell-/ClamAV-Versionen stehen in `config/bundle-components.json`. Maintainer führen zuerst `scripts/Prepare-CompleteBundle.ps1` aus: offizielle HTTPS-Archive herunterladen, SHA-256 und entpackte Laufzeitdateien prüfen, FreshClam in einem isolierten Cache ausführen und alle drei Signaturdatenbanken prüfen. `-SignatureSeedPath` kann vorhandene offizielle Datenbanken als Startstand kopieren; installierte Engine und Datenbank werden nicht verändert. Netzwerkversuche haben feste Zeitgrenzen und begrenzte Wiederholungen.
+
+`scripts/Build-Release.ps1` bündelt anschließend PowerShell, portables ClamAV mit benötigten DLLs, geprüfte Signaturen, originale Lizenzhinweise und das passende ClamAV-Quellarchiv unter `app/licenses/clamav/`. Fehlende Komponenten, abweichende Hashes und ein über 24 Stunden alter Vorbereitungsstand brechen den Complete-Build ab. Laufzeitdateien werden nach dem Kopieren erneut geprüft. Lokale FreshClam-Zustände/Logs, Entwicklerpfade, Debugsymbole, Linkerbibliotheken und Header werden ausgeschlossen. Die erzeugte FreshClam-Konfiguration enthält relative Pfade. Signaturzeitstempel bleiben im ZIP erhalten; andere Zeitstempel bleiben normalisiert.
+
+```powershell
+./scripts/Prepare-CompleteBundle.ps1
+./scripts/Build-Release.ps1 -OutputDirectory ./dist/complete
+# Ausdrückliches Entwicklerpaket ohne gebündelten Antivirus:
+./scripts/Build-Release.ps1 -Distribution Standard -OutputDirectory ./dist/standard
+```
+
+CI baut eine ausdrücklich benannte **Standard-Entwicklervorschau**, ohne produktive Signaturdatenbanken auf geteilten Runnern herunterzuladen. Sie ist nicht der Complete-Benutzerdownload. Complete-Kandidaten werden vor Veröffentlichung aus dem entpackten ZIP mit leerem PATH, mitgelieferter Laufzeit/Datenbank und echten harmlosen Scans geprüft. PowerShell und ClamAV sind auf die bei der letzten Pin-Aktualisierung geprüften neuesten stabilen Versionen festgelegt; spätere Upstream-Versionen erfordern neue Pins und Tests.
+
 Dieser Feature-Branch ergänzt einen nativen x64-Win32-Launcher und ein getrenntes Benutzerpaket für die bestehende Anwendung 2.2.0. Das stabile Quellrelease v2.2.0 wird dadurch weder neu veröffentlicht noch ersetzt. Launcher und Paket sind unsignierte Vorschauen.
 
 ## Quellcode und Benutzerpaket

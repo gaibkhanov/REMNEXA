@@ -34,14 +34,27 @@ The icon preserves the existing official PNG artwork, trims only transparent mar
 
 ## Reproduce the build
 
+The default distribution is now **Complete**, with the pinned PowerShell and ClamAV versions in `config/bundle-components.json`. Maintainers run `scripts/Prepare-CompleteBundle.ps1` first: it downloads official HTTPS archives, verifies pinned SHA-256 values and extracted runtime bytes, uses FreshClam in an isolated cache, and checks all three signature databases. An optional `-SignatureSeedPath` can seed that cache with existing official database files; it never edits the installed engine or its database. Network attempts have fixed timeouts and bounded retries.
+
+`scripts/Build-Release.ps1` then includes PowerShell, portable ClamAV and its required DLLs, verified signatures, upstream notices and the matching ClamAV source archive under `app/licenses/clamav/`. A missing component, changed hash or signature preparation older than 24 hours fails the Complete build. Runtime bytes are checked again after copying. Local FreshClam state/logs, developer paths, debug symbols, linker libraries and headers are excluded. The generated FreshClam configuration is relative, so moving the extracted folder does not bind it to the build machine. Signature timestamps are preserved in the ZIP; other timestamps remain normalized.
+
+```powershell
+./scripts/Prepare-CompleteBundle.ps1
+./scripts/Build-Release.ps1 -OutputDirectory ./dist/complete
+# Explicit developer-only build without bundled antivirus:
+./scripts/Build-Release.ps1 -Distribution Standard -OutputDirectory ./dist/standard
+```
+
+CI uses an explicitly named **Standard developer preview** to test packaging without fetching production signature databases on shared runners. It is not the Complete user download. Complete candidates need local verification from the extracted ZIP with an empty PATH, the bundled runtime and databases, and actual harmless scans before publication. PowerShell and ClamAV are pinned to the latest stable versions verified when these pins were updated; future upstream releases require a pin refresh and retesting.
+
 Use Windows 11 x64 (client build 22000+), PowerShell 7.5+, Git and the pinned Zig 0.15.2 toolchain:
 
 ```powershell
 ./scripts/Install-LauncherToolchain.ps1
 ./scripts/Build-Launcher.ps1
-./scripts/Build-Release.ps1
+./scripts/Build-Release.ps1 -Distribution Standard
 # Optional trusted PowerShell payload, including its license/notices:
-./scripts/Build-Release.ps1 -OutputDirectory ./dist/with-runtime -RuntimePath ./runtime
+./scripts/Build-Release.ps1 -Distribution Standard -OutputDirectory ./dist/with-runtime -RuntimePath ./runtime
 ```
 
 The explicit toolchain installation downloads only the official Zig archive and verifies its pinned SHA-256. It does not install globally or alter PATH. The toolchain is developer-only and excluded from distributions. Zig is MIT; see [launcher build notices](../src/Launcher/THIRD_PARTY_NOTICES.txt). The original PowerShell/ClamAV license boundaries remain in [third-party notices](THIRD_PARTY_NOTICES.md). Only existing application source and an explicitly supplied runtime are packaged; no ClamAV binaries/signatures are copied.

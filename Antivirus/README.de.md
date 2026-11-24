@@ -12,6 +12,8 @@ Version 2.2.0 startet interaktive Scans im eigenen Fenster. REMNEXA bleibt bedie
 
 ## Bestandteile und Voraussetzungen
 
+Das Complete-Benutzerpaket enthält bereits die portable Engine, notwendige Windows-Laufzeit-DLLs und main/daily/bytecode-Datenbanken. Entpacken und REMNEXA starten; keine manuelle ClamAV-Einrichtung und kein Download vor dem ersten Scan nötig. Die mitgelieferten Signaturen sind ein datierter Stand und können später über die bestehenden bestätigten Updateaktionen aktualisiert werden. Die folgende Quellcode-/Standard-Distribution wird getrennt davon beschrieben.
+
 Der Quellcode enthält die PowerShell-Anbindung, nicht ClamAV-Programme oder Signaturdatenbanken. Die Einrichtung benötigt ein unterstütztes Windows-ClamAV-Paket, Internet und passende Berechtigungen. Die Anwendung erklärt die Rechteerhöhung vor Öffnen des Antivirus-Bereichs. Bei Modulaufrufen müssen erforderliche Rechte für Systemziele oder Installationspfade bereitstehen.
 
 Modul im Projektordner laden:

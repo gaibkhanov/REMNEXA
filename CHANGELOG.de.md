@@ -6,6 +6,9 @@ Entwicklungsänderungen sind keine veröffentlichten Releases. Dieses Dokument v
 
 ## Nicht veröffentlicht — Windows-Launcher-Vorschau
 
+- Complete zum Standard-Benutzerpaket machen: festgelegtes PowerShell 7.7.0, portables ClamAV 1.5.5, geprüfte FreshClam-Signaturstände, Laufzeitabhängigkeiten, Lizenzhinweise und passenden ClamAV-Quellcode bündeln. Unvollständige oder veraltete Builds abweisen; Standard nur ausdrücklich als Entwicklerprofil wählen.
+- Upstream-Archiv-/Laufzeitbytes und Signaturintegrität prüfen, lokale Updater-Zustände ausschließen und Datenbankzeitstempel im ZIP erhalten. Isolierte Sicherheitsregressionen für den Paketbau ergänzen und Standard-CI-Artefakte als Entwicklerbuilds kennzeichnen.
+
 - Gespeicherte Antivirus-Historie vom Live-Status trennen: datierte Übersicht auf der Startseite, H und /scans, bedingte Seitennavigation und klare Hinweise bei unvollständigen Scans. Einzelne Durchläufe bei Wiederverwendung des Scanfensters erhalten und alte Stände ohne erfundene Zeitangaben lesen.
 - Benutzerordner mit einer EXE, kurzer README, app/ und optional runtime/ erläutern; Quellcode und kompatible Starter bleiben im Entwicklungsordner.
 

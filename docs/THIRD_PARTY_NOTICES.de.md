@@ -17,6 +17,8 @@ Dies ist eine Bestands- und Prüfhilfe, keine Rechtsberatung oder Erklärung, da
 
 ## Prüfliste für Maintainer
 
+Complete-Kandidaten bündeln PowerShell mit originaler `LICENSE.txt` und `ThirdPartyNotices.txt`. Sie enthalten die unveränderten ClamAV-Laufzeitdateien und ursprünglichen `COPYING.txt`-/`COPYING/`-Hinweise sowie das passende offizielle Quellrelease unter `app/licenses/clamav/clamav-<version>.tar.gz`. Das Paketmanifest erfasst Upstream-Archivhashes und Signatur-Hashes. Debug-/Linkerartefakte entfallen, erforderliche Laufzeit-DLLs bleiben enthalten. UnRAR und Microsoft-Laufzeitbibliotheken behalten ihre eigenen Bedingungen; sie werden nicht als MIT/GPL umlizenziert. Quellen und GPL-Hinweise des nativen Adapters liegen weiterhin bei. Standard-/Quellpakete enthalten diese fremden Binärdateien und Datenbanken weiterhin nicht.
+
 1. Genaue Upstream-Version, Quelle, Hash und enthaltene Dateien bestimmen.
 2. Lizenz und sämtliche Begleithinweise einschließlich indirekter Bestandteile lesen.
 3. Änderungs-, Weitergabe-, Quellbereitstellungs- und Nennungspflichten prüfen.

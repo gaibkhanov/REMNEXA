@@ -3,7 +3,7 @@ BeforeAll {
     $script:userPackageOutput=Join-Path $script:userPackageRoot ('dist/package-tests-'+[guid]::NewGuid().ToString('N'))
     $command=Get-Command git -CommandType Application -ErrorAction SilentlyContinue|Select-Object -First 1
     $git=if($command){$command.Source}else{'C:/Program Files/Git/cmd/git.exe'}
-    $script:userPackage=& (Join-Path $script:userPackageRoot 'scripts/Build-Release.ps1') -OutputDirectory $script:userPackageOutput -GitPath $git
+    $script:userPackage=& (Join-Path $script:userPackageRoot 'scripts/Build-Release.ps1') -Distribution Standard -OutputDirectory $script:userPackageOutput -GitPath $git
 }
 AfterAll {
     $full=[IO.Path]::GetFullPath($script:userPackageOutput)
@@ -46,7 +46,7 @@ Describe 'Clean end-user Windows distribution' {
         $command=Get-Command git -CommandType Application -ErrorAction SilentlyContinue|Select-Object -First 1
         $git=if($command){$command.Source}else{'C:/Program Files/Git/cmd/git.exe'}
         $rejected=$false
-        try{& (Join-Path $script:userPackageRoot 'scripts/Build-Release.ps1') -OutputDirectory $script:userPackageOutput -GitPath $git}catch{$rejected=$true}
+        try{& (Join-Path $script:userPackageRoot 'scripts/Build-Release.ps1') -Distribution Standard -OutputDirectory $script:userPackageOutput -GitPath $git}catch{$rejected=$true}
         if(-not $rejected){throw 'Existing user package was overwritten.'}
     }
 }

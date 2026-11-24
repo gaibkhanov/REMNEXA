@@ -50,6 +50,14 @@ German, English, Spanish, French, Russian and Turkish. Translation resources are
 
 ## Installation
 
+### Complete user package
+
+The Complete build in this development branch bundles **PowerShell 7.7.0, ClamAV 1.5.5 and a verified virus-signature snapshot**. No separate PowerShell, .NET, ClamAV or command-line installation is required. Download the **Complete ZIP** when published, extract the entire folder to a writable location, and double-click **REMNEXA.exe**. Keep `app/` and `runtime/` beside it. Scanning works offline immediately; internet is only needed for later updates. Windows may still request administrator consent for protected operations.
+
+Complete packages use the filename `REMNEXA-2.2.0-complete-windows-x64-preview.zip`. This branch prepares a candidate, not a new stable release. Standard CI artifacts and source ZIPs are developer distributions and do not provide this bundled experience. See [packaging and verification](docs/WINDOWS_LAUNCHER.md).
+
+### Running the source or Standard developer package
+
 Requirements: Windows 11 or newer (Windows client build **22000+**), PowerShell **7.5 or newer**, and administrator approval for operations requiring elevated access. Current development builds reject Windows 10, older Windows versions and Windows Server before application initialization. Windows PowerShell 5.1 cannot run the application. Existing published release files remain unchanged. Consult the [compatibility matrix](docs/COMPATIBILITY_MATRIX.md) for tested limits.
 
 Download the release source ZIP, or check out the release tag with Git:

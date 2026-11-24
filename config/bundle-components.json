@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "powerShell": {
+    "version": "7.7.0",
+    "uri": "https://github.com/PowerShell/PowerShell/releases/download/v7.7.0/PowerShell-7.7.0-win-x64.zip",
+    "sha256": "7c74e03b20a75b59715847439d046a6214b1863ee79b187872980f139bb4a05f"
+  },
+  "clamAV": {
+    "version": "1.5.5",
+    "uri": "https://github.com/Cisco-Talos/clamav/releases/download/clamav-1.5.5/clamav-1.5.5.win.x64.zip",
+    "sha256": "90169f5e551010bfbd0208b50d9b2fa8988ef396cccbd46b0cc8cae03e22a4a4"
+  },
+  "clamAVSource": {
+    "version": "1.5.5",
+    "uri": "https://github.com/Cisco-Talos/clamav/releases/download/clamav-1.5.5/clamav-1.5.5.tar.gz",
+    "sha256": "90284644e5568732c15fc4f4312fd0f09ac14c14e5b29fba3909d4da4e281b1e"
+  }
+}
