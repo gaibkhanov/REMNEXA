@@ -73,6 +73,25 @@ Describe 'Staged antivirus activation and rollback' {
 }
 
 Describe 'Scan continuation after a background update' {
+    It 'records explicit cancellation without a contradictory failure notice or queued scan' {
+        InModuleScope Updates -Parameters @{Root=$TestDrive} {
+            param($Root)
+            Mock Import-Module {}
+            Mock Install-RemnexaAntivirusUpdate {throw [OperationCanceledException]::new('owned fixture cancellation')}
+            Mock Start-ClamAVBackgroundScan {}
+            $app=Join-Path $Root ([guid]::NewGuid().ToString('N'));[void][IO.Directory]::CreateDirectory($app)
+            $paths=Get-RemnexaUpdatePaths $app (Join-Path $app 'cache');$state=New-RemnexaUpdateState $paths.Context
+            $id=[guid]::NewGuid().ToString('N')
+            $state.Task=@{Id=$id;Component='Signatures';Status='Starting';UpdatedUtc=[DateTimeOffset]::UtcNow.ToString('o');Completed=-1;Total=-1;Reason='';Version='';PreparedPath='';AfterScanType='Quick';AfterScanPath=@('private fixture path');Language='de';ScanStarted=$false}
+            Write-RemnexaUpdateJson $paths.State $state
+            Invoke-RemnexaComponentWorker $app $paths.Directory $id '2.2.0' '7.7.0'
+            $result=Get-RemnexaComponentUpdates $app $paths.Directory
+            $result.Task.Status|Should -Be Cancelled;$result.Task.Reason|Should -Be ''
+            @($result.Task.AfterScanPath).Count|Should -Be 0
+            Test-Path (Join-Path $paths.Directory ('failure-'+$id+'.txt'))|Should -BeFalse
+            Should -Invoke Start-ClamAVBackgroundScan -Times 0
+        }
+    }
     It 'preserves successful updates when queued scan startup fails <FailScan>' -TestCases @(@{FailScan=$false},@{FailScan=$true}) {
         param($FailScan)
         InModuleScope Updates -Parameters @{Root=$TestDrive;FailScan=$FailScan} {

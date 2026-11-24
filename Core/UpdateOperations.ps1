@@ -175,10 +175,11 @@ function Invoke-RemnexaComponentWorker {
     }catch{
         if($state -and $state.Task.Id -ceq $Id){
             $outcome=if($_.Exception -is [OperationCanceledException]){'Cancelled'}else{'Failed'}
-            $reason=if($_.Exception.Message -in @('external_installation','antivirus_not_installed','scan_still_running','database_changed_retry')){$_.Exception.Message}else{'update_failed'}
+            $reason=if($outcome -eq 'Cancelled'){''}elseif($_.Exception.Message -in @('external_installation','antivirus_not_installed','scan_still_running','database_changed_retry')){$_.Exception.Message}else{'update_failed'}
+            $state.Task.AfterScanPath=@()
             $state.History=@(@{Id=$Id;Component=$state.Task.Component;Outcome=$outcome;Version='';Timestamp=[DateTimeOffset]::UtcNow.ToString('o');PreparedPath=''})+@($state.History|Select-Object -First 19)
             Set-RemnexaUpdatePhase $state $paths $outcome -Reason $reason
-            [IO.File]::WriteAllText((Join-Path $paths.Directory ('failure-'+$Id+'.txt')),$_.Exception.Message,[Text.UTF8Encoding]::new($false))
+            if($outcome -eq 'Failed'){[IO.File]::WriteAllText((Join-Path $paths.Directory ('failure-'+$Id+'.txt')),$_.Exception.Message,[Text.UTF8Encoding]::new($false))}
         }
         Write-Verbose $_.Exception.Message
     }finally{
