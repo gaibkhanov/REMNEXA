@@ -23,6 +23,7 @@ function Update-ClamAVSignature {
     [CmdletBinding()]
     param(
         [string]$ConfigPath = $script:AVConfigPath,
+        [scriptblock]$OnHeartbeat,
         [ValidateRange(30, 86400)][int]$Timeout = 1800
     )
     $remnexaWorkProgress = New-RemnexaProgress -Activity (Get-RemnexaProgressText 'ProgressTaskUpdate')
@@ -51,7 +52,7 @@ function Update-ClamAVSignature {
                 ('--config-file=' + $configFile),
                 ('--datadir=' + $databasePath),
                 '--stdout'
-            ) -TimeoutSeconds $Timeout -WorkingDirectory $root
+            ) -TimeoutSeconds $Timeout -WorkingDirectory $root -OnHeartbeat $OnHeartbeat
             if ($run.ExitCode -ne 0) {
                 $detail = ($run.StandardError + "`n" + $run.StandardOutput).Trim()
                 throw "FreshClam meldete Exit-Code $($run.ExitCode): $detail"

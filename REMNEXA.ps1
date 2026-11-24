@@ -51,6 +51,10 @@ Import-Module -Name (Join-Path $PSScriptRoot 'Core\SystemSnapshot.psd1') -Force 
 Import-Module -Name (Join-Path $PSScriptRoot 'Core\Progress.psd1') -ErrorAction Stop
 Import-Module -Name (Join-Path $PSScriptRoot 'Core\NativeProcess.psd1') -ErrorAction Stop
 Import-Module -Name (Join-Path $PSScriptRoot 'Core\SecurityAssessment.psd1') -Force -ErrorAction Stop
+Import-Module -Name (Join-Path $PSScriptRoot 'Core\Updates.psm1') -ErrorAction Stop
+. (Join-Path $PSScriptRoot 'Core/UpdateConsole.ps1')
+$script:ComponentUpdatesAvailable=$true
+$script:ComponentApplicationRoot=$PSScriptRoot
 
 $script:BrandName = 'REMNEXA'
 $script:CleanerVersion = '2.2.0'
@@ -168,7 +172,8 @@ function Read-RemnexaInput {
         [Parameter(Position = 0)][AllowEmptyString()][string]$Prompt = '',
         [switch]$ExitOptionAlreadyShown,
         [switch]$ScanManagerContext,
-        [switch]$ExitDecisionContext
+        [switch]$ExitDecisionContext,
+        [switch]$ComponentManagerContext
     )
 
     # The caller still handles its existing zero choice. Keep x/exit as quiet
@@ -176,8 +181,10 @@ function Read-RemnexaInput {
     if (-not $ExitOptionAlreadyShown) { Write-Host ('  [X] ' + (T 'ExitApplication')) -ForegroundColor DarkGray }
     if (Get-Command Suspend-RemnexaProgress -ErrorAction SilentlyContinue) { Suspend-RemnexaProgress }
     while($true) {
+        if(-not $ComponentManagerContext -and (Get-Command Show-ComponentUpdateNotification -ErrorAction SilentlyContinue)){Show-ComponentUpdateNotification}
         if(-not $ScanManagerContext -and (Get-Command Show-AVBackgroundSummary -ErrorAction SilentlyContinue)){Show-AVBackgroundSummary}
         $answer = Read-Host -Prompt $Prompt
+        if($answer -and $answer.Trim() -ieq '/updates' -and (Get-Command Show-ComponentUpdateCenter -ErrorAction SilentlyContinue)){if($ComponentManagerContext){return ''};Show-ComponentUpdateCenter;continue}
         if(-not $ScanManagerContext -and $answer -and $answer.Trim() -ieq '/scan' -and (Get-Command Show-AVBackgroundManager -ErrorAction SilentlyContinue)) {
             Show-AVBackgroundManager
             continue
@@ -912,11 +919,12 @@ function Show-HomeMenu {
     Write-Host ('  [7] ' + (T 'Home7'))
     Write-Host ('  [8] ' + (T 'Home8'))
     Write-Host ('  [9] ' + (T 'Home9'))
+    Write-Host ('  [U] ' + (T 'CUTitle'))
     Write-Host ('  [0] ' + (T 'Main0'))
     Write-Host ''
     while ($true) {
         $answer = (Read-RemnexaInput (T 'SelectPrompt') -ExitOptionAlreadyShown).Trim()
-        if ($answer -match '^[0-9]$') { return $answer }
+        if ($answer -match '^[0-9uU]$') { return $answer.ToUpperInvariant() }
         if ($answer -ieq 'exit') { return '0' }
         Write-Status (T 'HomeInvalid') 'Warning'
     }
@@ -2254,7 +2262,7 @@ function Get-AVUpdateStatusText {
 function Show-AVUpdateSummary {
     param($State,[switch]$Detailed)
     if($null -eq $State) {
-        try { $State=Get-ClamAVUpdateState }
+        try { $State=if(Get-Variable ComponentUpdatesAvailable -Scope Script -ErrorAction SilentlyContinue){Get-RemnexaAntivirusUpdateState -ApplicationRoot $script:ComponentApplicationRoot}else{Get-ClamAVUpdateState} }
         catch { Write-Host (T 'AVUpdateState_check_failed') -ForegroundColor Yellow;return }
     }
     $color=if($State.status -eq 'current' -and -not $State.isStale){'Green'}else{'Yellow'}
@@ -2285,12 +2293,20 @@ function Invoke-AVConfirmedUpdate {
     while($true) {
         $answer=(Read-RemnexaInput (T 'SelectPrompt')).Trim().ToUpperInvariant()
         if($answer -in @('0','N')) { return $false }
-        if($answer -in @('J','Y')) { [void](Invoke-ClamAVManagedUpdate -Component $Component -Confirm:$false);Write-Status (T 'AVUpdateDone') 'Success';return $true }
+        if($answer -in @('J','Y')) {
+            if(Get-Variable ComponentUpdatesAvailable -Scope Script -ErrorAction SilentlyContinue){return (Start-ComponentUpdateFromConsole $Component)}
+            [void](Invoke-ClamAVManagedUpdate -Component $Component -Confirm:$false);Write-Status (T 'AVUpdateDone') 'Success';return $true
+        }
         Write-Status (T 'AVUpdateInvalidChoice') 'Warning'
     }
 }
 
 function Invoke-AVUpdateMenu {
+    if(Get-Variable ComponentUpdatesAvailable -Scope Script -ErrorAction SilentlyContinue){
+        [void](Start-RemnexaComponentTask -ApplicationRoot $script:ComponentApplicationRoot -ApplicationVersion $script:CleanerVersion -Component Check -Force)
+        Show-ComponentUpdateCenter
+        return
+    }
     $state=Invoke-ClamAVUpdateCheck -Force
     while($true) {
         Show-AVUpdateSummary -State $state -Detailed
@@ -2313,7 +2329,7 @@ function Invoke-AVUpdateMenu {
 function Invoke-AVScanWithUpdatePrompt {
     param([ValidateSet('Quick','Full','Custom')][string]$ScanType='Custom',[string[]]$Path=@(),[switch]$Targeted,[switch]$Background)
     if($Background -and (Get-ClamAVBackgroundScan) -and (Get-ClamAVBackgroundScan).State -in @('Starting','Running','Pausing','Paused','Cancelling')){throw (T 'AVScanBusy')}
-    $state=Get-ClamAVUpdateState
+    $state=if(Get-Variable ComponentUpdatesAvailable -Scope Script -ErrorAction SilentlyContinue){Get-RemnexaAntivirusUpdateState -ApplicationRoot $script:ComponentApplicationRoot}else{Get-ClamAVUpdateState}
     $signatures=($state.signatures.status -eq 'update_available' -and $state.signatures.canUpdate -and -not $state.signatures.isStale)
     $engine=($state.engine.updateAvailable -and $state.engine.canUpdate -and -not $state.engine.isStale)
     if($signatures -or $engine) {
@@ -2334,6 +2350,10 @@ function Invoke-AVScanWithUpdatePrompt {
         }
         if($update) {
             $component=if($signatures -and $engine){'Both'}elseif($engine){'Engine'}else{'Signatures'}
+            if($Background -and (Get-Variable ComponentUpdatesAvailable -Scope Script -ErrorAction SilentlyContinue)){
+                [void](Start-ComponentUpdateFromConsole $component -AfterScanType $ScanType -AfterScanPath $Path)
+                return @()
+            }
             Write-Status (T 'AVUpdatePreparingScan') 'Info'
             try { [void](Invoke-ClamAVManagedUpdate -Component $component -Confirm:$false) }
             catch [OperationCanceledException] {
@@ -3956,7 +3976,7 @@ function Invoke-RemnexaSelfTest {
 function Main {
     Initialize-AppSettings
     [void](Initialize-AntivirusModule)
-    try { if($script:AntivirusAvailable) { [void](Start-ClamAVUpdateCheck) } } catch { Write-Verbose 'Antivirus metadata check was skipped.' }
+    try { [void](Start-RemnexaComponentTask -ApplicationRoot $PSScriptRoot -ApplicationVersion $script:CleanerVersion -Component Check) } catch { Write-Verbose 'Component metadata check was skipped.' }
     $interactiveSession = (([string]::IsNullOrWhiteSpace($Name) -and -not $ResidualOnly -and -not $DryRun) -or $ContinueInteractive)
     $script:InteractiveSession = [bool]$interactiveSession
     $hasProvidedRequest = -not [string]::IsNullOrWhiteSpace($Name)
@@ -3998,10 +4018,10 @@ function Main {
                     continue mainLoop
                 }
                 default {
-                    Show-HistorySummary
-                    Show-AVScanHistorySummary
+                    Show-ComponentDashboard
                     $homeChoice = Show-HomeMenu
                     switch ($homeChoice) {
+                        'U' {Show-ComponentUpdateCenter;continue mainLoop}
                         '0' {
                             Write-Status (T 'ProgramEnded') 'Success'
                             return
@@ -4236,6 +4256,13 @@ catch {
 }
 finally {
     if(Get-Command Disconnect-ClamAVBackgroundScan -ErrorAction SilentlyContinue) { try { Disconnect-ClamAVBackgroundScan -OnlyOwned } catch { Write-Warning $_.Exception.Message } }
+    if(-not $SelfTest){
+        try{
+            $componentState=Get-RemnexaComponentUpdates -ApplicationRoot $PSScriptRoot
+            if($componentState.Task -and $componentState.Task.Component -ne 'Check' -and $componentState.Task.Status -notin @('Completed','Ready','Failed','Cancelled')){Write-Status (T 'CUExit') 'Info'}
+            Close-RemnexaComponentSession -ApplicationRoot $PSScriptRoot
+        }catch{Write-Verbose 'Component session cleanup unavailable.'}
+    }
     if(Get-Command Stop-ClamAVUpdateCheck -ErrorAction SilentlyContinue) { try { Stop-ClamAVUpdateCheck } catch { Write-Verbose 'Antivirus metadata worker cleanup failed.' } }
     if(Get-Command Stop-ClamAVScanEngine -ErrorAction SilentlyContinue) { try { Stop-ClamAVScanEngine } catch { Write-Verbose 'Antivirus scan worker cleanup failed.' } }
 }

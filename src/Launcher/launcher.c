@@ -70,9 +70,50 @@ static BOOL Candidate(WCHAR **chosen,WCHAR *version,const WCHAR *root,const WCHA
     if(FileExists(path)&&Probe(path,version)){*chosen=path;return TRUE;}
     HeapFree(GetProcessHeap(),0,path);return FALSE;
 }
+static BOOL StableVersion(const WCHAR *text,unsigned int parts[3]) {
+    for(int i=0;i<3;i++){
+        int digits=0;parts[i]=0;
+        while(*text>=L'0'&&*text<=L'9'){
+            if(++digits>4)return FALSE;parts[i]=parts[i]*10+(*text++-L'0');
+        }
+        if(!digits)return FALSE;
+        if(i<2){if(*text++!=L'.')return FALSE;}else if(*text)return FALSE;
+    }
+    return TRUE;
+}
+static BOOL UpdatedRuntime(const WCHAR *root,WCHAR **chosen,WCHAR *version,BOOL baseFound) {
+    WCHAR *runtime=Join(root,L"runtime"),*pointer=NULL,*versions=NULL,*candidate=NULL,*executable=NULL;
+    WCHAR requested[64]={0},actual[128]={0};char bytes[64]={0};DWORD read=0;HANDLE file=INVALID_HANDLE_VALUE;
+    unsigned int next[3],base[3];BOOL selected=FALSE;
+    if(!runtime)goto done;
+    pointer=Join(runtime,L"active.txt");versions=Join(runtime,L"versions");
+    if(!pointer||!versions||!FileExists(pointer))goto done;
+    if((GetFileAttributesW(pointer)&FILE_ATTRIBUTE_REPARSE_POINT)||(GetFileAttributesW(versions)&FILE_ATTRIBUTE_REPARSE_POINT))goto done;
+    file=CreateFileW(pointer,GENERIC_READ,FILE_SHARE_READ|FILE_SHARE_DELETE,NULL,OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,NULL);
+    if(file==INVALID_HANDLE_VALUE||!ReadFile(file,bytes,sizeof(bytes)-1,&read,NULL)||!read||read>=sizeof(bytes)-1)goto done;
+    for(DWORD i=0;i<read;i++){if((bytes[i]<'0'||bytes[i]>'9')&&bytes[i]!='.')goto done;requested[i]=bytes[i];}
+    if(!StableVersion(requested,next))goto done;
+    if(baseFound){
+        if(!StableVersion(version,base))goto done;
+        int comparison=0;for(int i=0;i<3;i++){if(next[i]!=base[i]){comparison=next[i]>base[i]?1:-1;break;}}
+        if(comparison<=0)goto done;
+    }
+    candidate=Join(versions,requested);
+    if(!candidate||(GetFileAttributesW(candidate)&FILE_ATTRIBUTE_REPARSE_POINT))goto done;
+    executable=Join(candidate,L"pwsh.exe");
+    if(!executable||!FileExists(executable)||!Probe(executable,actual)||lstrcmpW(actual,requested)!=0)goto done;
+    if(baseFound)HeapFree(GetProcessHeap(),0,*chosen);
+    *chosen=executable;executable=NULL;lstrcpyW(version,actual);selected=TRUE;
+done:
+    if(file!=INVALID_HANDLE_VALUE)CloseHandle(file);
+    if(runtime)HeapFree(GetProcessHeap(),0,runtime);if(pointer)HeapFree(GetProcessHeap(),0,pointer);
+    if(versions)HeapFree(GetProcessHeap(),0,versions);if(candidate)HeapFree(GetProcessHeap(),0,candidate);if(executable)HeapFree(GetProcessHeap(),0,executable);
+    return selected;
+}
 static BOOL FindRuntime(const WCHAR *root,WCHAR **chosen,WCHAR *version) {
     WCHAR *buffer=AllocText(),*start,*p;DWORD length;
-    if(Candidate(chosen,version,root,L"runtime\\pwsh.exe"))return TRUE;
+    BOOL bundled=Candidate(chosen,version,root,L"runtime\\pwsh.exe");
+    if(UpdatedRuntime(root,chosen,version,bundled)||bundled){if(buffer)HeapFree(GetProcessHeap(),0,buffer);return TRUE;}
     if(!buffer)return FALSE;
     if(GetEnvironmentVariableW(L"ProgramW6432",buffer,CAP)&&Candidate(chosen,version,buffer,L"PowerShell\\7\\pwsh.exe"))return TRUE;
     if(GetEnvironmentVariableW(L"ProgramFiles",buffer,CAP)&&Candidate(chosen,version,buffer,L"PowerShell\\7\\pwsh.exe"))return TRUE;

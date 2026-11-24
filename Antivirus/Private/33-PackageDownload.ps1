@@ -19,7 +19,7 @@ function Receive-AVPackage {
     param([Parameter(Mandatory)][uri]$Uri,[Parameter(Mandatory)][string]$OutFile,
           [ValidateRange(1,3600)][int]$TimeoutSeconds=900,
           [ValidateRange(1,1099511627776)][long]$MaximumBytes=1GB,
-          [Net.Http.HttpClient]$Client)
+          [Net.Http.HttpClient]$Client,[scriptblock]$OnProgress)
     if(-not $Uri.IsAbsoluteUri -or $Uri.Scheme -ne 'https' -or $Uri.UserInfo){throw 'Package downloads require HTTPS without embedded credentials.'}
     if(Test-Path -LiteralPath $OutFile){throw 'Refusing to overwrite an existing download.'}
     $OutFile=[IO.Path]::GetFullPath($OutFile)
@@ -50,6 +50,7 @@ function Receive-AVPackage {
         $length=if($null -ne $response.Content.Headers.ContentLength){[long]$response.Content.Headers.ContentLength}else{[long]-1}
         if($length -gt $MaximumBytes){throw 'Package exceeds the permitted download size.'}
         Update-RemnexaProgress $progress -Total $length -Force
+        if($OnProgress){& $OnProgress 0 $length}
         $source=Wait-AVDownloadTask -Task ($response.Content.ReadAsStreamAsync($cancel.Token)) -Progress $progress -Cancellation $cancel -ConsoleView $view -CancellationState $cancellationState
         $target=[IO.FileStream]::new($OutFile,[IO.FileMode]::CreateNew,[IO.FileAccess]::Write,[IO.FileShare]::None)
         $created=$true;$bytes=[long]0;$buffer=[byte[]]::new(65536)
@@ -59,6 +60,7 @@ function Receive-AVPackage {
             if($bytes+$count -gt $MaximumBytes){throw 'Package exceeds the permitted download size.'}
             $target.Write($buffer,0,$count);$bytes+=$count
             Update-RemnexaProgress $progress -Completed $bytes
+            if($OnProgress){& $OnProgress $bytes $length}
         }
         if($length -ge 0 -and $bytes -ne $length){throw 'The package download is incomplete.'}
         $target.Flush($true);$target.Dispose();$target=$null

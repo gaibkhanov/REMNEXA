@@ -36,6 +36,7 @@ function Update-ClamAVEngine {
     [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'Medium')]
     param(
         [string]$ConfigPath = $script:AVConfigPath,
+        [scriptblock]$DownloadProgress,
         [string]$DownloadUri,
         [string]$ExpectedSha256,
         [switch]$Force,
@@ -93,7 +94,7 @@ function Update-ClamAVEngine {
             New-Item -ItemType Directory -Path $extractPath -Force -ErrorAction Stop | Out-Null
             Write-AVLog -Message "ClamAV-Engine-Update gestartet: $($statusBefore.Version) -> $($asset.Version)." -Event 'EngineUpdate'
             Update-RemnexaProgress $remnexaWorkProgress -Status (Get-RemnexaProgressText 'ProgressTaskDownload') -Force
-            Receive-AVPackage -Uri $asset.Uri -OutFile $archivePath
+            Receive-AVPackage -Uri $asset.Uri -OutFile $archivePath -OnProgress $DownloadProgress
             [void](Assert-ClamAVArchiveDigest -Digest ([string]$asset.Digest) -ArchivePath $archivePath)
 
             Update-RemnexaProgress $remnexaWorkProgress -Status (Get-RemnexaProgressText 'ProgressTaskExtract') -Force

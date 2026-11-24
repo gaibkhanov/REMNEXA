@@ -1,0 +1,19 @@
+[English](UPDATES.md) | [Deutsch](UPDATES.de.md)
+
+# Updates und Start-Dashboard
+
+Öffne im Hauptmenü **[U] Updates und Versionen** oder gib an einer Eingabe **/updates** ein. Diese Entwicklungsfunktion veröffentlicht kein neues stabiles Release.
+
+- Die Startprüfung läuft getrennt und lädt nur Metadaten. Erfolgreiche Prüfungen gelten 24 Stunden; nach erfolglosen Versuchen gilt eine Pause von fünf Minuten. **[U]** im Updatebereich erzwingt eine neue Prüfung. Offline wird niemals als aktueller Schutzstand dargestellt.
+- Das Dashboard liest lokale Versionen, ohne Scannerstart oder Warten auf das Netzwerk: aktive REMNEXA-/PowerShell-Version, ClamAV-Dateiversion, Versionen von main/daily/bytecode und vier letzte gespeicherte Aktivitäten.
+- Eine Installation verlangt Zustimmung. Gehe danach zurück, um während Download und Prüfung weiterzuarbeiten. Enter aktualisiert die Momentaufnahme im Updatebereich. Prozente erscheinen nur bei bekannter tatsächlicher Downloadgröße. Abschlussmeldungen erscheinen bei der nächsten Eingabeaufforderung.
+- **PowerShell:** Geprüfte offizielle stabile x64-ZIPs werden neben der laufenden Laufzeit eingerichtet. Vorhandene Dateien bleiben unverändert. Der Launcher wählt die vorbereitete Version beim nächsten Start; das Dashboard unterscheidet aktive und vorbereitete Version. Ungültige, fehlende und nicht neuere Laufzeitverweise fallen auf die ursprüngliche Laufzeit zurück.
+- **ClamAV/Signaturen:** Eine getrennte Kopie wird mit den vorhandenen HTTPS-/Hash-/FreshClam-Routinen aktualisiert. Laufende Scans behalten ihre Dateien. Die Übernahme wartet auf die Scan-Sperre, prüft den unveränderten Original-Datenbankstand und verifiziert den Austausch. Bei Fehlern wird der vorherige Ordner zurückgesichert. Eine Wartezeit von zehn Minuten endet ohne Scanunterbrechung. Fremde oder extern geteilte Installationen ersetzt dieser Paket-Updater nicht.
+- **Aktualisieren und scannen:** Das Antivirus-Menü kann den angeforderten interaktiven Scan nach erfolgreichem Hintergrundupdate starten. Nach einem Fehler startet dieser Scan nicht. Bestehende synchrone Modul-APIs und gezielte Prüfungen innerhalb einer Deinstallation behalten ihre Schnittstellen.
+- **REMNEXA:** Installierbar ist nur eine neuere stabile offizielle Veröffentlichung mit passender Complete-x64-ZIP und offiziellem SHA-256-Wert. Ein Quellpaket gilt nicht als App-Update. Alle heruntergeladenen App-Dateien müssen ihre Manifestprüfung bestehen. Die neue vollständige Anwendung wird getrennt vorbereitet; starte zum Wechsel die dort angezeigte `REMNEXA.exe`. Bisherige Anwendungsdateien und unabhängige Scans bleiben erhalten. Fehlende geeignete Releasepakete werden in der App erklärt.
+
+Bestätigte Installationen können nach dem Beenden der Hauptanwendung fertiglaufen; darauf weist die Abschlussmeldung hin. Eigene Start-Metadatenprüfungen werden beim Beenden gestoppt. Es entstehen keine Windows-Dienste, geplanten Aufgaben, globalen Installationen, Sicherheitsausnahmen oder Execution-Policy-Umgehungen.
+
+Fortschritt, Cache und begrenzter Updateverlauf bleiben lokal und sind der Anwendung zugeordnet. Bei Fehlern liegt eine Diagnose `failure-<Vorgang>.txt` im lokalen Updatecache. Persönliche Scanpfade werden nicht an Updateendpunkte übertragen. Onlineanfragen übermitteln technisch erforderliche Verbindungsmetadaten an die offiziellen Endpunkte.
+
+Die Prüfung umfasst isolierte Transport-/Metadatentests, Rücksicherung und Datenbankänderungen, einen echten PowerShell-/Launcher-Wechsel mit parallelen Laufzeiten und vorhandene Antivirus-/Menüregressionen. Harmlose Testdateien prüfen weder reale Malware-Erkennungsqualität noch jede Windows-/Hardware-Konfiguration. Das Paket bleibt unsigniert, solange der gesondert dokumentierte vertrauenswürdige Signierablauf nicht erfolgreich ausgeführt wurde.

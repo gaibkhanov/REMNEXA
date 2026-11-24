@@ -50,6 +50,10 @@ German, English, Spanish, French, Russian and Turkish. Translation resources are
 
 ## Installation
 
+### Updates inside REMNEXA
+
+The Complete development build adds **[U] Updates and versions** and **/updates**. Confirm PowerShell, ClamAV or signature updates and keep using the app while they run in the background. PowerShell activates on the next launch; Antivirus activation waits for active scans. The dashboard shows local versions and recent saved activities. A newer REMNEXA app can be prepared when its official stable Complete package and checksum are available. See [behavior and limits](docs/UPDATES.md).
+
 ### Complete user package
 
 The Complete build in this development branch bundles **PowerShell 7.7.0, ClamAV 1.5.5 and a verified virus-signature snapshot**. No separate PowerShell, .NET, ClamAV or command-line installation is required. Download the **Complete ZIP** when published, extract the entire folder to a writable location, and double-click **REMNEXA.exe**. Keep `app/` and `runtime/` beside it. Scanning works offline immediately; internet is only needed for later updates. Windows may still request administrator consent for protected operations.

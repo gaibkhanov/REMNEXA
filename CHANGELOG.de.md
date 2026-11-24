@@ -6,6 +6,9 @@ Entwicklungsänderungen sind keine veröffentlichten Releases. Dieses Dokument v
 
 ## Nicht veröffentlicht — Windows-Launcher-Vorschau
 
+- Gemeinsamer Hintergrund-Updatebereich für portable PowerShell, ClamAV, Signaturen und unterstützte stabile Complete-App-Pakete. Zustimmung und geprüfte offizielle Artefakte sind erforderlich; aktive Laufzeiten und Scans bleiben erhalten, Austausch mit Abbruch vor der Übernahme.
+- Lokale Komponenten-/Datenbankversionen, vorbereitete Laufzeiten und letzte gespeicherte Aktivitäten im Start-Dashboard. Menüs bleiben während Updates nutzbar; Neustart-, Offline-, Scan-Sperren- und Paketgrenzen sind dokumentiert.
+
 - Complete zum Standard-Benutzerpaket machen: festgelegtes PowerShell 7.7.0, portables ClamAV 1.5.5, geprüfte FreshClam-Signaturstände, Laufzeitabhängigkeiten, Lizenzhinweise und passenden ClamAV-Quellcode bündeln. Unvollständige oder veraltete Builds abweisen; Standard nur ausdrücklich als Entwicklerprofil wählen.
 - Upstream-Archiv-/Laufzeitbytes und Signaturintegrität prüfen, lokale Updater-Zustände ausschließen und Datenbankzeitstempel im ZIP erhalten. Isolierte Sicherheitsregressionen für den Paketbau ergänzen und Standard-CI-Artefakte als Entwicklerbuilds kennzeichnen.
 
