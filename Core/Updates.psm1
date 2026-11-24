@@ -139,7 +139,11 @@ function Invoke-RemnexaComponentCheck {
             $row.AvailableVersion=$remote.Version;$row.CanInstall=$remote.CanInstall
             $row.Status=if((ConvertTo-RemnexaStableVersion $remote.Version) -gt (ConvertTo-RemnexaStableVersion $local[$name])){'update_available'}else{'current'}
             $row.CheckedUtc=[DateTimeOffset]::UtcNow.ToString('o');$successful=$true
-        }catch{$row.Status='offline';$row.CanInstall=$false}
+        }catch{
+            $failure=$_
+            $row.Status=& (Get-Module Antivirus) {param($ErrorRecord)Get-AVUpdateFailureStatus $ErrorRecord} $failure
+            $row.CanInstall=$false
+        }
     }
     try{
         $av=Invoke-ClamAVUpdateCheck -ConfigPath (Join-Path $Paths.App 'config/antivirus.json') -StatePath (Join-Path $Paths.Directory 'antivirus-metadata.json') -Force
