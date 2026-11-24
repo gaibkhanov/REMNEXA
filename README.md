@@ -12,7 +12,7 @@ A free, open-source Windows utility for application removal, startup management,
 
 > **Feature-branch launcher preview:** Native Windows entry with the REMNEXA icon and a clean end-user package. See [build and limits](docs/WINDOWS_LAUNCHER.md). The stable release above remains unchanged.
 
-For everyday use, open the extracted **user package**, whose top level contains only `REMNEXA.exe`, `README.txt`, `app/` and optional `runtime/`. Keep these together. The repository root is the developer checkout, including source files, compatibility launchers, tests and build tools.
+For everyday use, open the extracted **Complete user package**, whose top level contains only `REMNEXA.exe`, `README.txt`, `app/` and `runtime/`. Keep these together. The repository root is the developer checkout, including source files, compatibility launchers, tests and build tools.
 
 The package builder supports verified Authenticode signing when a trusted signing certificate and Microsoft SignTool are available. The current preview is **unsigned**; see [signing requirements](docs/WINDOWS_LAUNCHER.md#authenticode-signing).
 
@@ -40,7 +40,7 @@ The system overview is read-only. The current interface is a terminal applicatio
 
 Scans run in their own window. Keep using REMNEXA, or exit it and choose to let the scan finish independently. Pause, resume, cancel and inspect findings through the scan manager or scan window. See the [independent scan guide](docs/INDEPENDENT_SCANS.md).
 
-Run local on-demand scans, update signatures and review detections. Supported quarantine and restore operations require deliberate selection. Initial setup and signature updates need internet access; the scanner can use an installed engine and signatures offline.
+Run local on-demand scans, update signatures and review detections. Supported quarantine and restore operations require deliberate selection. Complete includes the engine and signatures for immediate offline scans. Initial component setup for source/Standard distributions and future updates need internet access.
 
 REMNEXA is not a real-time antivirus and does not replace Microsoft Defender or your installed security software. A detection can be a false positive; no detections do not guarantee safety. See the [ClamAV guide](Antivirus/README.md).
 

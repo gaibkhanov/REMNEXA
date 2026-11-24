@@ -31,7 +31,7 @@ Core/ Antivirus/ config/          app/
 src/Launcher/                      REMNEXA.ps1
 assets/icons/                      Core/ Antivirus/ config/
 locales/                           assets/ locales/ LICENSE
-scripts/ tests/ tools/             runtime/ (optional)
+scripts/ tests/ tools/             runtime/ (in Complete enthalten)
 docs/ examples/                   README.txt
 ```
 
@@ -54,21 +54,21 @@ Windows 11 x64 (Client-Build ab 22000), PowerShell ab 7.5, Git und festgelegtes 
 ```powershell
 ./scripts/Install-LauncherToolchain.ps1
 ./scripts/Build-Launcher.ps1
-./scripts/Build-Release.ps1
-# Optional vertrauenswürdige PowerShell-Dateien samt Lizenzhinweisen:
-./scripts/Build-Release.ps1 -OutputDirectory ./dist/with-runtime -RuntimePath ./runtime
+./scripts/Build-Release.ps1 -Distribution Standard
+# Optional vertrauenswürdige PowerShell-Dateien im Standard-Entwicklerpaket:
+./scripts/Build-Release.ps1 -Distribution Standard -OutputDirectory ./dist/with-runtime -RuntimePath ./runtime
 ```
 
-Die ausdrückliche Toolchain-Einrichtung lädt nur das offizielle Zig-Archiv und prüft dessen fest hinterlegten SHA-256-Wert. Keine globale Installation oder PATH-Änderung. Die Toolchain ist ausschließlich für Entwickler und nicht im Benutzerpaket. Zig steht unter MIT; siehe [Build-Lizenzhinweise](../src/Launcher/THIRD_PARTY_NOTICES.txt). Die bisherigen PowerShell-/ClamAV-Lizenzgrenzen gelten laut [Drittanbieterhinweisen](THIRD_PARTY_NOTICES.de.md). Nur vorhandener Anwendungscode und eine ausdrücklich angegebene Laufzeit werden verpackt; keine ClamAV-Programme oder Signaturen werden kopiert.
+Die ausdrückliche Toolchain-Einrichtung lädt nur das offizielle Zig-Archiv und prüft dessen fest hinterlegten SHA-256-Wert. Keine globale Installation oder PATH-Änderung. Die Toolchain ist ausschließlich für Entwickler und nicht im Benutzerpaket. Zig steht unter MIT; siehe [Build-Lizenzhinweise](../src/Launcher/THIRD_PARTY_NOTICES.txt). Die PowerShell-/ClamAV-Lizenzgrenzen gelten laut [Drittanbieterhinweisen](THIRD_PARTY_NOTICES.de.md). Die Standard-Befehle oben lassen ClamAV weg; der voreingestellte Complete-Build enthält dessen geprüfte Laufzeit und Datenbanken.
 
-Aus einem sauberen, committeten Checkout bauen. Standardausgabe: dist/windows-x64/REMNEXA-2.2.0 sowie windows-x64-preview-ZIP mit SHA-256-Datei. Vorhandene Ausgaben werden nicht überschrieben. Das Manifest nennt Quellcommit und Hash jeder kopierten Datei; ZIP- und unsignierte PE-Zeitstempel sind normalisiert. Reproduzierbarkeit setzt identische Quellen, Compiler und gegebenenfalls Laufzeitdateien voraus. scripts/New-ApplicationIcon.ps1 regeneriert das Icon mit Windows System.Drawing als Formatumwandlung des vorhandenen Logos.
+Aus einem sauberen, committeten Checkout bauen. Complete-Ausgabe: `dist/windows-x64/REMNEXA-2.2.0` sowie `REMNEXA-2.2.0-complete-windows-x64-preview.zip` mit SHA-256-Datei. Vorhandene Ausgaben werden nicht überschrieben. Das Manifest nennt Quellcommit und Hash jeder kopierten Datei. ZIP-Zeitstempel sind normalisiert; die Datenbankdateien behalten ihr tatsächliches Alter. Unsignierte PE-Zeitstempel werden normalisiert. Reproduzierbarkeit setzt identische Quellen, Compiler, Komponentenarchive und Datenbankstände einschließlich deren Datumsangaben voraus. scripts/New-ApplicationIcon.ps1 regeneriert das Icon mit Windows System.Drawing als Formatumwandlung des vorhandenen Logos.
 
 ## Authenticode-Signierung
 
 `Build-Release.ps1` kann den vorbereiteten Launcher und alle PowerShell-Skripte, Module und Modulmanifeste der Anwendung signieren, bevor Dateihashes und ZIP entstehen. Laufzeitdateien von Drittanbietern behalten ihre ursprünglichen Signaturen. Erforderlich sind ein bereits installiertes, gültiges Code-Signing-Zertifikat mit privatem Schlüssel, eine vertrauenswürdige und auf Widerruf prüfbare Zertifikatskette sowie Microsoft SignTool aus dem Windows SDK auf dem Signierrechner. Benutzer benötigen diese Entwicklerwerkzeuge nicht.
 
 ```powershell
-./scripts/Build-Release.ps1 -OutputDirectory ./dist/signed-preview -RuntimePath ./runtime `
+./scripts/Build-Release.ps1 -OutputDirectory ./dist/signed-preview `
     -SigningCertificateThumbprint '<40-stelliger Zertifikat-Fingerabdruck>' `
     -SignToolPath '<Windows SDK x64 signtool.exe>'
 ```
@@ -85,6 +85,18 @@ Launcher-Regressionen prüfen PE-/CLR-Metadaten, Icon-Größen, Quell-/Paketlayo
 
 Nativer Launcher und direkter PowerShell-Einstieg benötigen Windows 11 oder neuer (Client-Build ab 22000). Windows 10, ältere Windows-Versionen und Windows Server werden vor Laufzeitsuche bzw. Anwendungsinitialisierung abgewiesen. Der Launcher nutzt RtlGetVersion; das Skript prüft Betriebssystemversion und Client-Produkttyp. Die Kompatibilitäts-GUID im Manifest wird mit Windows 10 geteilt und ersetzt diese Buildprüfung nicht. Lässt sich kein unterstützter Client feststellen, wird der Start abgewiesen. Die Mindestanforderung gilt für aktuelle Entwicklungsstände; vorhandene veröffentlichte Artefakte bleiben unverändert.
 
-Die Vorschau zertifiziert weder SmartScreen-Reputation noch jede unterstützte Windows-11-/Terminal-Variante oder Offline-Ersteinrichtung optionaler Komponenten. Eine Benutzer-ExecutionPolicy kann heruntergeladene Skripte sperren; der Launcher meldet den Fehler und umgeht die Richtlinie nicht. Paketinhalt und unabhängige Sicherungen vor Systemänderungen prüfen. Die Build-Skripte verändern keine stabilen Releases.
+Die Vorschau zertifiziert weder SmartScreen-Reputation noch jede unterstützte Windows-11-/Terminal-Variante. Complete enthält die Komponenten für Offline-Scans; spätere Updates benötigen Internet. Eine Benutzer-ExecutionPolicy kann heruntergeladene Skripte sperren; der Launcher meldet den Fehler und umgeht die Richtlinie nicht. Paketinhalt und unabhängige Sicherungen vor Systemänderungen prüfen. Die Build-Skripte verändern keine stabilen Releases.
+
+### Complete-Prüfung — 24. November 2026
+
+Die entpackte Complete-ZIP aus Quellcommit `9fe63cb` besteht die Dateiprüfungen des Manifests. Oben stehen nur `REMNEXA.exe`, `README.txt`, `app/` und `runtime/`. Das ZIP ist 337.427.216 Bytes groß. Enthalten sind PowerShell **7.7.0**, ClamAV **1.5.5** und **3.642.950 Signaturen**; der FreshClam-Stand wurde am selben Tag geprüft. Originallizenzen, Komponentenhinweise und der passende ClamAV-Quellcode liegen bei.
+
+`tools/Test-CompletePackage.ps1` lief aus einem Entpackpfad mit Leerzeichen, ohne erhöhte Rechte, mit leerem PATH, auf einen nicht vorhandenen Ordner umgeleiteter Suche nach installierten Laufzeiten und einem unerreichbaren HTTP-Proxy. Alle **12 Anwendungsselbsttests** bestehen. Die echte Anwendungsschnittstelle prüfte **8 harmlose Dateien** mit vollständiger Abdeckung; eine separate harmlose Testsignatur lieferte den erwarteten Fund und ClamAV-Exitcode 1. Genutzt wurden ausschließlich mitgelieferte Laufzeit, Engine und Datenbanken. Keine Updateanforderung und keine automatische Quarantäne. Der Netzwerkadapter wurde nicht deaktiviert; geprüft ist der lokale Scanbetrieb, kein physisch vom Netz getrennter Rechner.
+
+Das voreingestellte Auto-Backend verwendet für das gebündelte ClamAV 1.5.5 sicher den `clamscan`-Pfad. Der wiederverwendbare native Adapter ist bisher nur für 1.5.4 freigegeben. Dieses Complete-Paket verspricht keine native Worker-Beschleunigung für 1.5.5 und stuft die Engine nicht zurück.
+
+Die vollständige lokale Suite besteht mit **272 Tests** unter PowerShell 7.7.0; der anschließend ergänzte Regressionstest für Modulimporte besteht separat. GitHub Actions für `9fe63cb` besteht mit **260 Tests** und **13 auf dem Server-Runner ausgeschlossenen Windows-11-Clienttests**. Quellpaket, Standard-Paket und statische Analyse bestehen ebenfalls. Lokale Parser-/PSScriptAnalyzer-Fehlerprüfungen decken **128 PowerShell-Dateien** ab. Dies bestätigt weder jede Hardware-/Windows-Variante noch echte Malware-Erkennungsqualität oder SmartScreen-Reputation. Das Paket bleibt **unsigniert** und ist keine neue stabile Veröffentlichung.
+
+### Frühere Launcher-Prüfung (vor Complete)
 
 Dokumentierte lokale Prüfung: **216 Tests bestanden, 0 fehlgeschlagen, 0 übersprungen** (Pester 5.7.1, PowerShell 7.6.9); die vier Pakettests wurden nach den Paketkorrekturen erfolgreich wiederholt. Syntax- und PSScriptAnalyzer-Fehlerprüfungen bestehen für **112 PowerShell-Dateien**. Zwei saubere Builds ohne optionale Laufzeit ergaben bytegleiche ZIPs. Das Paket mit PowerShell 7.6.9 enthält **738 Dateien** mit geprüften Hashes und vollständigen Laufzeit-Lizenzhinweisen. **12 Anwendungsselbsttests bestehen bei abgeschalteter Suche nach installierten Laufzeiten**, ohne erhöhte Rechte. Der zusätzliche Upstream-Preview-CMD-Starter ist ausgeschlossen. Ein echter Start über die Windows-Shell nutzte eine gemeinsame Konsole für Launcher und PowerShell und endete über das Hauptmenü; auch die Icon-Extraktion durch die Windows-Shell besteht. Dies dokumentiert den verfügbaren Windows-11-Rechner, keine vollständige Windows-Kompatibilitätsmatrix.

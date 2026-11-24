@@ -12,7 +12,7 @@ Ein kostenloses Open-Source-Werkzeug für die Deinstallation von Anwendungen, Au
 
 > **Launcher-Vorschau im Feature-Branch:** Nativer Windows-Start mit eigenem Icon und aufgeräumtem Benutzerpaket. Build und Grenzen: [Windows-Launcher](docs/WINDOWS_LAUNCHER.de.md). Das stabile Release oben bleibt unverändert.
 
-Für die tägliche Nutzung das entpackte **Benutzerpaket** öffnen: Oben stehen nur `REMNEXA.exe`, `README.txt`, `app/` und optional `runtime/`. Diese zusammenlassen. Der Repository-Hauptordner ist der Entwicklungsstand mit Quellcode, kompatiblen Startern, Tests und Build-Werkzeugen.
+Für die tägliche Nutzung das entpackte **Complete-Benutzerpaket** öffnen: Oben stehen nur `REMNEXA.exe`, `README.txt`, `app/` und `runtime/`. Diese zusammenlassen. Der Repository-Hauptordner ist der Entwicklungsstand mit Quellcode, kompatiblen Startern, Tests und Build-Werkzeugen.
 
 Der Paketbau unterstützt geprüfte Authenticode-Signierung mit vertrauenswürdigem Signierzertifikat und Microsoft SignTool. Die aktuelle Vorschau ist **unsigniert**; siehe [Voraussetzungen](docs/WINDOWS_LAUNCHER.de.md#authenticode-signierung).
 
@@ -40,7 +40,7 @@ Die Systemübersicht liest ausschließlich Daten. Die aktuelle Oberfläche läuf
 
 Scans laufen im eigenen Fenster. Nutze REMNEXA weiter oder beende es und lasse den Scan unabhängig fertiglaufen. Pause, Fortsetzung, Abbruch und Befunde sind im Scanmanager oder Scanfenster erreichbar. Siehe [Anleitung zum unabhängigen Scan](docs/INDEPENDENT_SCANS.de.md).
 
-Lokale Prüfungen bei Bedarf ausführen, Signaturen aktualisieren und Funde ansehen. Unterstützte Quarantäne- und Wiederherstellungsvorgänge müssen bewusst ausgewählt werden. Ersteinrichtung und Signaturupdates benötigen Internet; mit installierter Engine und vorhandenen Signaturen sind Scans offline möglich.
+Lokale Prüfungen bei Bedarf ausführen, Signaturen aktualisieren und Funde ansehen. Unterstützte Quarantäne- und Wiederherstellungsvorgänge müssen bewusst ausgewählt werden. Complete enthält Engine und Signaturen für sofortige Offline-Scans. Die Komponenteneinrichtung bei Quellcode-/Standard-Distributionen und spätere Updates benötigen Internet.
 
 REMNEXA ist kein Echtzeit-Antivirus und ersetzt weder Microsoft Defender noch vorhandene Sicherheitssoftware. Ein Fund kann ein Fehlalarm sein; ausbleibende Funde garantieren keine Sicherheit. Siehe [ClamAV-Anleitung](Antivirus/README.de.md).
 

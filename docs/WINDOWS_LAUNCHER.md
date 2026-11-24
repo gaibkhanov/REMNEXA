@@ -16,7 +16,7 @@ Core/ Antivirus/ config/          app/
 src/Launcher/                      REMNEXA.ps1
 assets/icons/                      Core/ Antivirus/ config/
 locales/                           assets/ locales/ LICENSE
-scripts/ tests/ tools/             runtime/ (optional)
+scripts/ tests/ tools/             runtime/ (included in Complete)
 docs/ examples/                   README.txt
 ```
 
@@ -57,16 +57,16 @@ Use Windows 11 x64 (client build 22000+), PowerShell 7.5+, Git and the pinned Zi
 ./scripts/Build-Release.ps1 -Distribution Standard -OutputDirectory ./dist/with-runtime -RuntimePath ./runtime
 ```
 
-The explicit toolchain installation downloads only the official Zig archive and verifies its pinned SHA-256. It does not install globally or alter PATH. The toolchain is developer-only and excluded from distributions. Zig is MIT; see [launcher build notices](../src/Launcher/THIRD_PARTY_NOTICES.txt). The original PowerShell/ClamAV license boundaries remain in [third-party notices](THIRD_PARTY_NOTICES.md). Only existing application source and an explicitly supplied runtime are packaged; no ClamAV binaries/signatures are copied.
+The explicit toolchain installation downloads only the official Zig archive and verifies its pinned SHA-256. It does not install globally or alter PATH. The toolchain is developer-only and excluded from distributions. Zig is MIT; see [launcher build notices](../src/Launcher/THIRD_PARTY_NOTICES.txt). The PowerShell/ClamAV license boundaries remain in [third-party notices](THIRD_PARTY_NOTICES.md). The Standard commands above omit ClamAV; the default Complete build includes its verified runtime and databases.
 
-Build from a clean committed checkout. Output defaults to dist/windows-x64/REMNEXA-2.2.0 and a windows-x64-preview ZIP plus SHA-256 sidecar. Existing outputs are not overwritten. The manifest records the source commit and every copied file hash; ZIP timestamps and unsigned PE timestamps are normalized. Reproducibility applies to identical source, compiler and optional runtime bytes. The icon can be regenerated with scripts/New-ApplicationIcon.ps1 using Windows System.Drawing; it is format conversion of existing artwork, not new branding.
+Build from a clean committed checkout. Complete output defaults to `dist/windows-x64/REMNEXA-2.2.0` and `REMNEXA-2.2.0-complete-windows-x64-preview.zip` plus a SHA-256 sidecar. Existing outputs are not overwritten. The manifest records the source commit and every copied file hash. ZIP timestamps are normalized except signature database dates, which preserve their real age; unsigned PE timestamps are normalized. Reproducibility requires identical source, compiler, component archives and database snapshot, including database dates. The icon can be regenerated with scripts/New-ApplicationIcon.ps1 using Windows System.Drawing; it is format conversion of existing artwork, not new branding.
 
 ## Authenticode signing
 
 `Build-Release.ps1` can sign the staged launcher and all application PowerShell scripts/modules/manifests before generating file hashes and the ZIP. Third-party runtime files retain their upstream signatures. Signing requires an already installed, currently valid code-signing certificate with its private key, a trusted and revocation-verifiable certificate chain, and Microsoft SignTool from the Windows SDK on the signing machine. These are developer requirements, not end-user dependencies.
 
 ```powershell
-./scripts/Build-Release.ps1 -OutputDirectory ./dist/signed-preview -RuntimePath ./runtime `
+./scripts/Build-Release.ps1 -OutputDirectory ./dist/signed-preview `
     -SigningCertificateThumbprint '<40-character certificate-store thumbprint>' `
     -SignToolPath '<Windows SDK x64 signtool.exe>'
 ```
@@ -83,6 +83,18 @@ Launcher regression checks cover PE/CLR metadata, icon resolutions, source/packa
 
 The native launcher and direct PowerShell entry require Windows 11 or newer (client build 22000+). Windows 10, older Windows versions and Windows Server are rejected before runtime discovery or application initialization. The launcher queries RtlGetVersion; the script checks the OS version and client product type. The compatibility manifest GUID is shared with Windows 10 and does not replace this build check. Failure to determine a supported client is rejected. This minimum applies to current development builds; existing published artifacts remain unchanged.
 
-The preview does not certify SmartScreen reputation, every supported Windows 11/Terminal variant or offline optional-component setup. Downloaded scripts may be blocked by a user's execution policy; the launcher reports failure instead of bypassing that policy. Review package contents and independent backups before system changes. Stable releases are not modified by these build scripts.
+The preview does not certify SmartScreen reputation or every supported Windows 11/Terminal variant. Complete includes the components needed for offline scans; future updates require internet. Downloaded scripts may be blocked by a user's execution policy; the launcher reports failure instead of bypassing that policy. Review package contents and independent backups before system changes. Stable releases are not modified by these build scripts.
+
+### Complete validation — 24 November 2026
+
+The extracted Complete ZIP from source commit `9fe63cb` passed the per-file manifest checks and has only `REMNEXA.exe`, `README.txt`, `app/` and `runtime/` at the top level. Its size is 337,427,216 bytes. PowerShell **7.7.0**, ClamAV **1.5.5** and **3,642,950 signatures** are included; the FreshClam snapshot was verified on the same day. Original licenses, component notices and matching ClamAV source accompany the bundle.
+
+`tools/Test-CompletePackage.ps1` ran from a space-containing extraction path, without elevation, with empty PATH, installed-runtime discovery redirected to an absent directory, and an unavailable HTTP proxy. All **12 application self-tests** passed. The real application API scanned **8 harmless files**, confirming complete coverage; a separate harmless custom hash signature produced the expected finding and ClamAV exit code 1. The test used only the packaged runtime/engine/databases, requested no updates and performed no automatic quarantine. The network adapter was not disabled; this verifies local scan operation rather than a physically disconnected machine.
+
+The default Auto backend safely falls back to `clamscan` for bundled ClamAV 1.5.5. The reusable native adapter is currently validated only for 1.5.4; this Complete package does not claim native-worker acceleration for 1.5.5 or downgrade the engine.
+
+The full local suite passed **272 tests** on PowerShell 7.7.0, and the subsequently added module-import regression passed separately. GitHub Actions for `9fe63cb` passed **260 tests** with **13 Windows 11 client tests excluded** on the Server runner; source packaging, Standard packaging and static analysis also passed. Local parser/PSScriptAnalyzer error checks covered **128 PowerShell files**. These results do not establish every hardware/Windows variant, real-malware detection quality or SmartScreen reputation. The package remains **unsigned** and is not a new stable publication.
+
+### Historical launcher-only validation (before Complete)
 
 Recorded local validation: **216 tests passed, 0 failed, 0 skipped** (Pester 5.7.1, PowerShell 7.6.9); the four package tests were repeated successfully after packaging fixes. Syntax and PSScriptAnalyzer error gates passed on **112 PowerShell files**. Two clean builds without an optional runtime produced byte-identical ZIPs. The bundle with PowerShell 7.6.9 has **738 files**, verified hashes, complete runtime licenses/notices and **12 passing application self-tests with installed-runtime discovery disabled**, without elevation. The redundant upstream preview CMD alias is excluded. A real Windows-shell launch shared one console between launcher and PowerShell and exited through the main menu; Windows shell icon extraction also succeeded. This records the available Windows 11 host, not a full Windows compatibility matrix.

@@ -14,7 +14,9 @@ function Invoke-OwnedCheck {
     param([string]$Executable,[string[]]$Arguments,[int]$TimeoutSeconds=90)
     $info=[Diagnostics.ProcessStartInfo]::new($Executable);$info.UseShellExecute=$false;$info.CreateNoWindow=$true
     $info.RedirectStandardOutput=$true;$info.RedirectStandardError=$true;$info.WorkingDirectory=$temp
-    $info.Environment['PATH']='';$info.Environment['ProgramFiles']=$temp;$info.Environment['ProgramW6432']=$temp
+    # Keep simulated installation roots separate from the harmless scan fixtures:
+    # otherwise the real scan guard correctly treats those fixtures as system files.
+    $info.Environment['PATH']='';$info.Environment['ProgramFiles']=Join-Path $temp 'unavailable-program-files';$info.Environment['ProgramW6432']=Join-Path $temp 'unavailable-program-files'
     $info.Environment['HTTP_PROXY']='http://127.0.0.1:9';$info.Environment['HTTPS_PROXY']='http://127.0.0.1:9';$info.Environment['ALL_PROXY']='http://127.0.0.1:9'
     foreach($argument in $Arguments){$info.ArgumentList.Add($argument)}
     $process=[Diagnostics.Process]::Start($info)
@@ -34,10 +36,11 @@ try{
     $code=@'
 param([string]$Package,[string]$Temporary)
 $ErrorActionPreference='Stop'
+$WarningPreference='SilentlyContinue'
 Import-Module (Join-Path $Package 'app/Antivirus/Antivirus.psd1') -Force
 $module=Get-Module Antivirus
 & $module {Set-RemnexaProgressRendering $false}
-$config=Get-AVConfig;$config.LogPath=Join-Path $Temporary 'logs';$config.QuarantinePath=Join-Path $Temporary 'quarantine';$config.AutoCheckUpdates=$false;$config.ScanPerformanceMode='Eco';$config.ScanBackend='ClamScan';$config.ExcludedPaths=@()
+$config=Get-AVConfig;$config.LogPath=Join-Path $Temporary 'logs';$config.QuarantinePath=Join-Path $Temporary 'quarantine';$config.AutoCheckUpdates=$false;$config.ScanPerformanceMode='Eco';$config.ExcludedPaths=@()
 $configPath=Join-Path $Temporary 'antivirus.json';$config|ConvertTo-Json -Depth 8|Set-Content $configPath -Encoding utf8
 $status=Get-ClamAVStatus -ConfigPath $configPath
 if(-not $status.Installed -or -not $status.Ready -or $status.SignaturesOutdated){throw 'Bundled engine/databases are not ready or the archive lost their timestamps.'}
@@ -45,7 +48,7 @@ if($status.ClamScanPath -ne (Join-Path $Package 'app/ClamAV/clamscan.exe') -or $
 $data=Join-Path $Temporary 'harmless';[void][IO.Directory]::CreateDirectory($data)
 foreach($index in 1..8){[IO.File]::WriteAllText((Join-Path $data ($index.ToString()+'.txt')),('REMNEXA harmless offline packaging fixture '+$index))}
 $rows=@(Invoke-ClamAVScan -ScanType Custom -Path $data -ConfigPath $configPath -PerformanceMode Eco)
-if($rows.Count -ne 8 -or @($rows|Where-Object{$_.Status -ne 'Clean' -or -not $_.CoverageComplete}).Count){throw 'Actual offline application scan did not cover all harmless fixtures.'}
+if($rows.Count -ne 1 -or $rows[0].FilesTotal -ne 8 -or $rows[0].FilesReported -ne 8 -or $rows[0].Status -ne 'Clean' -or -not $rows[0].CoverageComplete){throw ('Actual offline application scan did not cover all harmless fixtures: '+($rows|ConvertTo-Json -Depth 4 -Compress))}
 $fixture=Join-Path $Temporary 'known-benign.txt';[IO.File]::WriteAllText($fixture,'REMNEXA known benign detection test - not malware')
 $bytes=[IO.File]::ReadAllBytes($fixture);$hash=[Convert]::ToHexString([Security.Cryptography.MD5]::HashData($bytes)).ToLowerInvariant()
 $hdb=Join-Path $Temporary 'benign.hdb';[IO.File]::WriteAllText($hdb,($hash+':'+$bytes.Length+':Remnexa.Benign.PackagingFixture'+"`n"))
@@ -53,10 +56,11 @@ $arguments=@(('--database='+$status.DatabasePath),('--database='+$hdb),'--no-sum
 $detection=& $module {param($Executable,$Arguments)Invoke-AVNativeProcess -FilePath $Executable -ArgumentList $Arguments -TimeoutSeconds 180 -WorkingDirectory (Split-Path -Parent $Executable)} $status.ClamScanPath $arguments
 if($detection.ExitCode -ne 1 -or $detection.StandardOutput -notmatch 'Remnexa\.Benign\.PackagingFixture.*FOUND'){throw 'Known harmless signature did not produce the expected finding/exit code.'}
 Stop-ClamAVScanEngine
-[ordered]@{Runtime=$PSVersionTable.PSVersion.ToString();Engine=$status.Version;Ready=$status.Ready;SignatureAgeDays=$status.SignatureAgeDays;SignatureCount=$status.Signatures;CleanFixtures=$rows.Count;HarmlessCustomSignatureDetected=$true;ExternalInstallationsUsed=$false;UpdatesRequested=$false;HTTPProxyUnavailable=$true}|ConvertTo-Json
+[ordered]@{Runtime=$PSVersionTable.PSVersion.ToString();Engine=$status.Version;Ready=$status.Ready;SignatureAgeDays=$status.SignatureAgeDays;SignatureCount=$status.Signatures;CleanFixtures=$rows[0].FilesReported;ScanBackend=$rows[0].ScanBackend;HarmlessCustomSignatureDetected=$true;ExternalInstallationsUsed=$false;UpdatesRequested=$false;HTTPProxyUnavailable=$true}|ConvertTo-Json|Set-Content (Join-Path $Temporary 'scan-result.json') -Encoding utf8
 '@
     [IO.File]::WriteAllText($scanScript,$code,[Text.UTF8Encoding]::new($false))
-    $scan=Invoke-OwnedCheck (Join-Path $root 'runtime/pwsh.exe') @('-NoProfile','-File',$scanScript,'-Package',$root,'-Temporary',$temp) -TimeoutSeconds 360|ConvertFrom-Json
+    $null=Invoke-OwnedCheck (Join-Path $root 'runtime/pwsh.exe') @('-NoProfile','-File',$scanScript,'-Package',$root,'-Temporary',$temp) -TimeoutSeconds 360
+    $scan=Get-Content -LiteralPath (Join-Path $temp 'scan-result.json') -Raw|ConvertFrom-Json
     $report=[ordered]@{Passed=$true;PackageCommit=$manifest.SourceCommit;PackageHashesVerified=$true;Layout=$top;BundledRuntimeSelected=$true;SelfTests=@($self.Checks).Count;Elevated=$diagnostic.elevated;Scan=$scan;Signed=$manifest.Signed}
     if($OutputPath){[IO.File]::WriteAllText([IO.Path]::GetFullPath($OutputPath),($report|ConvertTo-Json -Depth 6),[Text.UTF8Encoding]::new($false))}
     [pscustomobject]$report
