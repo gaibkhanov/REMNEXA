@@ -117,11 +117,13 @@ Drittanbieterhinweise: app/THIRD_PARTY_NOTICES.de.md.
     }
     if($Distribution -eq 'Complete'){
         $readme=$readme.Replace('Windows x64 launcher preview / Launcher-Vorschau','Complete - Windows x64 preview / Vorschau')
+        $readme=$readme.Replace('REMNEXA.exe + README.txt + app/ + optional runtime/.','REMNEXA.exe + README.txt + app/ + runtime/.')
         $readme=$readme.Replace('PowerShell 7.5+ (stable) is required unless a compatible runtime is bundled.',('PowerShell '+$pins.powerShell.version+' is included. No additional PowerShell installation is required.'))
         $readme=$readme.Replace('ClamAV binaries/signatures are optional and not included. Setup needs internet.',('ClamAV '+$pins.clamAV.version+' and a verified signature snapshot are included. Scanning works offline from the first start.'))
         $readme=$readme.Replace('PowerShell ab 7.5 (stabil) wird benötigt, sofern keine passende Laufzeit beiliegt.',('PowerShell '+$pins.powerShell.version+' ist enthalten. Keine zusätzliche PowerShell-Installation nötig.'))
         $readme=$readme.Replace('ClamAV-Programme/Signaturen sind optional und nicht enthalten. Einrichtung braucht Internet.',('ClamAV '+$pins.clamAV.version+' und geprüfte Virensignaturen sind enthalten. Scans sind ab dem ersten Start offline möglich.'))
         $readme+="`r`nEN: Internet is only needed for future updates. Extract to a writable folder. Windows UAC consent may still be required for protected scan targets.`r`nDE: Internet wird nur für spätere Updates benötigt. In einen beschreibbaren Ordner entpacken. Für geschützte Scan-Ziele kann Windows weiterhin eine UAC-Bestätigung verlangen.`r`nClamAV source and license notices: app/licenses/clamav/.`r`n"
+        $readme+="`r`nEN: Use [U] or /updates inside REMNEXA to check and confirm background updates. Keep using the app during downloads. PowerShell updates activate on the next launch; the dashboard shows versions and recent activities.`r`nDE: Mit [U] oder /updates Hintergrundupdates prüfen und bestätigen. Während Downloads bleibt die App nutzbar. PowerShell-Updates gelten ab dem nächsten Start; das Dashboard zeigt Versionen und letzte Aktivitäten.`r`n"
     }
     [IO.File]::WriteAllText((Join-Path $stage 'README.txt'),$readme.Replace('REMNEXA 2.2.0',('REMNEXA '+$version)),[Text.UTF8Encoding]::new($false))
     $records=@(Get-ChildItem -LiteralPath $stage -File -Recurse|ForEach-Object{[ordered]@{Path=[IO.Path]::GetRelativePath($stage,$_.FullName).Replace('\','/');SHA256=(Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()}}|Sort-Object { $_.Path })
