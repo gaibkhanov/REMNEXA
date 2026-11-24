@@ -475,5 +475,7 @@
   "CUReason_external_installation": "Esta instalación o base ClamAV está fuera del paquete y no se reemplazará aquí.",
   "CUReason_antivirus_not_installed": "ClamAV no está configurado. Usa Complete o la configuración antivirus.",
   "CUReason_scan_still_running": "El análisis sigue activo y no se interrumpió. Reintenta luego.",
-  "CUReason_database_changed_retry": "Las firmas cambiaron durante el proceso. Se detuvo la activación. Comprueba de nuevo."
+  "CUReason_database_changed_retry": "Las firmas cambiaron durante el proceso. Se detuvo la activación. Comprueba de nuevo.",
+
+  "CUScanNotStarted": "La actualización terminó, pero no se pudo iniciar el análisis pendiente. Inícialo desde el menú antivirus."
 }

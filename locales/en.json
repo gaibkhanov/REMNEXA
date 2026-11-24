@@ -475,5 +475,7 @@
   "CUReason_external_installation": "This ClamAV installation or database is outside the app package and will not be replaced here.",
   "CUReason_antivirus_not_installed": "ClamAV is not configured. Use the Complete package or antivirus setup.",
   "CUReason_scan_still_running": "The scan is still active and was not interrupted. Please retry the update later.",
-  "CUReason_database_changed_retry": "The signatures changed meanwhile. Activation was stopped to protect that state. Please check again."
+  "CUReason_database_changed_retry": "The signatures changed meanwhile. Activation was stopped to protect that state. Please check again.",
+
+  "CUScanNotStarted": "The update succeeded, but the queued scan could not start. Start it again from the Antivirus menu."
 }

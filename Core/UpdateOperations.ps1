@@ -156,12 +156,18 @@ function Invoke-RemnexaComponentWorker {
             foreach($row in $state.Components){$row.InstalledVersion=[string]$local[$row.Name]}
             if($state.Task.Component -eq 'Signatures'){$state.Task.Version=$local.Signatures}
             if($state.Task.AfterScanType){
-                [void](Start-ClamAVBackgroundScan -ScanType $state.Task.AfterScanType -Path @($state.Task.AfterScanPath) -ConfigPath (Join-Path $paths.App 'config/antivirus.json') -Language $state.Task.Language)
-                $state.Task.ScanStarted=$true
+                try{
+                    [void](Start-ClamAVBackgroundScan -ScanType $state.Task.AfterScanType -Path @($state.Task.AfterScanPath) -ConfigPath (Join-Path $paths.App 'config/antivirus.json') -Language $state.Task.Language)
+                    $state.Task.ScanStarted=$true
+                }catch{
+                    # The update has already succeeded. A busy scan host must
+                    # not turn that into a false installation-failure report.
+                    $state.Task.Reason='scan_not_started'
+                }
             }
             $state.Task.AfterScanPath=@()
             $state.History=@(@{Id=$Id;Component=$state.Task.Component;Outcome=$outcome;Version=$state.Task.Version;Timestamp=[DateTimeOffset]::UtcNow.ToString('o');PreparedPath=$state.Task.PreparedPath})+@($state.History|Select-Object -First 19)
-            Set-RemnexaUpdatePhase $state $paths $outcome
+            Set-RemnexaUpdatePhase $state $paths $outcome -Reason $state.Task.Reason
         }
     }catch{
         if($state -and $state.Task.Id -ceq $Id){

@@ -475,5 +475,7 @@
   "CUReason_external_installation": "Diese ClamAV-Installation oder Datenbank liegt außerhalb des App-Pakets. Sie wird hier nicht automatisch ersetzt.",
   "CUReason_antivirus_not_installed": "ClamAV ist noch nicht eingerichtet. Nutze das Complete-Paket oder die Antivirus-Einrichtung.",
   "CUReason_scan_still_running": "Der Scan läuft noch. Das Update hat ihn nicht unterbrochen. Bitte später erneut aktualisieren.",
-  "CUReason_database_changed_retry": "Die Signaturen wurden inzwischen anderweitig geändert. Zum Schutz dieses Standes wurde die Übernahme gestoppt. Bitte erneut prüfen."
+  "CUReason_database_changed_retry": "Die Signaturen wurden inzwischen anderweitig geändert. Zum Schutz dieses Standes wurde die Übernahme gestoppt. Bitte erneut prüfen.",
+
+  "CUScanNotStarted": "Das Update ist erfolgreich, aber der vorgemerkte Scan konnte nicht starten. Bitte im Antivirus-Menü erneut starten."
 }

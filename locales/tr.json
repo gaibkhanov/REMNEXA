@@ -475,5 +475,7 @@
   "CUReason_external_installation": "Bu ClamAV kurulumu veya veritabanı uygulama paketi dışında; burada değiştirilmez.",
   "CUReason_antivirus_not_installed": "ClamAV yapılandırılmamış. Complete paketini veya antivirüs kurulumunu kullanın.",
   "CUReason_scan_still_running": "Tarama sürüyor ve kesilmedi. Güncellemeyi daha sonra yeniden deneyin.",
-  "CUReason_database_changed_retry": "İmzalar bu sırada değişti. Mevcut durumu korumak için etkinleştirme durduruldu. Yeniden denetleyin."
+  "CUReason_database_changed_retry": "İmzalar bu sırada değişti. Mevcut durumu korumak için etkinleştirme durduruldu. Yeniden denetleyin.",
+
+  "CUScanNotStarted": "Güncelleme başarılı, ancak bekleyen tarama başlatılamadı. Antivirüs menüsünden yeniden başlatın."
 }

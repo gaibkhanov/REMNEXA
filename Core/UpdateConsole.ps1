@@ -21,6 +21,7 @@ function Show-ComponentUpdateNotification {
         }
         elseif($state.Task.Status -eq 'Failed'){Write-Status (T 'CUFailed') 'Warning'}
         elseif($state.Task.Status -eq 'Cancelled'){Write-Status (T 'CUCancelled') 'Info'}
+        if($state.Task.Reason -eq 'scan_not_started'){Write-Status (T 'CUScanNotStarted') 'Warning'}
     }catch{Write-Verbose 'Component notification unavailable.'}
 }
 
@@ -93,7 +94,7 @@ function Show-ComponentUpdateCenter {
         if($state.Task){
             Write-Host (T 'CURunning' @((Get-ComponentDisplayName $state.Task.Component),(T ('CUPhase'+$state.Task.Status)))) -ForegroundColor $(if($state.Task.Status -eq 'Failed'){'Yellow'}elseif($busy){'Cyan'}else{'Green'})
             if($state.Task.Total -gt 0 -and $state.Task.Completed -ge 0){Write-Host (T 'CUBytes' @([Math]::Floor(100*$state.Task.Completed/$state.Task.Total),(Format-ByteSize $state.Task.Completed),(Format-ByteSize $state.Task.Total))) -ForegroundColor Cyan}
-            if($state.Task.Reason){$reason=if($state.Task.Reason -in @('external_installation','antivirus_not_installed','scan_still_running','database_changed_retry')){'CUReason_'+$state.Task.Reason}else{'CUFailed'};Write-Host (T $reason) -ForegroundColor Yellow}
+            if($state.Task.Reason){$reason=if($state.Task.Reason -eq 'scan_not_started'){'CUScanNotStarted'}elseif($state.Task.Reason -in @('external_installation','antivirus_not_installed','scan_still_running','database_changed_retry')){'CUReason_'+$state.Task.Reason}else{'CUFailed'};Write-Host (T $reason) -ForegroundColor Yellow}
         }
         Write-Host (T 'CURefreshHint') -ForegroundColor DarkGray
         if(-not $busy){
