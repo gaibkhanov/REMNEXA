@@ -6,6 +6,8 @@ Development changes are not published release claims. Existing release artifacts
 
 ## Unreleased — Windows launcher preview
 
+- Recover launcher-compiler downloads through bounded HTTPS mirror attempts, checking every archive against the existing immutable SHA-256 pin. Cache the compiler archive in CI, report toolchain preparation separately from tests, and reject failed test discovery as well as failed test cases.
+
 - Add **[E] Extras → Default applications** with Simple/Advanced views, current Windows associations, literal search, conditional paging and refresh. Open the supported Windows Default apps page for user-confirmed changes; no registry writes or elevation. Translate the feature into all six interface languages.
 
 - Add a common background update center for portable PowerShell, ClamAV, signatures and supported stable Complete app releases. Require confirmation and verified official assets; preserve active runtimes/scans and stage replacements with cancellation before activation.

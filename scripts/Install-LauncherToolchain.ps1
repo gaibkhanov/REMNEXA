@@ -8,10 +8,8 @@ $root=[IO.Path]::GetFullPath($Destination);[void][IO.Directory]::CreateDirectory
 $exe=Join-Path $root ('zig-x86_64-windows-'+$version+'/zig.exe')
 if((Test-Path -LiteralPath $exe) -and (Test-Path -LiteralPath (Join-Path $root 'verified-toolchain.sha256')) -and ([IO.File]::ReadAllText((Join-Path $root 'verified-toolchain.sha256')).Trim() -ceq $hash)){Write-Output $exe;return}
 $archive=Join-Path $root 'verified-zig.zip'
-if(-not(Test-Path -LiteralPath $archive) -or (Get-FileHash $archive -Algorithm SHA256).Hash.ToLowerInvariant() -ne $hash){
-    & (Join-Path $env:SystemRoot 'System32/curl.exe') --silent --show-error --fail --location --connect-timeout 15 --max-time 180 --retry 1 --output $archive ('https://ziglang.org/download/'+$version+'/zig-x86_64-windows-'+$version+'.zip')
-    if($LASTEXITCODE -ne 0){throw 'Official Zig toolchain download failed.'}
-}
+Import-Module (Join-Path $PSScriptRoot 'LauncherToolchain.psm1') -Force
+$archive=Get-RemnexaVerifiedLauncherArchive -Directory $root -Version $version -SHA256 $hash
 if((Get-FileHash $archive -Algorithm SHA256).Hash.ToLowerInvariant() -cne $hash){throw 'Official Zig toolchain checksum mismatch.'}
 [IO.Compression.ZipFile]::ExtractToDirectory($archive,$root,$true)
 if(-not(Test-Path -LiteralPath $exe)){throw 'Verified Zig toolchain is incomplete.'}
