@@ -1,5 +1,11 @@
 BeforeAll {Import-Module (Join-Path $PSScriptRoot '../scripts/BundlePayload.psm1') -Force}
 Describe 'Complete bundle integrity and distribution boundaries' {
+    It 'preserves path validation commands already imported by the package builder' {
+        Import-Module (Join-Path $PSScriptRoot '../Core/PathSafety.psd1') -Force
+        Import-Module (Join-Path $PSScriptRoot '../scripts/BundlePayload.psm1') -Force
+        (Get-Command Get-RemnexaPathSafety -ErrorAction Stop).Name | Should -Be 'Get-RemnexaPathSafety'
+        (Get-RemnexaPathSafety $TestDrive).IsSafe | Should -BeTrue
+    }
     BeforeEach {
         $script:bundleFixture=Join-Path $TestDrive ([guid]::NewGuid().ToString('N'));[void][IO.Directory]::CreateDirectory($script:bundleFixture)
         function New-TestZip {
