@@ -64,6 +64,9 @@ try {
 REMNEXA 2.2.0 - Windows x64 launcher preview / Launcher-Vorschau
 
 EN: Extract the entire folder and double-click REMNEXA.exe.
+Folder layout: REMNEXA.exe + README.txt + app/ + optional runtime/.
+This is the user package. Developer tools, tests and compatibility launchers are excluded.
+Keep app/ and runtime/ beside the EXE; do not copy the EXE on its own.
 Requires Windows 11 or newer (client build 22000+). Windows 10/Server are unsupported.
 PowerShell 7.5+ (stable) is required unless a compatible runtime is bundled.
 The launcher uses runtime/pwsh.exe first, then an installed compatible runtime.
@@ -76,6 +79,9 @@ Third-party notices: app/THIRD_PARTY_NOTICES.md.
 Documentation: https://github.com/gaibkhanov/REMNEXA
 
 DE: Den ganzen Ordner entpacken und REMNEXA.exe doppelklicken.
+Ordnerstruktur: REMNEXA.exe + README.txt + app/ + optional runtime/.
+Dies ist das Benutzerpaket. Quellcode-Werkzeuge, Tests und weitere Starter fehlen bewusst.
+app/ und runtime/ neben der EXE lassen; die EXE nicht einzeln herauskopieren.
 Windows 11 oder neuer (Client-Build ab 22000) erforderlich; Windows 10/Server nicht unterstützt.
 PowerShell ab 7.5 (stabil) wird benötigt, sofern keine passende Laufzeit beiliegt.
 Zuerst wird runtime/pwsh.exe, danach eine passende installierte Laufzeit genutzt.

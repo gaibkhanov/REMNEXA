@@ -12,6 +12,8 @@ Ein kostenloses Open-Source-Werkzeug für die Deinstallation von Anwendungen, Au
 
 > **Launcher-Vorschau im Feature-Branch:** Nativer Windows-Start mit eigenem Icon und aufgeräumtem Benutzerpaket. Build und Grenzen: [Windows-Launcher](docs/WINDOWS_LAUNCHER.de.md). Das stabile Release oben bleibt unverändert.
 
+Für die tägliche Nutzung das entpackte **Benutzerpaket** öffnen: Oben stehen nur `REMNEXA.exe`, `README.txt`, `app/` und optional `runtime/`. Diese zusammenlassen. Der Repository-Hauptordner ist der Entwicklungsstand mit Quellcode, kompatiblen Startern, Tests und Build-Werkzeugen.
+
 Der Paketbau unterstützt geprüfte Authenticode-Signierung mit vertrauenswürdigem Signierzertifikat und Microsoft SignTool. Die aktuelle Vorschau ist **unsigniert**; siehe [Voraussetzungen](docs/WINDOWS_LAUNCHER.de.md#authenticode-signierung).
 
 ## Funktionen
