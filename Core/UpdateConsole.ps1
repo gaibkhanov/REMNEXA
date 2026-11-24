@@ -64,7 +64,7 @@ function Show-ComponentActivities {
     foreach($row in @(Get-StartupHistory|Select-Object -First 3)){$activities.Add([pscustomobject]@{Timestamp=$row.Timestamp;Text=(T 'CUActivityStartup')})}
     Write-Host (T 'CUActivities') -ForegroundColor White
     if(-not $activities.Count){Write-Host ('  '+(T 'CUActivitiesNone')) -ForegroundColor DarkGray}
-    else{foreach($row in @($activities|Sort-Object Timestamp -Descending|Select-Object -First 4)){$safe=[regex]::Replace([string]$row.Text,'[\x00-\x1f\x7f-\x9f]',' ');if($safe.Length -gt 160){$safe=$safe.Substring(0,157)+'...'};Write-Host ('  '+(Format-HistoryTimestamp $row.Timestamp)+'  '+$safe) -ForegroundColor DarkGray}}
+    else{foreach($row in @($activities|Sort-Object {try{if($_.Timestamp -is [DateTime]){([DateTimeOffset]$_.Timestamp).UtcDateTime.Ticks}else{[DateTimeOffset]::Parse([string]$_.Timestamp,[Globalization.CultureInfo]::InvariantCulture).UtcDateTime.Ticks}}catch{[long]::MinValue}} -Descending|Select-Object -First 4)){$safe=[regex]::Replace([string]$row.Text,'[\x00-\x1f\x7f-\x9f]',' ');if($safe.Length -gt 160){$safe=$safe.Substring(0,157)+'...'};Write-Host ('  '+(Format-HistoryTimestamp $row.Timestamp)+'  '+$safe) -ForegroundColor DarkGray}}
 }
 
 function Start-ComponentUpdateFromConsole {

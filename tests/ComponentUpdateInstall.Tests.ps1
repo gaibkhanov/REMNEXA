@@ -158,4 +158,14 @@ Describe 'Component update console workflows' {
             $output.IndexOf('2026-11-21')|Should -BeLessThan $output.IndexOf('2026-11-20')
         }
     }
+    It 'orders mixed local-offset and UTC activities by the actual instant' {
+        & $script:console {
+            function Get-RemovalHistory {@([pscustomobject]@{Timestamp='2026-11-24T17:00:00+05:00';ProgramName='older local activity'})}
+            function Get-ClamAVScanHistory {param($First)@([pscustomobject]@{RecordedAtUtc='2026-11-24T13:00:00Z';Files=8;Findings=0;State='Completed'})}
+            Show-ComponentActivities @{History=@(@{Component='Signatures';Outcome='Completed';Timestamp='2026-11-24T12:30:00Z'})}
+            $output=$script:Lines -join "`n"
+            $output.IndexOf('13:00:00Z')|Should -BeLessThan $output.IndexOf('12:30:00Z')
+            $output.IndexOf('12:30:00Z')|Should -BeLessThan $output.IndexOf('17:00:00+05:00')
+        }
+    }
 }
