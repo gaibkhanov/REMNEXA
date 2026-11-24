@@ -129,7 +129,7 @@ Describe 'Component update console workflows' {
             function Write-Status {param($Message,$Level)$script:Lines.Add([string]$Message)}
             function Read-RemnexaInput {param($Prompt)$script:Inputs.Dequeue()}
             function Clear-RemnexaScreen {} function Show-BrandHeader {} function Stop-ClamAVScanEngine {}
-            function Start-RemnexaComponentTask {param($ApplicationRoot,$ApplicationVersion,$Component,$AfterScanType,$AfterScanPath,$Language)$script:Starts++;$true}
+            function Start-RemnexaComponentTask {param($ApplicationRoot,$ApplicationVersion,$Component,$AfterScanType,$AfterScanPath,$Language)$script:Starts++;$script:LastComponent=$Component;$true}
             function Format-HistoryTimestamp {param($Timestamp)$Timestamp}
             function Get-AVUpdateStatusText {param($Status)$Status}
             function Get-RemovalHistory {@([pscustomobject]@{Timestamp='2026-11-20T10:00:00Z';ProgramName='harmless app'})}
@@ -145,6 +145,9 @@ Describe 'Component update console workflows' {
     }
     It 'queues a confirmed update once and returns immediately to navigation' {
         & $script:console {foreach($value in @('1','J','0')){$script:Inputs.Enqueue($value)};Show-ComponentUpdateCenter;$script:Starts|Should -Be 1}
+    }
+    It 'preserves the existing Antivirus Engine menu action with the common updater' {
+        & $script:console {[void](Start-ComponentUpdateFromConsole -Component Engine);$script:Starts|Should -Be 1;$script:LastComponent|Should -Be Antivirus}
     }
     It 'shows saved activities in chronological order and labels them as history' {
         & $script:console {

@@ -237,6 +237,13 @@ function Start-RemnexaComponentTask {
           [string]$ApplicationVersion,[string]$PowerShellVersion=$PSVersionTable.PSVersion.ToString(),[string]$StateDirectory,[switch]$Force,
           [ValidateSet('','Quick','Full','Custom')][string]$AfterScanType='',[string[]]$AfterScanPath=@(),[ValidateSet('de','en','es','fr','ru','tr')][string]$Language='de')
     $paths=Get-RemnexaUpdatePaths $ApplicationRoot $StateDirectory
+    if($Component -eq 'Check' -and -not $Force){
+        $settings=Join-Path $paths.App 'config/antivirus.json'
+        if(Test-Path -LiteralPath $settings){
+            try{$options=Get-Content -LiteralPath $settings -Raw -Encoding utf8|ConvertFrom-Json -AsHashtable;if($options.ContainsKey('AutoCheckUpdates') -and $options.AutoCheckUpdates -ne $true){return $false}}
+            catch{Write-Verbose 'Automatic checks skipped because settings are unreadable.';return $false}
+        }
+    }
     Assert-RemnexaUpdatePath $paths.App;[void][IO.Directory]::CreateDirectory($paths.Directory);Assert-RemnexaUpdatePath $paths.Directory
     $guard=[IO.File]::Open(($paths.State+'.start'),[IO.FileMode]::OpenOrCreate,[IO.FileAccess]::ReadWrite,[IO.FileShare]::None)
     try{

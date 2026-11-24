@@ -68,9 +68,10 @@ function Show-ComponentActivities {
 }
 
 function Start-ComponentUpdateFromConsole {
-    param([ValidateSet('PowerShell','Antivirus','Signatures','Both','Application')][string]$Component,[string]$AfterScanType='',[string[]]$AfterScanPath=@())
+    param([ValidateSet('PowerShell','Antivirus','Engine','Signatures','Both','Application')][string]$Component,[string]$AfterScanType='',[string[]]$AfterScanPath=@())
     Stop-ClamAVScanEngine
-    $started=Start-RemnexaComponentTask -ApplicationRoot $script:ComponentApplicationRoot -ApplicationVersion $script:CleanerVersion -Component $Component -AfterScanType $AfterScanType -AfterScanPath $AfterScanPath -Language $script:Language
+    $target=if($Component -eq 'Engine'){'Antivirus'}else{$Component}
+    $started=Start-RemnexaComponentTask -ApplicationRoot $script:ComponentApplicationRoot -ApplicationVersion $script:CleanerVersion -Component $target -AfterScanType $AfterScanType -AfterScanPath $AfterScanPath -Language $script:Language
     Write-Status (T $(if($started){'CUStarted'}else{'CUBusy'})) $(if($started){'Info'}else{'Warning'})
     return $started
 }

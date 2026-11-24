@@ -133,4 +133,10 @@ throw 'Isolated fixture: no network or installation.'
             }
         }
     }
+    It 'honors disabled automatic checks without creating a task or making requests' {
+        $app=Join-Path $TestDrive 'disabled';[void][IO.Directory]::CreateDirectory((Join-Path $app 'config'))
+        [IO.File]::WriteAllText((Join-Path $app 'config/antivirus.json'),'{"AutoCheckUpdates":false}')
+        Start-RemnexaComponentTask $app -StateDirectory (Join-Path $app 'cache') -ApplicationVersion '2.2.0'|Should -BeFalse
+        Test-Path (Join-Path $app 'cache/state.json')|Should -BeFalse
+    }
 }
